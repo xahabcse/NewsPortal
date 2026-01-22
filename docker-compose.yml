@@ -28,6 +28,34 @@ services:
       - newsportal-network
 
 
+  # MongoDB - Image Storage (GridFS)
+  mongodb:
+    image: mongo:4.4
+    container_name: newsportal-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongouser}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-MongoPassword123}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - newsportal-network
+
   # Redis - Caching Layer
   redis:
     image: redis:7-alpine
@@ -66,17 +94,17 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER:-newsadmin};Password=${POSTGRES_PASSWORD:-YourSecurePassword123};Include Error Detail=true
-      - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@host.docker.internal:27017/newsportal?authSource=admin
+      - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@mongodb:27017/newsportal?authSource=admin
       - ConnectionStrings__Redis=redis:6379,abortConnect=false
     volumes:
       - ./logs/web:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
       redis:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -97,17 +125,17 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER:-newsadmin};Password=${POSTGRES_PASSWORD:-YourSecurePassword123};Include Error Detail=true
-      - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@host.docker.internal:27017/newsportal?authSource=admin
+      - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@mongodb:27017/newsportal?authSource=admin
       - ConnectionStrings__Redis=redis:6379,abortConnect=false
     volumes:
       - ./logs/mcp:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
       redis:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
@@ -119,6 +147,10 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
     driver: local
   redis_data:
     driver: local
