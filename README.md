@@ -380,7 +380,7 @@ services:
           memory: 512M
 
   mongodb:
-    image: mongo:6.0
+    image: mongo:4.4
     container_name: newsportal-mongodb
     restart: always
     environment:

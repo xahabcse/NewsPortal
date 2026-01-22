@@ -75,7 +75,7 @@ This document provides a complete overview of the Docker setup for the News Port
 - **Health Check**: `pg_isready` command
 
 ### 2. MongoDB
-- **Image**: `mongo:6.0`
+- **Image**: `mongo:4.4`
 - **Purpose**: Image storage using GridFS
 - **Memory**: 512MB limit, 256MB reserved
 - **Data Persistence**: `mongodb_data` and `mongodb_config` volumes
