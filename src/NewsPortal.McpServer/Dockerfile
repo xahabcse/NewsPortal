@@ -1,25 +1,44 @@
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-WORKDIR /app
-
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj files and restore
-COPY ["NewsPortal.McpServer/NewsPortal.McpServer.csproj", "NewsPortal.McpServer/"]
-COPY ["NewsPortal.Application/NewsPortal.Application.csproj", "NewsPortal.Application/"]
-COPY ["NewsPortal.Infrastructure/NewsPortal.Infrastructure.csproj", "NewsPortal.Infrastructure/"]
-COPY ["NewsPortal.Core/NewsPortal.Core.csproj", "NewsPortal.Core/"]
-RUN dotnet restore "NewsPortal.McpServer/NewsPortal.McpServer.csproj"
+# Copy solution file and project files
+COPY ["NewsPortal.sln", "./"]
+COPY ["src/NewsPortal.McpServer/NewsPortal.McpServer.csproj", "src/NewsPortal.McpServer/"]
+COPY ["src/NewsPortal.Application/NewsPortal.Application.csproj", "src/NewsPortal.Application/"]
+COPY ["src/NewsPortal.Infrastructure/NewsPortal.Infrastructure.csproj", "src/NewsPortal.Infrastructure/"]
+COPY ["src/NewsPortal.Core/NewsPortal.Core.csproj", "src/NewsPortal.Core/"]
+COPY ["src/NewsPortal.BackgroundJobs/NewsPortal.BackgroundJobs.csproj", "src/NewsPortal.BackgroundJobs/"]
 
-# Copy everything else and build
-COPY . .
-WORKDIR "/src/NewsPortal.McpServer"
+# Restore dependencies
+RUN dotnet restore "src/NewsPortal.McpServer/NewsPortal.McpServer.csproj"
+
+# Copy all source code
+COPY src/ src/
+
+# Build the application
+WORKDIR "/src/src/NewsPortal.McpServer"
 RUN dotnet build "NewsPortal.McpServer.csproj" -c Release -o /app/build
 
+# Publish stage
 FROM build AS publish
 RUN dotnet publish "NewsPortal.McpServer.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
+# Final stage
+FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
 WORKDIR /app
+
+# Install timezone data
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+
+# Create logs directory
+RUN mkdir -p /app/logs && chmod 755 /app/logs
+
+# Copy published application
 COPY --from=publish /app/publish .
+
+# Run as non-root user
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser:appuser /app
+USER appuser
+
 ENTRYPOINT ["dotnet", "NewsPortal.McpServer.dll"]

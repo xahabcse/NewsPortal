@@ -1,0 +1,49 @@
+# Directories
+**/bin/
+**/obj/
+**/out/
+**/logs/
+**/node_modules/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/.git/
+**/.github/
+
+# Files
+**/*.md
+**/.gitignore
+**/.gitattributes
+**/.editorconfig
+**/*.Development.json
+**/*.log
+**/*.tmp
+**/*.bak
+**/*.swp
+**/Thumbs.db
+**/.DS_Store
+
+# Docker files
+**/Dockerfile*
+**/docker-compose*
+**/.dockerignore
+
+# Test projects
+**/tests/**
+**/*.Test.*
+**/*.Tests.*
+
+# Build artifacts
+**/publish/
+**/dist/
+**/coverage/
+
+# IDE
+**/*.user
+**/*.suo
+**/*.cache
+**/*.sln.docstates
+
+# Local settings
+**/*.local.json
+**/.env*
