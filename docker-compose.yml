@@ -79,24 +79,18 @@ services:
     networks:
       - newsportal-network
 
-  # Web Application
+  # Web Application (React UI)
   web:
     build:
       context: .
-      dockerfile: src/NewsPortal.Web/Dockerfile
-    image: newsportal-web:latest
-    container_name: newsportal-web
+      dockerfile: src/NewsPortal.Web.Client/Dockerfile
+    image: newsportal-web-client:latest
+    container_name: newsportal-web-client
     restart: always
     ports:
-      - "${WEB_PORT:-5000}:8080"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER:-newsadmin};Password=${POSTGRES_PASSWORD:-YourSecurePassword123};Include Error Detail=true
-      - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@mongodb:27017/newsportal?authSource=admin
-      - ConnectionStrings__Redis=redis:6379,abortConnect=false
-    volumes:
-      - ./logs/web:/app/logs
+      - "${WEB_PORT:-5000}:80"
+    networks:
+      - newsportal-network
     depends_on:
       postgres:
         condition: service_healthy

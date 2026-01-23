@@ -1,5 +1,5 @@
 {
-  "name": "news-portal-ui",
+  "name": "NewsPortal.Web.Client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
