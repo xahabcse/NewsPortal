@@ -3,31 +3,37 @@ import type { FC } from 'react';
 interface NewsCardProps {
     title: string;
     summary: string;
-    category: string;
-    author: string;
-    date: string;
-    image: string;
+    categoryName?: string;
+    sourceName: string;
+    publishedAt: string;
+    thumbnailUrl: string;
 }
 
-const NewsCard: FC<NewsCardProps> = ({ title, summary, category, author, date, image }) => {
+const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl }) => {
+    const formattedDate = new Date(publishedAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+
     return (
         <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
             <div className="relative h-48 overflow-hidden">
                 <img
-                    src={image}
+                    src={thumbnailUrl || 'https://via.placeholder.com/400x200?text=NewsPortal'}
                     alt={title}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute top-4 left-4 bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded backdrop-blur-md">
-                    {category}
+                    {categoryName || 'General'}
                 </div>
             </div>
 
             <div className="p-6 flex flex-col flex-1">
                 <div className="flex items-center gap-2 text-[11px] text-secondary font-medium mb-3">
-                    <span>{author}</span>
+                    <span>{sourceName}</span>
                     <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
-                    <span>{date}</span>
+                    <span>{formattedDate}</span>
                 </div>
 
                 <h3 className="text-lg font-bold text-white mb-3 group-hover:text-accent transition-colors line-clamp-2">

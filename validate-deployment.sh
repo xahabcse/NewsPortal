@@ -83,6 +83,9 @@ critical_files=(
     ".dockerignore"
     ".env.example"
     "src/NewsPortal.Web.Client/Dockerfile"
+    "src/NewsPortal.Web.Client/nginx.conf"
+    "src/NewsPortal.Api/Dockerfile"
+    "src/NewsPortal.Api/NewsPortal.Api.csproj"
     "src/NewsPortal.McpServer/Dockerfile"
     "src/NewsPortal.Web.Client/package.json"
     "src/NewsPortal.McpServer/NewsPortal.McpServer.csproj"
@@ -112,6 +115,12 @@ if [ -f "src/NewsPortal.McpServer/Program.cs" ]; then
     print_success "Found: src/NewsPortal.McpServer/Program.cs"
 else
     print_error "Missing: src/NewsPortal.McpServer/Program.cs"
+fi
+
+if [ -f "src/NewsPortal.Api/Program.cs" ]; then
+    print_success "Found: src/NewsPortal.Api/Program.cs"
+else
+    print_error "Missing: src/NewsPortal.Api/Program.cs"
 fi
 
 # 3. Validate configuration files
@@ -179,6 +188,15 @@ if [ -f "src/NewsPortal.McpServer/Dockerfile" ]; then
         print_success "MCP Dockerfile copies solution file"
     else
         print_error "MCP Dockerfile missing solution file copy"
+    fi
+fi
+
+# Validate Api Dockerfile
+if [ -f "src/NewsPortal.Api/Dockerfile" ]; then
+    if grep -q "FROM.*AS build" src/NewsPortal.Api/Dockerfile; then
+        print_success "Api Dockerfile uses multi-stage build"
+    else
+        print_warning "Api Dockerfile might not use multi-stage build"
     fi
 fi
 
@@ -283,7 +301,7 @@ if docker compose config > /dev/null 2>&1; then
     # Check if all services are defined
     services=$(docker compose config --services 2>/dev/null)
 
-    expected_services=("postgres" "mongodb" "redis" "web" "mcpserver")
+    expected_services=("postgres" "mongodb" "redis" "web" "api" "mcpserver")
     for service in "${expected_services[@]}"; do
         if echo "$services" | grep -q "^$service$"; then
             print_success "Service '$service' is defined"

@@ -1,9 +1,32 @@
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import NewsCard from './components/NewsCard'
-import { newsData } from './data/newsData'
+import { newsApi, NewsArticle } from './services/api'
 
 function App() {
+  const [news, setNews] = useState<NewsArticle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setLoading(true)
+        const result = await newsApi.getLatestNews(1, 10)
+        setNews(result.items)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching news:', err)
+        setError('Failed to load news. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNews()
+  }, [])
+
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       <Sidebar />
@@ -25,11 +48,27 @@ function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {newsData.map(news => (
-              <NewsCard key={news.id} {...news} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-center">
+              {error}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {news.map(item => (
+                <NewsCard key={item.id} {...item} />
+              ))}
+            </div>
+          )}
+
+          {!loading && !error && news.length === 0 && (
+            <div className="text-center p-12 text-secondary">
+              No news found.
+            </div>
+          )}
 
           <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-accent/20 via-purple-500/10 to-transparent border border-accent/10 relative overflow-hidden">
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
