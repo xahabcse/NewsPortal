@@ -24,19 +24,28 @@ export interface PagedResult<T> {
 export const newsApi = {
     getLatestNews: async (page = 1, pageSize = 10): Promise<PagedResult<NewsArticle>> => {
         const response = await fetch(`${API_BASE_URL}/news/latest?page=${page}&pageSize=${pageSize}`);
-        if (!response.ok) throw new Error('Failed to fetch latest news');
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch latest news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
         return response.json();
     },
 
     getFeaturedNews: async (count = 5): Promise<NewsArticle[]> => {
         const response = await fetch(`${API_BASE_URL}/news/featured?count=${count}`);
-        if (!response.ok) throw new Error('Failed to mb fetch featured news');
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch featured news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
         return response.json();
     },
 
     getNewsByCategory: async (slug: string, page = 1, pageSize = 10): Promise<PagedResult<NewsArticle>> => {
         const response = await fetch(`${API_BASE_URL}/news/category/${slug}?page=${page}&pageSize=${pageSize}`);
-        if (!response.ok) throw new Error('Failed to fetch category news');
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch category news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
         return response.json();
     }
 };
