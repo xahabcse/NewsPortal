@@ -139,6 +139,37 @@ echo ""
 echo "Checking service status..."
 docker compose ps
 
+# Firewall reminder
+if command -v ufw > /dev/null; then
+    if sudo ufw status | grep -q "active"; then
+        echo ""
+        echo "----------------------------------------------------"
+        echo "🔥 FIREWALL DETECTED: Ensure port 5000 is allowed!"
+        echo "Run: sudo ufw allow 5000/tcp"
+        echo "----------------------------------------------------"
+    fi
+fi
+
+# Wait for Web App to be ready
+echo ""
+echo "Waiting for Web Application to start (may take a minute)..."
+MAX_RETRIES=30
+COUNT=0
+URL="http://localhost:${WEB_PORT:-5000}"
+
+while ! curl -s --head "$URL" | grep "200 OK\|302 Found" > /dev/null; do
+    echo -n "."
+    sleep 2
+    ((COUNT++))
+    if [ $COUNT -ge $MAX_RETRIES ]; then
+        echo ""
+        echo "Warning: Web App didn't respond within 60 seconds."
+        echo "Check logs with: docker compose logs web"
+        break
+    fi
+done
+echo ""
+
 # Check if web service is running
 if docker compose ps web | grep -q "Up"; then
     echo ""

@@ -28,10 +28,8 @@ try
     {
         var context = scope.ServiceProvider.GetRequiredService<NewsPortalDbContext>();
 
-        if (app.Environment.IsDevelopment())
-        {
+            // Allow migrations in all environments for Docker deployment
             await context.Database.MigrateAsync();
-        }
 
         await SeedData.SeedAsync(context);
     }
@@ -43,7 +41,11 @@ try
         app.UseHsts();
     }
 
-    app.UseHttpsRedirection();
+    // Only redirect to HTTPS if configured (avoid loop in Docker/Proxy setup)
+    if (app.Configuration.GetValue<bool>("UseHttpsRedirection", false))
+    {
+        app.UseHttpsRedirection();
+    }
     app.UseStaticFiles();
     app.UseRouting();
     app.UseAuthorization();
