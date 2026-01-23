@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #0c0d0e;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.huly-sidebar-item {
+  @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 text-secondary hover:text-white hover:bg-white/5;
+}
+
+.huly-sidebar-item.active {
+  @apply text-white bg-accent/10 border border-accent/20;
+}
