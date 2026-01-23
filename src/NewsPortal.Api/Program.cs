@@ -55,6 +55,38 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+
+
+// Configure the HTTP request pipeline.
+app.UseDeveloperExceptionPage(); 
+
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        
+        Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = exceptionHandlerPathFeature?.Error.Message,
+            details = exceptionHandlerPathFeature?.Error.StackTrace
+        });
+    });
+});
+
+app.UseCors("AllowAll");
+
+app.MapControllers();
+
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
+
+app.Run();
+
 public static class DbInitializer
 {
     public static void Initialize(NewsPortal.Infrastructure.Data.NewsPortalDbContext context)
@@ -110,33 +142,3 @@ public static class DbInitializer
         context.SaveChanges();
     }
 }
-
-// Configure the HTTP request pipeline.
-app.UseDeveloperExceptionPage(); 
-
-app.UseExceptionHandler(exceptionHandlerApp =>
-{
-    exceptionHandlerApp.Run(async context =>
-    {
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
-
-        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-        
-        Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
-
-        await context.Response.WriteAsJsonAsync(new
-        {
-            error = exceptionHandlerPathFeature?.Error.Message,
-            details = exceptionHandlerPathFeature?.Error.StackTrace
-        });
-    });
-});
-
-app.UseCors("AllowAll");
-
-app.MapControllers();
-
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
-
-app.Run();
