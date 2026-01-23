@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NewsPortal.Application;
 using NewsPortal.Infrastructure;
 using Serilog;
@@ -32,6 +33,23 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Auto-apply migrations
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<NewsPortal.Infrastructure.Data.NewsPortalDbContext>();
+        Log.Information("Applying migrations...");
+        context.Database.Migrate();
+        Log.Information("Migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while applying migrations.");
+    }
+}
 
 // Configure the HTTP request pipeline.
 app.UseDeveloperExceptionPage(); 
