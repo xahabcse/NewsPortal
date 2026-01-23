@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import NewsCard from './components/NewsCard'
-import { newsApi, NewsArticle } from './services/api'
+import { newsApi } from './services/api'
+import type { NewsArticle } from './services/api'
 
 function App() {
   const [news, setNews] = useState<NewsArticle[]>([])
