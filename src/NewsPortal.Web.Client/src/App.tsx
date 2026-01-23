@@ -66,8 +66,14 @@ function App() {
           )}
 
           {!loading && !error && news.length === 0 && (
-            <div className="text-center p-12 text-secondary">
-              No news found.
+            <div className="text-center p-12 bg-white/2 rounded-2xl border border-dashed border-glass-border">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary/40"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8l-4 4v14a2 2 0 0 0 2 2z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>
+              </div>
+              <h3 className="text-white font-semibold mb-1">No news found</h3>
+              <p className="text-secondary text-sm max-w-xs mx-auto">
+                Our crawlers are busy fetching the latest headlines. Please check back in a few moments or try another category.
+              </p>
             </div>
           )}
 

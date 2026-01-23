@@ -13,23 +13,38 @@ const Sidebar = () => {
                     <span>Home</span>
                 </a>
                 <a href="#" className="huly-sidebar-item">
-                    <span>Trending</span>
+                    <div className="flex flex-col">
+                        <span>Trending</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">Most popular stories</span>
+                    </div>
                 </a>
                 <a href="#" className="huly-sidebar-item">
-                    <span>Categories</span>
+                    <div className="flex flex-col">
+                        <span>Categories</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">Browse by topic</span>
+                    </div>
                 </a>
                 <a href="#" className="huly-sidebar-item">
-                    <span>Bookmarks</span>
+                    <div className="flex flex-col">
+                        <span>Bookmarks</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">Your saved items</span>
+                    </div>
                 </a>
             </nav>
 
             <nav className="flex flex-col gap-2 mt-auto">
                 <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Support</div>
                 <a href="#" className="huly-sidebar-item">
-                    <span>Settings</span>
+                    <div className="flex flex-col">
+                        <span>Settings</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">App preferences</span>
+                    </div>
                 </a>
                 <a href="#" className="huly-sidebar-item">
-                    <span>Help Center</span>
+                    <div className="flex flex-col">
+                        <span>Help Center</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">FAQ & Support</span>
+                    </div>
                 </a>
             </nav>
         </aside>
