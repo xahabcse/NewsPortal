@@ -86,7 +86,8 @@ case $option in
         echo ""
         echo "Starting fresh deployment..."
         echo ""
-        docker compose pull
+        # Only pull external images (databases), skip local app images
+        docker compose pull postgres mongodb redis
         docker compose up -d --build
         ;;
     2)
