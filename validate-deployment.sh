@@ -82,9 +82,12 @@ critical_files=(
     "docker-compose.yml"
     ".dockerignore"
     ".env.example"
-    "src/NewsPortal.Web/Dockerfile"
+    "src/NewsPortal.Web.Client/Dockerfile"
+    "src/NewsPortal.Web.Client/nginx.conf"
+    "src/NewsPortal.Api/Dockerfile"
+    "src/NewsPortal.Api/NewsPortal.Api.csproj"
     "src/NewsPortal.McpServer/Dockerfile"
-    "src/NewsPortal.Web/NewsPortal.Web.csproj"
+    "src/NewsPortal.Web.Client/package.json"
     "src/NewsPortal.McpServer/NewsPortal.McpServer.csproj"
     "src/NewsPortal.Application/NewsPortal.Application.csproj"
     "src/NewsPortal.Infrastructure/NewsPortal.Infrastructure.csproj"
@@ -101,16 +104,23 @@ for file in "${critical_files[@]}"; do
 done
 
 # Check Program.cs files
-if [ -f "src/NewsPortal.Web/Program.cs" ]; then
-    print_success "Found: src/NewsPortal.Web/Program.cs"
+# Check core project files
+if [ -f "src/NewsPortal.Web.Client/src/App.tsx" ]; then
+    print_success "Found: src/NewsPortal.Web.Client/src/App.tsx"
 else
-    print_error "Missing: src/NewsPortal.Web/Program.cs"
+    print_error "Missing: src/NewsPortal.Web.Client/src/App.tsx"
 fi
 
 if [ -f "src/NewsPortal.McpServer/Program.cs" ]; then
     print_success "Found: src/NewsPortal.McpServer/Program.cs"
 else
     print_error "Missing: src/NewsPortal.McpServer/Program.cs"
+fi
+
+if [ -f "src/NewsPortal.Api/Program.cs" ]; then
+    print_success "Found: src/NewsPortal.Api/Program.cs"
+else
+    print_error "Missing: src/NewsPortal.Api/Program.cs"
 fi
 
 # 3. Validate configuration files
@@ -149,30 +159,20 @@ fi
 # 4. Check Dockerfiles
 print_section "4. Validating Dockerfiles"
 
-# Validate Web Dockerfile
-if [ -f "src/NewsPortal.Web/Dockerfile" ]; then
+# Validate Web Dockerfile (React/Nginx)
+if [ -f "src/NewsPortal.Web.Client/Dockerfile" ]; then
     # Check for multi-stage build
-    if grep -q "FROM.*AS build" src/NewsPortal.Web/Dockerfile; then
+    if grep -q "FROM.*AS build" src/NewsPortal.Web.Client/Dockerfile; then
         print_success "Web Dockerfile uses multi-stage build"
     else
         print_warning "Web Dockerfile might not use multi-stage build"
     fi
 
-    # Check for COPY instructions
-    if grep -q "COPY.*NewsPortal.sln" src/NewsPortal.Web/Dockerfile; then
-        print_success "Web Dockerfile copies solution file"
+    # Check for nginx
+    if grep -q "FROM.*nginx" src/NewsPortal.Web.Client/Dockerfile; then
+        print_success "Web Dockerfile uses Nginx for production"
     else
-        print_error "Web Dockerfile missing solution file copy"
-    fi
-
-    # Check for proper project references
-    if grep -q "NewsPortal.Web.csproj" src/NewsPortal.Web/Dockerfile && \
-       grep -q "NewsPortal.Application.csproj" src/NewsPortal.Web/Dockerfile && \
-       grep -q "NewsPortal.Infrastructure.csproj" src/NewsPortal.Web/Dockerfile && \
-       grep -q "NewsPortal.Core.csproj" src/NewsPortal.Web/Dockerfile; then
-        print_success "Web Dockerfile references all required projects"
-    else
-        print_warning "Web Dockerfile might be missing some project references"
+        print_warning "Web Dockerfile might not use Nginx for production"
     fi
 fi
 
@@ -188,6 +188,15 @@ if [ -f "src/NewsPortal.McpServer/Dockerfile" ]; then
         print_success "MCP Dockerfile copies solution file"
     else
         print_error "MCP Dockerfile missing solution file copy"
+    fi
+fi
+
+# Validate Api Dockerfile
+if [ -f "src/NewsPortal.Api/Dockerfile" ]; then
+    if grep -q "FROM.*AS build" src/NewsPortal.Api/Dockerfile; then
+        print_success "Api Dockerfile uses multi-stage build"
+    else
+        print_warning "Api Dockerfile might not use multi-stage build"
     fi
 fi
 
@@ -225,16 +234,10 @@ fi
 # 7. Validate appsettings files
 print_section "7. Validating appsettings Files"
 
-if [ -f "src/NewsPortal.Web/appsettings.json" ]; then
-    print_success "Web appsettings.json exists"
+if [ -f "src/NewsPortal.Web.Client/index.html" ]; then
+    print_success "Web index.html exists"
 else
-    print_error "Missing src/NewsPortal.Web/appsettings.json"
-fi
-
-if [ -f "src/NewsPortal.Web/appsettings.Production.json" ]; then
-    print_success "Web appsettings.Production.json exists"
-else
-    print_warning "Missing src/NewsPortal.Web/appsettings.Production.json (will use defaults)"
+    print_error "Missing src/NewsPortal.Web.Client/index.html"
 fi
 
 if [ -f "src/NewsPortal.McpServer/appsettings.json" ]; then
@@ -298,7 +301,7 @@ if docker compose config > /dev/null 2>&1; then
     # Check if all services are defined
     services=$(docker compose config --services 2>/dev/null)
 
-    expected_services=("postgres" "mongodb" "redis" "web" "mcpserver")
+    expected_services=("postgres" "mongodb" "redis" "web" "api" "mcpserver")
     for service in "${expected_services[@]}"; do
         if echo "$services" | grep -q "^$service$"; then
             print_success "Service '$service' is defined"

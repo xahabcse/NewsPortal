@@ -175,6 +175,8 @@ if docker compose ps web | grep -q "Up"; then
     echo ""
     echo -e "${GREEN}======================================"
     echo "✓ Deployment Successful!"
+    echo "  Modern React Frontend (Huly.io Theme)"
+    echo "  Connected to .NET Backend API"
     echo "======================================${NC}"
     echo ""
     echo "Access your application at:"
