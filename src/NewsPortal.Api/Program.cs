@@ -32,10 +32,26 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.UseDeveloperExceptionPage(); 
+
+app.UseExceptionHandler(exceptionHandlerApp =>
 {
-    app.UseDeveloperExceptionPage();
-}
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+        
+        Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = exceptionHandlerPathFeature?.Error.Message,
+            details = exceptionHandlerPathFeature?.Error.StackTrace
+        });
+    });
+});
 
 app.UseCors("AllowAll");
 
