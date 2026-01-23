@@ -67,7 +67,7 @@ try
         recurringJobManager.AddOrUpdate<INewsFetchJob>(
             "news-fetch-all",
             job => job.FetchAllSourcesAsync(),
-            Cron.MinuteInterval(15));
+            "*/15 * * * *");
             
         // Cleanup cache daily
         recurringJobManager.AddOrUpdate<ICacheCleanupJob>(
