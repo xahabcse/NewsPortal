@@ -6,6 +6,10 @@ using NewsPortal.Application;
 using NewsPortal.Infrastructure;
 using NewsPortal.McpServer.Tools;
 using Serilog;
+using Hangfire;
+using Hangfire.PostgreSql;
+using NewsPortal.BackgroundJobs;
+using NewsPortal.BackgroundJobs.Jobs;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -27,6 +31,20 @@ try
     // Add services
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddApplication();
+    builder.Services.AddBackgroundJobs();
+
+    // Add Hangfire
+    builder.Services.AddHangfire(configuration => configuration
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("PostgreSQL"))));
+
+    // Add the processing server as IHostedService
+    builder.Services.AddHangfireServer(options =>
+    {
+        options.WorkerCount = 1; // Limit workers for low-resource environment
+    });
 
     // Add MCP Server
     builder.Services.AddMcpServer()
@@ -39,6 +57,27 @@ try
     });
 
     var host = builder.Build();
+
+    // Schedule Recurring Jobs
+    using (var scope = host.Services.CreateScope())
+    {
+        var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+        
+        // Fetch news every 15 minutes
+        recurringJobManager.AddOrUpdate<INewsFetchJob>(
+            "news-fetch-all",
+            job => job.FetchAllSourcesAsync(),
+            Cron.MinuteInterval(15));
+            
+        // Cleanup cache daily
+        recurringJobManager.AddOrUpdate<ICacheCleanupJob>(
+            "cache-cleanup",
+            job => job.CleanupAsync(),
+            Cron.Daily);
+            
+        Log.Information("Background jobs scheduled");
+    }
+
     await host.RunAsync();
 }
 catch (Exception ex)

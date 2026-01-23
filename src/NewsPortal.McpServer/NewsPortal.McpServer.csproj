@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />
     <PackageReference Include="ModelContextProtocol" Version="0.1.0-preview.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
@@ -19,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewsPortal.Application\NewsPortal.Application.csproj" />
+    <ProjectReference Include="..\NewsPortal.BackgroundJobs\NewsPortal.BackgroundJobs.csproj" />
   </ItemGroup>
 
 </Project>
