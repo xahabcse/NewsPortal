@@ -79,6 +79,21 @@ services:
     networks:
       - newsportal-network
 
+  # Seq - Centralized Logging
+  seq:
+    image: datalust/seq:latest
+    container_name: newsportal-seq
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "8081:80"
+      - "5341:5341"
+    volumes:
+      - seq_data:/data
+    networks:
+      - newsportal-network
+
   # Web Application (React UI + Nginx Reverse Proxy)
   web:
     build:
@@ -108,6 +123,7 @@ services:
       - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER:-newsadmin};Password=${POSTGRES_PASSWORD:-YourSecurePassword123};Include Error Detail=true
       - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@mongodb:27017/newsportal?authSource=admin
       - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - ConnectionStrings__Seq=http://seq:5341
     depends_on:
       postgres:
         condition: service_healthy
@@ -131,6 +147,7 @@ services:
       - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER:-newsadmin};Password=${POSTGRES_PASSWORD:-YourSecurePassword123};Include Error Detail=true
       - ConnectionStrings__MongoDB=mongodb://${MONGO_USER:-mongouser}:${MONGO_PASSWORD:-MongoPassword123}@mongodb:27017/newsportal?authSource=admin
       - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - ConnectionStrings__Seq=http://seq:5341
     volumes:
       - ./logs/mcp:/app/logs
     depends_on:
@@ -151,6 +168,8 @@ volumes:
   mongodb_config:
     driver: local
   redis_data:
+    driver: local
+  seq_data:
     driver: local
 
 networks:

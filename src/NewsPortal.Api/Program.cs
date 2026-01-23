@@ -8,7 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "NewsPortal.Api")
     .WriteTo.Console()
+    .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq") ?? "http://seq:5341")
     .CreateLogger();
 
 builder.Host.UseSerilog();

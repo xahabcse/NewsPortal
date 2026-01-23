@@ -13,7 +13,10 @@ using NewsPortal.BackgroundJobs.Jobs;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
+    .Enrich.WithProperty("Application", "NewsPortal.McpServer")
     .WriteTo.File("logs/mcp-server-.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.Console()
+    .WriteTo.Seq(Environment.GetEnvironmentVariable("ConnectionStrings__Seq") ?? "http://seq:5341")
     .CreateLogger();
 
 try
