@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 
 interface NewsCardProps {
     title: string;
@@ -9,7 +9,7 @@ interface NewsCardProps {
     image: string;
 }
 
-const NewsCard: React.FC<NewsCardProps> = ({ title, summary, category, author, date, image }) => {
+const NewsCard: FC<NewsCardProps> = ({ title, summary, category, author, date, image }) => {
     return (
         <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
             <div className="relative h-48 overflow-hidden">
