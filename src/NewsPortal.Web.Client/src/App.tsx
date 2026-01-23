@@ -19,7 +19,7 @@ function App() {
         setError(null)
       } catch (err) {
         console.error('Error fetching news:', err)
-        setError('Failed to load news. Please try again later.')
+        setError(`Failed to load news (Backend may be offline). Error: ${err instanceof Error ? err.message : 'Unknown'}`)
       } finally {
         setLoading(false)
       }
