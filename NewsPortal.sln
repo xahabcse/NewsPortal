@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.API", "src\NewsPortal.API\NewsPortal.API.csproj", "{A818D1DD-D55C-467F-8BB2-01767B3C1FD0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Api", "src\NewsPortal.Api\NewsPortal.Api.csproj", "{A818D1DD-D55C-467F-8BB2-01767B3C1FD0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Service", "src\NewsPortal.Service\NewsPortal.Service.csproj", "{6F66D237-07C3-458F-AB52-F8957EE9E421}"
 EndProject

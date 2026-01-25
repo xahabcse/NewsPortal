@@ -114,7 +114,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/NewsPortal.API/Dockerfile
+      dockerfile: src/NewsPortal.Api/Dockerfile
     image: newsportal-api:latest
     container_name: newsportal-api
     restart: always
