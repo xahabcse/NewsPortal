@@ -11,6 +11,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "NewsPortal.Api")
     .WriteTo.Console()
+    .WriteTo.File("logs/api-.log", rollingInterval: RollingInterval.Day)
     .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq") ?? "http://seq:5341")
     .CreateLogger();
 
