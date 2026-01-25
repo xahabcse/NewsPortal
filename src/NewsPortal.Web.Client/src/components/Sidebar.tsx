@@ -37,6 +37,12 @@ const Sidebar = () => {
                         <span className="text-[10px] text-secondary/50 font-normal leading-tight">Your saved items</span>
                     </div>
                 </Link>
+                <Link to="/news-sources" className={`huly-sidebar-item ${isActive('/news-sources')}`}>
+                    <div className="flex flex-col">
+                        <span>News Channels</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage sources</span>
+                    </div>
+                </Link>
             </nav>
 
             <nav className="flex flex-col gap-2">

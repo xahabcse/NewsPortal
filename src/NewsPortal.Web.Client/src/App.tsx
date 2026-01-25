@@ -4,6 +4,7 @@ import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
 import LogsPage from './pages/LogsPage'
 import FetchLogsPage from './pages/FetchLogsPage'
+import NewsSourcesPage from './pages/NewsSourcesPage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
               <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
               <Route path="/categories" element={<PlaceholderPage title="Categories" />} />
               <Route path="/bookmarks" element={<PlaceholderPage title="Bookmarks" />} />
+              <Route path="/news-sources" element={<NewsSourcesPage />} />
               <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
               <Route path="/help" element={<PlaceholderPage title="Help Center" />} />
             </Routes>
