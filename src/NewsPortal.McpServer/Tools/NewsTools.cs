@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
-using NewsPortal.Application.Services;
+using NewsPortal.Service.Services;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Interfaces;
 

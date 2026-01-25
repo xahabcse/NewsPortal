@@ -98,7 +98,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: src/NewsPortal.Web.Client/Dockerfile
+      dockerfile: src/NewsPortal.Client/Dockerfile
     image: newsportal-web-client:latest
     container_name: newsportal-web-client
     restart: always
@@ -114,7 +114,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/NewsPortal.Api/Dockerfile
+      dockerfile: src/NewsPortal.API/Dockerfile
     image: newsportal-api:latest
     container_name: newsportal-api
     restart: always

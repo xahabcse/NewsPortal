@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Interfaces;
 
-namespace NewsPortal.Api.Controllers;
+namespace NewsPortal.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

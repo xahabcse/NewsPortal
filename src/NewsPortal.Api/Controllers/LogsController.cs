@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 
-namespace NewsPortal.Api.Controllers;
+namespace NewsPortal.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

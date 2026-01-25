@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\NewsPortal.Application\NewsPortal.Application.csproj" />
-    <ProjectReference Include="..\NewsPortal.Infrastructure\NewsPortal.Infrastructure.csproj" />
+    <ProjectReference Include="..\NewsPortal.Service\NewsPortal.Service.csproj" />
+    <ProjectReference Include="..\NewsPortal.Repository\NewsPortal.Repository.csproj" />
     <ProjectReference Include="..\NewsPortal.Core\NewsPortal.Core.csproj" />
-    <ProjectReference Include="..\NewsPortal.BackgroundJobs\NewsPortal.BackgroundJobs.csproj" />
+    <ProjectReference Include="..\NewsPortal.Scheduler\NewsPortal.Scheduler.csproj" />
   </ItemGroup>
 
   <ItemGroup>

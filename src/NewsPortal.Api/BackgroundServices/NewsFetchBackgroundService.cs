@@ -1,6 +1,6 @@
-using NewsPortal.BackgroundJobs.Jobs;
+using NewsPortal.Scheduler.Jobs;
 
-namespace NewsPortal.Api.BackgroundServices;
+namespace NewsPortal.API.BackgroundServices;
 
 public class NewsFetchBackgroundService : BackgroundService
 {

@@ -5,10 +5,10 @@ WORKDIR /src
 # Copy solution file and project files
 COPY ["NewsPortal.sln", "./"]
 COPY ["src/NewsPortal.McpServer/NewsPortal.McpServer.csproj", "src/NewsPortal.McpServer/"]
-COPY ["src/NewsPortal.Application/NewsPortal.Application.csproj", "src/NewsPortal.Application/"]
-COPY ["src/NewsPortal.Infrastructure/NewsPortal.Infrastructure.csproj", "src/NewsPortal.Infrastructure/"]
+COPY ["src/NewsPortal.Service/NewsPortal.Service.csproj", "src/NewsPortal.Service/"]
+COPY ["src/NewsPortal.Repository/NewsPortal.Repository.csproj", "src/NewsPortal.Repository/"]
 COPY ["src/NewsPortal.Core/NewsPortal.Core.csproj", "src/NewsPortal.Core/"]
-COPY ["src/NewsPortal.BackgroundJobs/NewsPortal.BackgroundJobs.csproj", "src/NewsPortal.BackgroundJobs/"]
+COPY ["src/NewsPortal.Scheduler/NewsPortal.Scheduler.csproj", "src/NewsPortal.Scheduler/"]
 
 # Restore dependencies
 RUN dotnet restore "src/NewsPortal.McpServer/NewsPortal.McpServer.csproj"

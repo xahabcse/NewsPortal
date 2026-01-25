@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using NewsPortal.Application;
-using NewsPortal.Infrastructure;
-using NewsPortal.BackgroundJobs;
+using NewsPortal.Service;
+using NewsPortal.Repository;
+using NewsPortal.Scheduler;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("Application", "NewsPortal.Api")
+    .Enrich.WithProperty("Application", "NewsPortal.API")
     .WriteTo.Console()
     .WriteTo.File("logs/api-.log", rollingInterval: RollingInterval.Day)
     .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq") ?? "http://seq:5341")
@@ -25,7 +25,7 @@ builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
 
 // Add automatic news fetching background service
-builder.Services.AddHostedService<NewsPortal.Api.BackgroundServices.NewsFetchBackgroundService>();
+builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
 
 // Enable CORS with environment-based configuration
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
@@ -48,7 +48,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<NewsPortal.Infrastructure.Data.NewsPortalDbContext>();
+        var context = services.GetRequiredService<NewsPortal.Repository.Data.NewsPortalDbContext>();
         Log.Information("Applying migrations...");
         context.Database.Migrate();
         Log.Information("Migrations applied successfully.");
@@ -106,7 +106,7 @@ app.Run();
 
 public static class DbInitializer
 {
-    public static void Initialize(NewsPortal.Infrastructure.Data.NewsPortalDbContext context)
+    public static void Initialize(NewsPortal.Repository.Data.NewsPortalDbContext context)
     {
         // EnsureCreated() removed - using migrations instead
 

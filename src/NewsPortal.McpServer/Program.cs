@@ -2,14 +2,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
-using NewsPortal.Application;
-using NewsPortal.Infrastructure;
+using NewsPortal.Service;
+using NewsPortal.Repository;
 using NewsPortal.McpServer.Tools;
 using Serilog;
 using Hangfire;
 using Hangfire.PostgreSql;
-using NewsPortal.BackgroundJobs;
-using NewsPortal.BackgroundJobs.Jobs;
+using NewsPortal.Scheduler;
+using NewsPortal.Scheduler.Jobs;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()

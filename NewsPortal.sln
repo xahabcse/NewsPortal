@@ -5,17 +5,17 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.API", "src\NewsPortal.API\NewsPortal.API.csproj", "{A818D1DD-D55C-467F-8BB2-01767B3C1FD0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Service", "src\NewsPortal.Service\NewsPortal.Service.csproj", "{6F66D237-07C3-458F-AB52-F8957EE9E421}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Repository", "src\NewsPortal.Repository\NewsPortal.Repository.csproj", "{ABEDBEFA-FD64-4329-BEBC-26C1615B4B28}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Core", "src\NewsPortal.Core\NewsPortal.Core.csproj", "{0C7F1059-BDC6-468C-80B5-410F5BCA04ED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Infrastructure", "src\NewsPortal.Infrastructure\NewsPortal.Infrastructure.csproj", "{ABEDBEFA-FD64-4329-BEBC-26C1615B4B28}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Application", "src\NewsPortal.Application\NewsPortal.Application.csproj", "{6F66D237-07C3-458F-AB52-F8957EE9E421}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Scheduler", "src\NewsPortal.Scheduler\NewsPortal.Scheduler.csproj", "{9A7637DF-E301-4C17-815E-5A239DEAE6C4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.McpServer", "src\NewsPortal.McpServer\NewsPortal.McpServer.csproj", "{EFDDA2B2-4371-4C44-9361-76486E49E662}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.BackgroundJobs", "src\NewsPortal.BackgroundJobs\NewsPortal.BackgroundJobs.csproj", "{9A7637DF-E301-4C17-815E-5A239DEAE6C4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsPortal.Api", "src\NewsPortal.Api\NewsPortal.Api.csproj", "{A818D1DD-D55C-467F-8BB2-01767B3C1FD0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

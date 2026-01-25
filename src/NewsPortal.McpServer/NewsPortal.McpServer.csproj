@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NewsPortal.Application\NewsPortal.Application.csproj" />
-    <ProjectReference Include="..\NewsPortal.BackgroundJobs\NewsPortal.BackgroundJobs.csproj" />
+    <ProjectReference Include="..\NewsPortal.Service\NewsPortal.Service.csproj" />
+    <ProjectReference Include="..\NewsPortal.Scheduler\NewsPortal.Scheduler.csproj" />
   </ItemGroup>
 
 </Project>
