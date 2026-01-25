@@ -4,11 +4,11 @@ export interface NewsArticle {
     id: number;
     title: string;
     slug: string;
-    summary: string;
-    thumbnailUrl: string;
+    summary: string | null;
+    thumbnailUrl: string | null;
     publishedAt: string;
     sourceName: string;
-    categoryName: string;
+    categoryName: string | null;
 }
 
 export interface PagedResult<T> {

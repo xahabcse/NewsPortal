@@ -220,42 +220,68 @@ public class NewsService : INewsService
 
     private static NewsArticleListDto MapToListDto(NewsArticle article)
     {
+        // Determine thumbnail URL with fallback chain
+        string? thumbnailUrl = null;
+        if (!string.IsNullOrEmpty(article.MongoThumbId))
+        {
+            thumbnailUrl = $"/api/images/{article.MongoThumbId}";
+        }
+        else if (!string.IsNullOrEmpty(article.OriginalImageUrl))
+        {
+            thumbnailUrl = article.OriginalImageUrl;
+        }
+
         return new NewsArticleListDto
         {
             Id = article.Id,
             Title = article.Title,
             Slug = article.Slug,
-            Summary = article.Summary,
-            ThumbnailUrl = !string.IsNullOrEmpty(article.MongoThumbId)
-                ? $"/api/images/{article.MongoThumbId}"
-                : article.OriginalImageUrl,
+            Summary = article.Summary ?? "No summary available",
+            ThumbnailUrl = thumbnailUrl,
             PublishedAt = article.PublishedAt,
-            SourceName = article.Source?.Name ?? string.Empty,
+            SourceName = article.Source?.Name ?? "Unknown Source",
             CategoryName = article.Category?.Name
         };
     }
 
     private static NewsArticleDto MapToDetailDto(NewsArticle article)
     {
+        // Determine image URLs with fallback chain
+        string? imageUrl = null;
+        if (!string.IsNullOrEmpty(article.MongoImageId))
+        {
+            imageUrl = $"/api/images/{article.MongoImageId}";
+        }
+        else if (!string.IsNullOrEmpty(article.OriginalImageUrl))
+        {
+            imageUrl = article.OriginalImageUrl;
+        }
+
+        string? thumbnailUrl = null;
+        if (!string.IsNullOrEmpty(article.MongoThumbId))
+        {
+            thumbnailUrl = $"/api/images/{article.MongoThumbId}";
+        }
+        else if (!string.IsNullOrEmpty(article.OriginalImageUrl))
+        {
+            thumbnailUrl = article.OriginalImageUrl;
+        }
+
         return new NewsArticleDto
         {
             Id = article.Id,
             Title = article.Title,
             Slug = article.Slug,
-            Summary = article.Summary,
-            Content = article.Content,
+            Summary = article.Summary ?? "No summary available",
+            Content = article.Content ?? "No content available",
             SourceUrl = article.SourceUrl,
-            ImageUrl = !string.IsNullOrEmpty(article.MongoImageId)
-                ? $"/api/images/{article.MongoImageId}"
-                : article.OriginalImageUrl,
-            ThumbnailUrl = !string.IsNullOrEmpty(article.MongoThumbId)
-                ? $"/api/images/{article.MongoThumbId}"
-                : article.OriginalImageUrl,
+            ImageUrl = imageUrl,
+            ThumbnailUrl = thumbnailUrl,
             Author = article.Author,
             PublishedAt = article.PublishedAt,
             ViewCount = article.ViewCount,
             IsFeatured = article.IsFeatured,
-            SourceName = article.Source?.Name ?? string.Empty,
+            SourceName = article.Source?.Name ?? "Unknown Source",
             CategoryName = article.Category?.Name,
             CategorySlug = article.Category?.Slug
         };

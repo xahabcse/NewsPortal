@@ -2,11 +2,11 @@ import type { FC } from 'react';
 
 interface NewsCardProps {
     title: string;
-    summary: string;
-    categoryName?: string;
+    summary: string | null;
+    categoryName?: string | null;
     sourceName: string;
     publishedAt: string;
-    thumbnailUrl: string;
+    thumbnailUrl: string | null;
 }
 
 const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl }) => {
@@ -41,7 +41,7 @@ const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName,
                 </h3>
 
                 <p className="text-sm text-secondary line-clamp-3 mb-6">
-                    {summary}
+                    {summary || 'No summary available'}
                 </p>
 
                 <button className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all">
