@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { NewsSource, CreateNewsSourceDto } from '../types/NewsSource';
 import { NewsSourceService } from '../services/NewsSourceService';
+import axios from 'axios';
 
 const NewsSourcesPage = () => {
     const [sources, setSources] = useState<NewsSource[]>([]);
@@ -91,6 +92,17 @@ const NewsSourcesPage = () => {
         }
     };
 
+    const handleFetch = async (sourceId: number) => {
+        try {
+            // Call the fetch endpoint for this specific source
+            await axios.post(`${import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000/api`}/newssources/${sourceId}/fetch`);
+            alert('News fetch started! Check Fetch Logs for progress.');
+        } catch (error) {
+            console.error('Failed to trigger fetch', error);
+            alert('Failed to trigger news fetch');
+        }
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -120,34 +132,24 @@ const NewsSourcesPage = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sources.map(source => (
-                        <div key={source.id} className="glass-card hover:bg-white/5 transition-all p-6 rounded-xl border border-glass-border">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
-                                    {source.logoUrl ? (
-                                        <img src={source.logoUrl} alt={source.name} className="w-10 h-10 rounded-lg object-cover bg-white" />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-lg bg-glass-surface flex items-center justify-center text-xl font-bold text-white">
-                                            {source.name[0]}
-                                        </div>
-                                    )}
-                                    <div>
-                                        <h3 className="font-semibold text-white">{source.name}</h3>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full ${source.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                                            }`}>
-                                            {source.isActive ? 'Active' : 'Inactive'}
-                                        </span>
+                        <div key={source.id} className="glass-card hover:bg-white/5 transition-all p-6 rounded-xl border border-glass-border flex flex-col">
+                            <div className="flex items-center gap-3 mb-4">
+                                {source.logoUrl ? (
+                                    <img src={source.logoUrl} alt={source.name} className="w-10 h-10 rounded-lg object-cover bg-white" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-glass-surface flex items-center justify-center text-xl font-bold text-white">
+                                        {source.name[0]}
                                     </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleEdit(source)} className="text-secondary hover:text-white transition-colors">
-                                        <i className="bi bi-pencil"></i>
-                                    </button>
-                                    <button onClick={() => handleDelete(source.id)} className="text-secondary hover:text-red-400 transition-colors">
-                                        <i className="bi bi-trash"></i>
-                                    </button>
+                                )}
+                                <div>
+                                    <h3 className="font-semibold text-white">{source.name}</h3>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${source.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                        }`}>
+                                        {source.isActive ? 'Active' : 'Inactive'}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="space-y-2 text-sm text-secondary">
+                            <div className="space-y-2 text-sm text-secondary flex-grow">
                                 <div className="flex justify-between">
                                     <span>Method:</span>
                                     <span className="text-white">{source.fetchMethod === 0 ? 'RSS Feed' : source.fetchMethod === 1 ? 'API' : 'Scrape'}</span>
@@ -161,6 +163,32 @@ const NewsSourcesPage = () => {
                                         {source.baseUrl}
                                     </a>
                                 </div>
+                            </div>
+                            <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-glass-border">
+                                <button
+                                    onClick={() => handleEdit(source)}
+                                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-2"
+                                    title="Edit Channel"
+                                >
+                                    <i className="bi bi-pencil"></i>
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(source.id)}
+                                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
+                                    title="Delete Channel"
+                                >
+                                    <i className="bi bi-trash"></i>
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={() => handleFetch(source.id)}
+                                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors flex items-center gap-2"
+                                    title="Fetch News Now"
+                                >
+                                    <i className="bi bi-download"></i>
+                                    Fetch
+                                </button>
                             </div>
                         </div>
                     ))}

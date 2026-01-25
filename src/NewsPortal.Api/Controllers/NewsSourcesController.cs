@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Application.Services;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Entities;
+using NewsPortal.BackgroundJobs.Jobs;
 
 namespace NewsPortal.Api.Controllers;
 
@@ -10,10 +11,12 @@ namespace NewsPortal.Api.Controllers;
 public class NewsSourcesController : ControllerBase
 {
     private readonly INewsSourceService _sourceService;
+    private readonly INewsFetchJob _fetchJob;
 
-    public NewsSourcesController(INewsSourceService sourceService)
+    public NewsSourcesController(INewsSourceService sourceService, INewsFetchJob fetchJob)
     {
         _sourceService = sourceService;
+        _fetchJob = fetchJob;
     }
 
     [HttpGet]
@@ -74,6 +77,21 @@ public class NewsSourcesController : ControllerBase
         catch (InvalidOperationException)
         {
             return NotFound();
+        }
+    }
+
+    [HttpPost("{id}/fetch")]
+    public async Task<IActionResult> FetchNews(int id)
+    {
+        try
+        {
+            // Trigger fetch for this specific source
+            await _fetchJob.FetchSourceAsync(id);
+            return Ok(new { message = "News fetch completed successfully", sourceId = id });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

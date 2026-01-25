@@ -4,6 +4,7 @@
     <ProjectReference Include="..\NewsPortal.Application\NewsPortal.Application.csproj" />
     <ProjectReference Include="..\NewsPortal.Infrastructure\NewsPortal.Infrastructure.csproj" />
     <ProjectReference Include="..\NewsPortal.Core\NewsPortal.Core.csproj" />
+    <ProjectReference Include="..\NewsPortal.BackgroundJobs\NewsPortal.BackgroundJobs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
