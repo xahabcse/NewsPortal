@@ -73,6 +73,7 @@ validate_deployment() {
         ".dockerignore"
         "src/NewsPortal.Client/Dockerfile"
         "src/NewsPortal.Client/nginx.conf"
+        # Check for API Dockerfile (case insensitive backup)
         "src/NewsPortal.API/Dockerfile"
         "src/NewsPortal.McpServer/Dockerfile"
     )
@@ -80,6 +81,8 @@ validate_deployment() {
     for file in "${critical_files[@]}"; do
         if [ -f "$file" ]; then
             print_success "Found: $file"
+        elif [ "$file" == "src/NewsPortal.API/Dockerfile" ] && [ -f "src/NewsPortal.Api/Dockerfile" ]; then
+             print_success "Found: src/NewsPortal.Api/Dockerfile (lowercase path)"
         else
             print_error "Missing critical file: $file"
             ((errors++))
