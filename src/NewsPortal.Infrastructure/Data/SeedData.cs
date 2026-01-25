@@ -42,6 +42,69 @@ public static class SeedData
                     RssFeedUrl = "https://www.prothomalo.com/feed",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "bdnews24",
+                    Slug = "bdnews24",
+                    BaseUrl = "https://bdnews24.com",
+                    RssFeedUrl = "https://bdnews24.com/topic/rss",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "Bangla Tribune",
+                    Slug = "bangla-tribune",
+                    BaseUrl = "https://www.banglatribune.com",
+                    RssFeedUrl = "https://www.banglatribune.com/feed",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "Jagonews24",
+                    Slug = "jagonews24",
+                    BaseUrl = "https://www.jagonews24.com",
+                    RssFeedUrl = "https://www.jagonews24.com/rss",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "Sun News Bangladesh",
+                    Slug = "sun-news-bangladesh",
+                    BaseUrl = "https://www.sunnews24x7.com",
+                    RssFeedUrl = "https://en.sunnews24x7.com/rss",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "Bangladesh Sangbad Sangstha (BSS)",
+                    Slug = "bss",
+                    BaseUrl = "https://www.bssnews.net",
+                    RssFeedUrl = "https://www.bssnews.net/rss",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "The Dhaka Post",
+                    Slug = "the-dhaka-post",
+                    BaseUrl = "https://www.thedhakapost.com",
+                    RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
+                },
+                new()
+                {
+                    Name = "Daily Star (English)",
+                    Slug = "daily-star",
+                    BaseUrl = "https://www.thedailystar.net",
+                    RssFeedUrl = "https://www.thedailystar.net/rss",
+                    FetchMethod = FetchMethod.Rss,
+                    FetchIntervalMinutes = 30
                 }
             };
 

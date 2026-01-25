@@ -24,6 +24,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
 
+// Add automatic news fetching background service
+builder.Services.AddHostedService<NewsPortal.Api.BackgroundServices.NewsFetchBackgroundService>();
+
 // Enable CORS
 builder.Services.AddCors(options =>
 {
