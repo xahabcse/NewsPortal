@@ -2,8 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
-import LogsPage from './pages/LogsPage'
-import FetchLogsPage from './pages/FetchLogsPage'
 import NewsSourcesPage from './pages/NewsSourcesPage'
 
 function App() {
@@ -18,14 +16,8 @@ function App() {
           <div className="mt-16 flex-1">
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/logs" element={<LogsPage />} />
-              <Route path="/fetch-logs" element={<FetchLogsPage />} />
               <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
-              <Route path="/categories" element={<PlaceholderPage title="Categories" />} />
-              <Route path="/bookmarks" element={<PlaceholderPage title="Bookmarks" />} />
               <Route path="/news-sources" element={<NewsSourcesPage />} />
-              <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
-              <Route path="/help" element={<PlaceholderPage title="Help Center" />} />
             </Routes>
           </div>
         </div>
