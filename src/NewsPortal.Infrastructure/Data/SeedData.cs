@@ -42,42 +42,6 @@ public static class SeedData
                     RssFeedUrl = "https://www.prothomalo.com/feed",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "BD News 24",
-                    Slug = "bdnews24",
-                    BaseUrl = "https://bangla.bdnews24.com",
-                    RssFeedUrl = "https://bangla.bdnews24.com/rss/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "The Daily Star",
-                    Slug = "daily-star",
-                    BaseUrl = "https://www.thedailystar.net",
-                    RssFeedUrl = "https://www.thedailystar.net/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Kaler Kantho",
-                    Slug = "kaler-kantho",
-                    BaseUrl = "https://www.kalerkantho.com",
-                    RssFeedUrl = "https://www.kalerkantho.com/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Ittefaq",
-                    Slug = "ittefaq",
-                    BaseUrl = "https://www.ittefaq.com.bd",
-                    RssFeedUrl = "https://www.ittefaq.com.bd/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
                 }
             };
 
