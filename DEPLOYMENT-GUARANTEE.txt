@@ -49,7 +49,7 @@ Documentation:
   ✓ DOCKER-QUICKREF.txt         Quick reference
 
 Updated:
-  ✓ src/NewsPortal.Web/Dockerfile
+  ✓ src/NewsPortal.Web.Client/Dockerfile
   ✓ src/NewsPortal.McpServer/Dockerfile
   ✓ Production appsettings.json files
 

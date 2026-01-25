@@ -61,8 +61,14 @@ mongo_status=$?
 check_service "redis" "newsportal-cache"
 redis_status=$?
 
-check_service "web" "newsportal-web"
+check_service "seq" "newsportal-seq"
+seq_status=$?
+
+check_service "web" "newsportal-web-client"
 web_status=$?
+
+check_service "api" "newsportal-api"
+api_status=$?
 
 check_service "mcpserver" "newsportal-mcp"
 mcp_status=$?
@@ -71,7 +77,7 @@ echo ""
 echo "----------------------------------------"
 
 # Overall status
-if [ $pg_status -eq 0 ] && [ $mongo_status -eq 0 ] && [ $redis_status -eq 0 ] && [ $web_status -eq 0 ] && [ $mcp_status -eq 0 ]; then
+if [ $pg_status -eq 0 ] && [ $mongo_status -eq 0 ] && [ $redis_status -eq 0 ] && [ $seq_status -eq 0 ] && [ $web_status -eq 0 ] && [ $api_status -eq 0 ] && [ $mcp_status -eq 0 ]; then
     echo -e "${GREEN}Overall Status: ✓ ALL SERVICES HEALTHY${NC}"
     health_ok=true
 else
@@ -127,6 +133,13 @@ if docker exec newsportal-mongodb mongosh --quiet --eval "db.adminCommand('ping'
     echo -e "MongoDB: ${GREEN}✓ RESPONDING${NC}"
 else
     echo -e "MongoDB: ${RED}✗ NOT RESPONDING${NC}"
+fi
+
+# Check Seq
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081 | grep -q "200\|302\|301"; then
+    echo -e "Seq Logging (HTTP): ${GREEN}✓ RESPONDING${NC}"
+else
+    echo -e "Seq Logging (HTTP): ${RED}✗ NOT RESPONDING${NC}"
 fi
 
 echo ""

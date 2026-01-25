@@ -29,13 +29,17 @@
 │ 📦 SERVICES & PORTS                                                      │
 └──────────────────────────────────────────────────────────────────────────┘
 
-  Service          Container Name        Port     Memory
-  ────────────────────────────────────────────────────────
-  Web App          newsportal-web        5000     512 MB
-  PostgreSQL       newsportal-db         5432     512 MB
-  MongoDB          newsportal-mongodb    27017    512 MB
-  Redis            newsportal-cache      6379     128 MB
-  MCP Server       newsportal-mcp        -        256 MB
+  Service          Container Name           Port     Memory
+  ───────────────────────────────────────────────────────────
+  Web App          newsportal-web-client    5000     512 MB
+  API              newsportal-api           8080*    512 MB
+  PostgreSQL       newsportal-db            5432     512 MB
+  MongoDB          newsportal-mongodb       27017    512 MB
+  Redis            newsportal-cache         6379     128 MB
+  Seq Logging      newsportal-seq           8081     256 MB
+  MCP Server       newsportal-mcp           -        256 MB
+
+  * API port 8080 is internal only (accessed via nginx proxy)
 
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 🔧 COMMON COMMANDS                                                       │
@@ -55,6 +59,8 @@
 
   All logs:        docker compose logs -f
   Web logs:        docker compose logs -f web
+  API logs:        docker compose logs -f api
+  Seq Web UI:      http://localhost:8081 (Centralized logs viewer)
   Resources:       docker stats
   Health:          ./health-check.sh
   Disk:            docker system df
@@ -119,6 +125,7 @@
 └──────────────────────────────────────────────────────────────────────────┘
 
   Application:     http://localhost:5000
+  Seq Logs:        http://localhost:8081
   PostgreSQL:      localhost:5432
   MongoDB:         localhost:27017
   Redis:           localhost:6379

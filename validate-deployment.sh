@@ -301,7 +301,7 @@ if docker compose config > /dev/null 2>&1; then
     # Check if all services are defined
     services=$(docker compose config --services 2>/dev/null)
 
-    expected_services=("postgres" "mongodb" "redis" "web" "api" "mcpserver")
+    expected_services=("postgres" "mongodb" "redis" "seq" "web" "api" "mcpserver")
     for service in "${expected_services[@]}"; do
         if echo "$services" | grep -q "^$service$"; then
             print_success "Service '$service' is defined"

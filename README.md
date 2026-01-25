@@ -1,6 +1,6 @@
 # News Portal with MCP Server - Complete Documentation
 
-A news aggregation portal built with ASP.NET Core MVC and MCP (Model Context Protocol) Server for fetching, processing, and displaying news from multiple sources.
+A modern news aggregation portal built with React frontend, ASP.NET Core API backend, and MCP (Model Context Protocol) Server for fetching, processing, and displaying news from multiple sources.
 
 > **Note:** This is the master documentation file. It consolidates information from all previous documentation files (`DEPLOYMENT.md`, `QUICKSTART.md`, etc.).
 
@@ -24,25 +24,31 @@ The News Portal is a comprehensive system designed to fetch, categorize, and dis
 
 ### Key Components
 
-*   **Web Application (ASP.NET Core MVC):** The user-facing frontend for browsing news.
+*   **Web Application (React + Vite):** Modern SPA frontend with TypeScript for browsing news.
+*   **API Server (ASP.NET Core):** RESTful API backend serving data to the frontend.
 *   **MCP Server (.NET Console):** A background service implementing the Model Context Protocol to fetch, parse, and process news articles.
 *   **PostgreSQL:** Stores structured data (articles, categories, settings).
 *   **MongoDB:** Stores binary data (images, thumbnails) using GridFS.
 *   **Redis:** Caching layer for high performance.
+*   **Seq:** Centralized structured logging and monitoring platform.
 
 ### Data Flow
 
 ```mermaid
 graph TD
-    User[User Browser] <--> WebApp[ASP.NET MVC Web App]
-    WebApp <--> Cache[Redis Cache]
-    WebApp <--> SQL[PostgreSQL DB]
-    WebApp <--> Mongo[MongoDB GridFS]
-    
+    User[User Browser] <--> React[React Frontend]
+    React <--> API[ASP.NET Core API]
+    API <--> Cache[Redis Cache]
+    API <--> SQL[PostgreSQL DB]
+    API <--> Mongo[MongoDB GridFS]
+
     MCP[MCP Server] --> External[External News Sites/APIs]
     MCP --> SQL
     MCP --> Mongo
     MCP --> Cache
+
+    API --> Seq[Seq Logging]
+    MCP --> Seq
 ```
 
 ---
@@ -153,15 +159,17 @@ docker compose ps
 
 ### Service definitions (`docker-compose.yml`)
 
-| Service | Image | Memory Limit | Purpose |
-|---------|-------|--------------|---------|
-| `postgres` | `postgres:15-alpine` | 512MB | Relational data |
-| `mongodb` | `mongo:4.4` | 512MB | Image storage |
-| `redis` | `redis:7-alpine` | 128MB | Caching |
-| `web` | `newsportal-web` | 512MB | Frontend App |
-| `mcpserver` | `newsportal-mcp` | 256MB | Background Jobs |
+| Service | Container Name | Image | Memory Limit | Purpose |
+|---------|----------------|-------|--------------|---------|
+| `postgres` | `newsportal-db` | `postgres:15-alpine` | 512MB | Relational data |
+| `mongodb` | `newsportal-mongodb` | `mongo:4.4` | 512MB | Image storage |
+| `redis` | `newsportal-cache` | `redis:7-alpine` | 128MB | Caching |
+| `seq` | `newsportal-seq` | `datalust/seq:latest` | 256MB | Centralized logging |
+| `web` | `newsportal-web-client` | Custom (React+Nginx) | 512MB | Frontend SPA |
+| `api` | `newsportal-api` | Custom (.NET 8) | 512MB | REST API Backend |
+| `mcpserver` | `newsportal-mcp` | Custom (.NET 8) | 256MB | Background Jobs |
 
-**Total Memory Footprint:** ~2GB (Leaving ample room on a 4GB server).
+**Total Memory Footprint:** ~2.5GB (Comfortable on a 4GB server).
 
 ### Key Features
 *   **Multi-Stage Builds:** Optimized Dockerfiles for smaller images.
@@ -229,25 +237,36 @@ If you follow the **Quick Start** steps and the validation passes, the system is
 
 ### Backend
 *   **.NET 8:** Core platform.
+*   **ASP.NET Core Web API:** RESTful API with controllers.
 *   **Entity Framework Core:** ORM for PostgreSQL.
 *   **MongoDB Driver:** For GridFS operations.
 *   **Hangfire:** For job scheduling (in MCP server).
+*   **Serilog:** Structured logging with multiple sinks (Console, File, Seq).
 
 ### Frontend
-*   **ASP.NET Core MVC:** Razor views.
-*   **Bootstrap 5:** Responsive UI.
-*   **jQuery/AJAX:** Dynamic content loading.
+*   **React 18:** Modern component-based UI.
+*   **TypeScript:** Type-safe development.
+*   **Vite:** Fast build tool and dev server.
+*   **React Router:** Client-side routing.
+*   **Axios:** HTTP client for API communication.
+*   **Nginx:** Production web server.
 
 ### Project Structure
 ```
 NewsPortal/
 ├── src/
-│   ├── NewsPortal.Web/         # Frontend
-│   ├── NewsPortal.McpServer/   # Background Service
-│   └── NewsPortal.Core/        # Shared Logic
-├── scripts/                    # Helper scripts
-├── docker-compose.yml          # Production Compose file
-└── logs/                       # Application logs
+│   ├── NewsPortal.Web.Client/       # React Frontend (TypeScript + Vite)
+│   ├── NewsPortal.Api/              # ASP.NET Core REST API
+│   ├── NewsPortal.McpServer/        # Background Service (MCP)
+│   ├── NewsPortal.BackgroundJobs/   # Hangfire job definitions
+│   ├── NewsPortal.Application/      # Business logic layer
+│   ├── NewsPortal.Infrastructure/   # Data access layer
+│   └── NewsPortal.Core/             # Domain models & DTOs
+├── docker-compose.yml               # Production orchestration
+├── deploy.sh                        # Automated deployment
+├── health-check.sh                  # Service monitoring
+├── validate-deployment.sh           # Pre-deployment checks
+└── logs/                            # Application logs (api/, mcp/, web/)
 ```
 
 ---
