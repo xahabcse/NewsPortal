@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<INewsArticleRepository, NewsArticleRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<INewsSourceRepository, NewsSourceRepository>();
+        services.AddScoped<INewsFetchLogRepository, NewsFetchLogRepository>();
 
         // Services
         services.AddScoped<ICacheService, RedisCacheService>();

@@ -47,6 +47,12 @@ const Sidebar = () => {
                         <span className="text-[10px] text-secondary/50 font-normal leading-tight">Monitor & debug</span>
                     </div>
                 </Link>
+                <Link to="/fetch-logs" className={`huly-sidebar-item ${isActive('/fetch-logs')}`}>
+                    <div className="flex flex-col">
+                        <span>Fetch Logs</span>
+                        <span className="text-[10px] text-secondary/50 font-normal leading-tight">News fetch history</span>
+                    </div>
+                </Link>
             </nav>
 
             <nav className="flex flex-col gap-2 mt-auto">

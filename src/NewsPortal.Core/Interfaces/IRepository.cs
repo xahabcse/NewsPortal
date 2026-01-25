@@ -42,3 +42,14 @@ public interface INewsSourceRepository : IRepository<NewsSource>
     Task<NewsSource?> GetWithScrapingConfigAsync(int id);
     Task UpdateLastFetchedAsync(int id);
 }
+
+public interface INewsFetchLogRepository
+{
+    Task<NewsFetchLog> AddAsync(NewsFetchLog log);
+    Task<IEnumerable<NewsFetchLog>> GetAllAsync(int page, int pageSize);
+    Task<IEnumerable<NewsFetchLog>> GetBySourceIdAsync(int sourceId, int page, int pageSize);
+    Task<NewsFetchLog?> GetByIdAsync(string id);
+    Task<long> GetTotalCountAsync();
+    Task<IEnumerable<NewsFetchLog>> GetRecentAsync(int count);
+    Task<IEnumerable<NewsFetchLog>> GetFailedLogsAsync(int page, int pageSize);
+}

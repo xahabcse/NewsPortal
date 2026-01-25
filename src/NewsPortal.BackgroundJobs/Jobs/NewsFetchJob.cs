@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
 using NewsPortal.Application.Services;
+using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
+using System.Diagnostics;
 
 namespace NewsPortal.BackgroundJobs.Jobs;
 
@@ -17,6 +19,7 @@ public class NewsFetchJob : INewsFetchJob
     private readonly INewsFetcherService _fetcherService;
     private readonly INewsService _newsService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly INewsFetchLogRepository _fetchLogRepository;
     private readonly ILogger<NewsFetchJob> _logger;
 
     public NewsFetchJob(
@@ -24,12 +27,14 @@ public class NewsFetchJob : INewsFetchJob
         INewsFetcherService fetcherService,
         INewsService newsService,
         IUnitOfWork unitOfWork,
+        INewsFetchLogRepository fetchLogRepository,
         ILogger<NewsFetchJob> logger)
     {
         _sourceService = sourceService;
         _fetcherService = fetcherService;
         _newsService = newsService;
         _unitOfWork = unitOfWork;
+        _fetchLogRepository = fetchLogRepository;
         _logger = logger;
     }
 
@@ -67,6 +72,7 @@ public class NewsFetchJob : INewsFetchJob
 
     public async Task FetchSourceAsync(int sourceId)
     {
+        var stopwatch = Stopwatch.StartNew();
         var sources = await _sourceService.GetActiveSourcesForFetchingAsync();
         var source = sources.FirstOrDefault(s => s.Id == sourceId);
 
@@ -78,6 +84,13 @@ public class NewsFetchJob : INewsFetchJob
 
         _logger.LogInformation("Fetching news from source: {SourceName}", source.Name);
 
+        var fetchLog = new NewsFetchLog
+        {
+            SourceId = source.Id,
+            SourceName = source.Name,
+            FetchedAt = DateTime.UtcNow
+        };
+
         try
         {
             var articles = source.FetchMethod switch
@@ -88,15 +101,33 @@ public class NewsFetchJob : INewsFetchJob
                 _ => throw new NotSupportedException($"Fetch method not supported: {source.FetchMethod}")
             };
 
+            fetchLog.ArticlesFetched = articles.Count();
             var importedCount = await _newsService.ImportNewsArticlesAsync(articles);
+            fetchLog.NewArticles = importedCount;
+            fetchLog.UpdatedArticles = fetchLog.ArticlesFetched - fetchLog.NewArticles;
 
             // Update last fetched time
             await _unitOfWork.NewsSources.UpdateLastFetchedAsync(sourceId);
+
+            stopwatch.Stop();
+            fetchLog.Duration = stopwatch.Elapsed;
+            fetchLog.Success = true;
+            fetchLog.Details = $"Successfully fetched {fetchLog.ArticlesFetched} articles ({fetchLog.NewArticles} new, {fetchLog.UpdatedArticles} updated)";
+
+            await _fetchLogRepository.AddAsync(fetchLog);
 
             _logger.LogInformation("Imported {Count} articles from {SourceName}", importedCount, source.Name);
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
+            fetchLog.Duration = stopwatch.Elapsed;
+            fetchLog.Success = false;
+            fetchLog.ErrorMessage = ex.Message;
+            fetchLog.Details = ex.ToString();
+
+            await _fetchLogRepository.AddAsync(fetchLog);
+
             _logger.LogError(ex, "Failed to fetch news from source: {SourceName}", source.Name);
             throw;
         }

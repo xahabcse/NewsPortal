@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
 import LogsPage from './pages/LogsPage'
+import FetchLogsPage from './pages/FetchLogsPage'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/logs" element={<LogsPage />} />
+              <Route path="/fetch-logs" element={<FetchLogsPage />} />
               <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
               <Route path="/categories" element={<PlaceholderPage title="Categories" />} />
               <Route path="/bookmarks" element={<PlaceholderPage title="Bookmarks" />} />
