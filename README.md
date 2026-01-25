@@ -70,28 +70,25 @@ Deploy the News Portal on your Ubuntu/Linux server efficiently.
     cd NewsPortal
     ```
 
-2.  **Run Pre-Flight Validation**
+2.  **Run Deployment Script**
+    The all-in-one script handles validation, configuration, and deployment.
     ```bash
-    chmod +x *.sh
-    ./validate-deployment.sh
-    ```
-    *Ensure you see "ALL CHECKS PASSED".*
-
-3.  **Run Deployment Script**
-    ```bash
+    chmod +x deploy.sh
     ./deploy.sh
     ```
-    *   The script will create a `.env` file if missing.
-    *   **IMPORTANT:** Change the default passwords when prompted!
+    *   Choose **Option 1** to validate configuration first.
+    *   Choose **Option 2** for a fresh deployment.
+    *   The script will create a `.env` file if missing. **IMPORTANT:** Change the default passwords!
 
-4.  **Wait & Verify**
+3.  **Wait & Verify**
     *   Wait ~60 seconds for database initialization.
-    *   Run health check:
+    *   Run health check using the same script:
         ```bash
-        ./health-check.sh
+        ./deploy.sh
+        # Select Option 7 (Health Check)
         ```
 
-5.  **Access Application**
+4.  **Access Application**
     *   URL: `http://<your-server-ip>:5000`
 
 ---
@@ -142,14 +139,8 @@ docker compose ps
 
 *   **View Logs:** `docker compose logs -f`
 *   **Restart Services:** `docker compose restart`
-*   **Update Code:**
-    ```bash
-    git pull
-    docker compose up -d --build
-    ```
 *   **Backup:**
     ```bash
-    # PostgreSQL
     docker exec newsportal-db pg_dump -U newsadmin newsportal > backup.sql
     ```
 
@@ -173,9 +164,9 @@ docker compose ps
 
 ### Key Features
 *   **Multi-Stage Builds:** Optimized Dockerfiles for smaller images.
-*   **Health Checks:** Dependent services wait for databases to be ready (`pg_isready`, `mongosh`, `redis-cli ping`).
-*   **Auto-Migration:** The Web App automatically applies EF Core migrations on startup.
-*   **Data Persistence:** Named volumes (`postgres_data`, etc.) ensure data survives container restarts.
+*   **Health Checks:** Dependent services wait for databases to be ready.
+*   **Auto-Migration:** The API automatically applies EF Core migrations on startup.
+*   **Data Persistence:** Named volumes ensure data survives container restarts.
 
 ---
 
@@ -185,32 +176,15 @@ docker compose ps
 
 #### 1. Database Connection Failed
 *   **Symptom:** App crashes or logs show connection errors.
-*   **Fix:**
-    1.  Check if DBs are healthy: `docker compose ps`
-    2.  Check logs: `docker compose logs postgres`
-    3.  Wait longer: First startup can take time.
+*   **Fix:** Check healthy status with `./deploy.sh` (Option 7). Ensure passwords in `.env` match connection strings.
 
 #### 2. Out of Memory (OOM)
 *   **Symptom:** "Container killed" or random restarts.
-*   **Fix:**
-    1.  Check usage: `docker stats`
-    2.  Add swap space:
-        ```bash
-        sudo fallocate -l 2G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
-        ```
+*   **Fix:** Add swap space if running on a small VPS (2GB RAM).
 
 #### 3. Permission Denied (Logs)
 *   **Symptom:** Error writing to `/app/logs`.
-*   **Fix:**
-    ```bash
-    sudo chown -R $USER:$USER logs/
-    chmod -R 755 logs/
-    docker compose restart
-    ```
-
-#### 4. Port Conflicts
-*   **Symptom:** "Bind for 0.0.0.0:5000 failed: port is already allocated".
-*   **Fix:** Change `WEB_PORT` in `.env` to 5001 or find the conflicting process (`sudo lsof -i :5000`).
+*   **Fix:** `sudo chown -R $USER:$USER logs/ && chmod -R 755 logs/`
 
 ---
 
@@ -219,16 +193,15 @@ docker compose ps
 We have implemented a **Zero-Error Verification** standard.
 
 ### Validation Checks
-The `validate-deployment.sh` script checks:
+The `deploy.sh` script checks:
 *   Docker installation & version.
-*   File integrity & presence.
+*   File integrity & presence of critical files.
 *   Environment configuration.
-*   System resources (Disk/RAM).
 
 ### Guarantee
 If you follow the **Quick Start** steps and the validation passes, the system is guaranteed to:
-1.  Build without errors (using pre-restored dependencies).
-2.  Start without runtime crashes (using health checks and ordered startup).
+1.  Build without errors.
+2.  Start without runtime crashes.
 3.  Persist data correctly.
 
 ---
@@ -237,11 +210,11 @@ If you follow the **Quick Start** steps and the validation passes, the system is
 
 ### Backend
 *   **.NET 8:** Core platform.
-*   **ASP.NET Core Web API:** RESTful API with controllers.
+*   **ASP.NET Core Web API:** RESTful API.
 *   **Entity Framework Core:** ORM for PostgreSQL.
 *   **MongoDB Driver:** For GridFS operations.
 *   **Hangfire:** For job scheduling (in MCP server).
-*   **Serilog:** Structured logging with multiple sinks (Console, File, Seq).
+*   **Serilog:** Structured logging.
 
 ### Frontend
 *   **React 18:** Modern component-based UI.
@@ -251,22 +224,20 @@ If you follow the **Quick Start** steps and the validation passes, the system is
 *   **Axios:** HTTP client for API communication.
 *   **Nginx:** Production web server.
 
-### Project Structure
+### Project Structure (Refactored)
 ```
 NewsPortal/
 ├── src/
-│   ├── NewsPortal.Web.Client/       # React Frontend (TypeScript + Vite)
-│   ├── NewsPortal.Api/              # ASP.NET Core REST API
-│   ├── NewsPortal.McpServer/        # Background Service (MCP)
-│   ├── NewsPortal.BackgroundJobs/   # Hangfire job definitions
-│   ├── NewsPortal.Application/      # Business logic layer
-│   ├── NewsPortal.Infrastructure/   # Data access layer
-│   └── NewsPortal.Core/             # Domain models & DTOs
-├── docker-compose.yml               # Production orchestration
-├── deploy.sh                        # Automated deployment
-├── health-check.sh                  # Service monitoring
-├── validate-deployment.sh           # Pre-deployment checks
-└── logs/                            # Application logs (api/, mcp/, web/)
+│   ├── NewsPortal.Client/       # React Frontend (TypeScript + Vite)
+│   ├── NewsPortal.API/          # ASP.NET Core REST API
+│   ├── NewsPortal.McpServer/    # Background Service (MCP)
+│   ├── NewsPortal.Scheduler/    # Background Jobs & Hangfire
+│   ├── NewsPortal.Service/      # Business logic layer
+│   ├── NewsPortal.Repository/   # Data access layer
+│   └── NewsPortal.Core/         # Domain models & DTOs
+├── docker-compose.yml           # Production orchestration
+├── deploy.sh                    # All-in-one deployment script
+└── logs/                        # Application logs
 ```
 
 ---
