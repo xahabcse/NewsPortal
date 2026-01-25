@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NewsPortal.Application;
 using NewsPortal.Infrastructure;
+using NewsPortal.BackgroundJobs;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddBackgroundJobs();
 
 // Enable CORS
 builder.Services.AddCors(options =>
