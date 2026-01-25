@@ -133,13 +133,14 @@ health_check() {
 
     echo ""
     echo "Resource Usage:"
-    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep newsportal
+    # Use || true to prevent set -e from killing the script if grep finds nothing
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep newsportal || echo "No newsportal containers are currently running."
 
     if [ "$all_healthy" = true ]; then
         print_success "All services are healthy"
         return 0
     else
-        print_error "Some services are unhealthy"
+        print_error "Some services are unhealthy or not started"
         return 1
     fi
 }
