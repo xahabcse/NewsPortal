@@ -16,28 +16,132 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check if running as root
-if [ "$EUID" -eq 0 ]; then
-    echo -e "${RED}Please do not run as root${NC}"
-    exit 1
-fi
+# Function to print section headers
+print_section() {
+    echo ""
+    echo -e "${BLUE}======================================"
+    echo "$1"
+    echo -e "======================================${NC}"
+}
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo -e "${RED}Docker is not installed. Please install Docker first.${NC}"
-    echo "Visit: https://docs.docker.com/engine/install/"
-    exit 1
-fi
+# Function to print success
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
 
-# Check if Docker Compose is installed
-if ! command -v docker compose &> /dev/null; then
-    echo -e "${RED}Docker Compose is not installed. Please install Docker Compose first.${NC}"
-    echo "Visit: https://docs.docker.com/compose/install/"
-    exit 1
-fi
+# Function to print error
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
 
-echo -e "${GREEN}✓ Docker is installed${NC}"
-echo -e "${GREEN}✓ Docker Compose is installed${NC}"
+# Function to print warning
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+# Function to print info
+print_info() {
+    echo -e "${BLUE}ℹ $1${NC}"
+}
+
+# Function to validate deployment
+validate_deployment() {
+    print_section "Deployment Configuration Validation"
+    
+    local errors=0
+    local warnings=0
+
+    # 1. Check Docker installation
+    if command -v docker &> /dev/null; then
+        print_success "Docker is installed: $(docker --version)"
+    else
+        print_error "Docker is not installed"
+        ((errors++))
+    fi
+
+    if command -v docker compose &> /dev/null; then
+        print_success "Docker Compose is installed: $(docker compose version)"
+    else
+        print_error "Docker Compose is not installed"
+        ((errors++))
+    fi
+
+    # 2. Check critical files
+    local critical_files=(
+        "NewsPortal.sln"
+        "docker-compose.yml"
+        ".dockerignore"
+        "src/NewsPortal.Client/Dockerfile"
+        "src/NewsPortal.Client/nginx.conf"
+        "src/NewsPortal.API/Dockerfile"
+        "src/NewsPortal.McpServer/Dockerfile"
+    )
+
+    for file in "${critical_files[@]}"; do
+        if [ -f "$file" ]; then
+            print_success "Found: $file"
+        else
+            print_error "Missing critical file: $file"
+            ((errors++))
+        fi
+    done
+
+    # 3. Check .env
+    if [ -f ".env" ]; then
+        print_success ".env file exists"
+        if grep -q "YourSecurePassword123" .env; then
+            print_warning "Using default PostgreSQL password in .env"
+            ((warnings++))
+        fi
+    else
+        print_warning ".env file missing (will be created from example)"
+        ((warnings++))
+    fi
+
+    if [ $errors -gt 0 ]; then
+        print_error "Validation failed with $errors errors and $warnings warnings."
+        return 1
+    else
+        print_success "Validation passed with $warnings warnings."
+        return 0
+    fi
+}
+
+# Function to check health
+health_check() {
+    print_section "System Health Check"
+    
+    if ! docker compose ps > /dev/null 2>&1; then
+        print_error "Docker Compose not running"
+        return 1
+    fi
+
+    local services=("postgres" "mongodb" "redis" "seq" "web" "api" "mcpserver")
+    local all_healthy=true
+
+    for service in "${services[@]}"; do
+        if docker compose ps "$service" | grep -q "Up"; then
+            print_success "Service $service is running"
+        else
+            print_error "Service $service is NOT running"
+            all_healthy=false
+        fi
+    done
+
+    echo ""
+    echo "Resource Usage:"
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep newsportal
+
+    if [ "$all_healthy" = true ]; then
+        print_success "All services are healthy"
+        return 0
+    else
+        print_error "Some services are unhealthy"
+        return 1
+    fi
+}
+
+echo -e "${GREEN}✓ Docker prerequisites checked${NC}"
 echo ""
 
 # Check if .env file exists
@@ -64,55 +168,51 @@ else
 fi
 
 # Create logs directories
-echo ""
-echo "Creating log directories..."
 mkdir -p logs/web logs/mcp
-chmod -R 755 logs
-echo -e "${GREEN}✓ Log directories created${NC}"
+chmod -R 755 logs 2>/dev/null || true
 
 # Ask deployment type
 echo ""
-echo "Select deployment option:"
-echo "1) Fresh deployment (pull images, build, start)"
-echo "2) Update deployment (rebuild and restart)"
-echo "3) Start existing containers"
-echo "4) Stop all containers"
-echo "5) Stop and remove all (including data volumes)"
+echo "Select option:"
+echo "1) Validate Configuration"
+echo "2) Fresh deployment (pull, build, start)"
+echo "3) Update deployment (rebuild, restart)"
+echo "4) Start existing containers"
+echo "5) Stop all containers"
+echo "6) Stop and remove all (including volumes)"
+echo "7) Health Check"
 echo ""
-read -p "Enter option (1-5): " option
+read -p "Enter option (1-7): " option
 
 case $option in
     1)
-        echo ""
-        echo "Starting fresh deployment..."
-        echo ""
-        # Only pull external images (databases, logging), skip local app images
-        docker compose pull postgres mongodb redis seq
-        docker compose up -d --build
+        validate_deployment
         ;;
     2)
-        echo ""
-        echo "Updating deployment..."
-        echo ""
-        docker compose build
-        docker compose up -d
+        if validate_deployment; then
+            echo "Starting fresh deployment..."
+            docker compose pull postgres mongodb redis seq
+            docker compose up -d --build
+            health_check
+        fi
         ;;
     3)
-        echo ""
-        echo "Starting containers..."
-        echo ""
+        echo "Updating deployment..."
+        docker compose build
         docker compose up -d
+        health_check
         ;;
     4)
-        echo ""
-        echo "Stopping containers..."
-        echo ""
-        docker compose down
-        echo -e "${GREEN}✓ All containers stopped${NC}"
-        exit 0
+        echo "Starting containers..."
+        docker compose up -d
+        health_check
         ;;
     5)
-        echo ""
+        echo "Stopping containers..."
+        docker compose down
+        echo -e "${GREEN}✓ All containers stopped${NC}"
+        ;;
+    6)
         echo -e "${RED}WARNING: This will remove all data including databases!${NC}"
         read -p "Are you sure? Type 'yes' to continue: " confirm
         if [ "$confirm" = "yes" ]; then
@@ -121,82 +221,12 @@ case $option in
         else
             echo "Cancelled"
         fi
-        exit 0
+        ;;
+    7)
+        health_check
         ;;
     *)
         echo -e "${RED}Invalid option${NC}"
         exit 1
         ;;
 esac
-
-# Wait for services to be healthy
-echo ""
-echo "Waiting for services to start..."
-sleep 10
-
-# Check status
-echo ""
-echo "Checking service status..."
-docker compose ps
-
-# Firewall reminder
-if command -v ufw > /dev/null; then
-    if sudo ufw status | grep -q "active"; then
-        echo ""
-        echo "----------------------------------------------------"
-        echo "🔥 FIREWALL DETECTED: Ensure port 5000 is allowed!"
-        echo "Run: sudo ufw allow 5000/tcp"
-        echo "----------------------------------------------------"
-    fi
-fi
-
-# Wait for Web App to be ready
-echo ""
-echo "Waiting for Web Application to start (may take a minute)..."
-MAX_RETRIES=30
-COUNT=0
-URL="http://localhost:${WEB_PORT:-5000}"
-
-while ! curl -s --head "$URL" | grep "200 OK\|302 Found" > /dev/null; do
-    echo -n "."
-    sleep 2
-    ((COUNT++))
-    if [ $COUNT -ge $MAX_RETRIES ]; then
-        echo ""
-        echo "Warning: Web App didn't respond within 60 seconds."
-        echo "Check logs with: docker compose logs web"
-        break
-    fi
-done
-echo ""
-
-# Check if web service is running
-if docker compose ps web | grep -q "Up"; then
-    echo ""
-    echo -e "${GREEN}======================================"
-    echo "✓ Deployment Successful!"
-    echo "  Modern React Frontend (Huly.io Theme)"
-    echo "  Connected to .NET Backend API"
-    echo "======================================${NC}"
-    echo ""
-    echo "Access your application at:"
-    echo "  http://localhost:5000"
-    echo ""
-    echo "Or from another machine:"
-    echo "  http://$(hostname -I | awk '{print $1}'):5000"
-    echo ""
-    echo "Useful commands:"
-    echo "  docker compose logs -f          # View all logs"
-    echo "  docker compose logs -f web      # View web logs"
-    echo "  docker compose ps               # Check status"
-    echo "  docker compose restart          # Restart all"
-    echo "  docker compose down             # Stop all"
-    echo ""
-    echo "For more information, see DEPLOYMENT.md"
-    echo ""
-else
-    echo ""
-    echo -e "${RED}Deployment failed. Check logs:${NC}"
-    echo "  docker compose logs"
-    echo ""
-fi
