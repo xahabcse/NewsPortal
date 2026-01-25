@@ -74,7 +74,7 @@ validate_deployment() {
         "src/NewsPortal.Client/Dockerfile"
         "src/NewsPortal.Client/nginx.conf"
         # Check for API Dockerfile
-        "src/NewsPortal.Api/Dockerfile",
+        "src/NewsPortal.Api/Dockerfile"
         "src/NewsPortal.McpServer/Dockerfile"
     )
 
