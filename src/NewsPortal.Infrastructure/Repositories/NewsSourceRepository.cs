@@ -34,7 +34,7 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
     public async Task UpdateLastFetchedAsync(int id)
     {
         await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE news_sources SET last_fetched_at = {0} WHERE id = {1}",
+            "UPDATE news_sources SET \"LastFetchedAt\" = {0} WHERE \"Id\" = {1}",
             DateTime.UtcNow, id);
     }
 }

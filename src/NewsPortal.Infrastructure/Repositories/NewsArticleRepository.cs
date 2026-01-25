@@ -84,7 +84,7 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
     public async Task IncrementViewCountAsync(int id)
     {
         await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE news_articles SET view_count = view_count + 1 WHERE id = {0}", id);
+            "UPDATE news_articles SET \"ViewCount\" = \"ViewCount\" + 1 WHERE \"Id\" = {0}", id);
     }
 
     public async Task<bool> ExistsBySourceUrlAsync(string sourceUrl)
