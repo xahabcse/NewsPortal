@@ -27,14 +27,16 @@ builder.Services.AddBackgroundJobs();
 // Add automatic news fetching background service
 builder.Services.AddHostedService<NewsPortal.Api.BackgroundServices.NewsFetchBackgroundService>();
 
-// Enable CORS
+// Enable CORS with environment-based configuration
+var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("NewsPortalPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -64,28 +66,37 @@ using (var scope = app.Services.CreateScope())
 
 
 // Configure the HTTP request pipeline.
-app.UseDeveloperExceptionPage(); 
-
-app.UseExceptionHandler(exceptionHandlerApp =>
+if (app.Environment.IsDevelopment())
 {
-    exceptionHandlerApp.Run(async context =>
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(exceptionHandlerApp =>
     {
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
-
-        var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-        
-        Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
-
-        await context.Response.WriteAsJsonAsync(new
+        exceptionHandlerApp.Run(async context =>
         {
-            error = exceptionHandlerPathFeature?.Error.Message,
-            details = exceptionHandlerPathFeature?.Error.StackTrace
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+
+            var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+            
+            Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
+
+            // Don't expose internal details in production
+            await context.Response.WriteAsJsonAsync(new
+            {
+                error = "An error occurred while processing your request.",
+                timestamp = DateTime.UtcNow
+            });
         });
     });
-});
+}
 
-app.UseCors("AllowAll");
+// Add request logging
+app.UseSerilogRequestLogging();
+
+app.UseCors("NewsPortalPolicy");
 
 app.MapControllers();
 
@@ -97,7 +108,7 @@ public static class DbInitializer
 {
     public static void Initialize(NewsPortal.Infrastructure.Data.NewsPortalDbContext context)
     {
-        context.Database.EnsureCreated();
+        // EnsureCreated() removed - using migrations instead
 
         if (context.Categories.Any())
         {

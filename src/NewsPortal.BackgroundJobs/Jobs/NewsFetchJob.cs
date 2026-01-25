@@ -129,7 +129,7 @@ public class NewsFetchJob : INewsFetchJob
             await _fetchLogRepository.AddAsync(fetchLog);
 
             _logger.LogError(ex, "Failed to fetch news from source: {SourceName}", source.Name);
-            throw;
+            // Don't rethrow - let the job complete with failure status
         }
     }
 }
