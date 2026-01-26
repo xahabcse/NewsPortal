@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using NewsPortal.Api.DataSeed;
 using NewsPortal.Repository;
+using NewsPortal.Repository.Data;
 using NewsPortal.Scheduler;
 using NewsPortal.Service;
 using Serilog;
@@ -83,7 +83,7 @@ using (var scope = app.Services.CreateScope())
         Log.Information("Migrations applied successfully.");
 
         Log.Information("Seeding database...");
-        DbInitializer.Initialize(context);
+        await SeedData.SeedAsync(context);
         Log.Information("Database seeding completed.");
     }
     catch (Exception ex)
