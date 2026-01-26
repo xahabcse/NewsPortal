@@ -7,13 +7,16 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Serilog
+var seqUrl = builder.Configuration.GetConnectionString("Seq");
+seqUrl = string.IsNullOrWhiteSpace(seqUrl) ? "http://localhost:5341" : seqUrl;
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "NewsPortal.API")
     .WriteTo.Console()
     .WriteTo.File("logs/api-.log", rollingInterval: RollingInterval.Day)
-    .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq") ?? "http://seq:5341")
+    .WriteTo.Seq(seqUrl)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -23,6 +26,31 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
+
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Version = "v1",
+        Title = "NewsPortal API",
+        Description = "A comprehensive news aggregation and management API",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "NewsPortal Team",
+            Email = "contact@newsportal.com"
+        }
+    });
+
+    // Include XML comments
+    var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
 
 // Add automatic news fetching background service
 builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
@@ -80,7 +108,7 @@ else
             context.Response.ContentType = "application/json";
 
             var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-            
+
             Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
 
             // Don't expose internal details in production
@@ -92,6 +120,15 @@ else
         });
     });
 }
+
+// Enable Swagger UI (available in all environments for API documentation)
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+    options.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root (http://localhost:port/)
+    options.DocumentTitle = "NewsPortal API Documentation";
+});
 
 // Add request logging
 app.UseSerilogRequestLogging();
