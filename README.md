@@ -2,7 +2,46 @@
 
 A modern news aggregation portal built with React frontend, ASP.NET Core API backend, and MCP (Model Context Protocol) Server for fetching, processing, and displaying news from multiple sources.
 
-> **Note:** This is the master documentation file. It consolidates information from all previous documentation files (`DEPLOYMENT.md`, `QUICKSTART.md`, etc.).
+> **🚀 NEW: Complete CI/CD Pipeline Available!**
+> We now support **automated deployment** from development to production with GitHub Actions.
+> See [DEPLOYMENT.md](./DEPLOYMENT.md) for the complete workflow guide, or [QUICK-REFERENCE.md](./QUICK-REFERENCE.md) for a visual cheat sheet.
+
+---
+
+## 📚 Documentation Quick Links
+
+| Document | Purpose | When to Use |
+|----------|---------|-------------|
+| **[DEPLOYMENT.md](./DEPLOYMENT.md)** | Complete deployment guide | Local dev, Docker testing, CI/CD setup |
+| **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** | Visual workflow cheat sheet | Quick command reference |
+| **README.md** (this file) | Project overview & architecture | Understanding the project structure |
+
+---
+
+## 🎯 Choose Your Workflow
+
+### 1️⃣ Local Development (Visual Studio + Docker DBs)
+Perfect for daily coding with debugging support.
+```bash
+docker compose -f docker-compose.dev.yml up -d
+# Then run from Visual Studio (F5)
+```
+👉 See: [Local Development Guide](./DEPLOYMENT.md#1-local-development-setup)
+
+### 2️⃣ Docker Mode (Full Stack Testing)
+Test everything in containers before production.
+```bash
+docker compose up -d --build
+```
+👉 See: [Docker Mode Guide](./DEPLOYMENT.md#2-docker-mode-pre-production-testing)
+
+### 3️⃣ Production CI/CD (Automated)
+Push to GitHub → Auto-deploy to Linux server.
+```bash
+git push origin main
+# CI/CD automatically builds and deploys
+```
+👉 See: [Production Deployment Guide](./DEPLOYMENT.md#3-production-deployment)
 
 ---
 
