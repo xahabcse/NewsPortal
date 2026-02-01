@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using NewsPortal.Api.Middleware;
 using NewsPortal.Repository;
 using NewsPortal.Repository.Data;
 using NewsPortal.Scheduler;
@@ -30,6 +31,23 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
+
+// Add API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = Asp.Versioning.ApiVersionReader.Combine(
+        new Asp.Versioning.QueryStringApiVersionReader("api-version"),
+        new Asp.Versioning.HeaderApiVersionReader("X-Api-Version"),
+        new Asp.Versioning.MediaTypeApiVersionReader("ver")
+    );
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -152,32 +170,18 @@ using (var scope = app.Services.CreateScope())
 
 
 // Configure the HTTP request pipeline.
+// Add security headers middleware
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Add global exception handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 else
 {
-    app.UseExceptionHandler(exceptionHandlerApp =>
-    {
-        exceptionHandlerApp.Run(async context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-
-            Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
-
-            // Don't expose internal details in production
-            await context.Response.WriteAsJsonAsync(new
-            {
-                error = "An error occurred while processing your request.",
-                timestamp = DateTime.UtcNow
-            });
-        });
-    });
-
     // Add HTTPS redirection and HSTS for production
     app.UseHttpsRedirection();
     app.UseHsts();

@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Service.Services;
@@ -8,7 +9,8 @@ using NewsPortal.Scheduler.Jobs;
 namespace NewsPortal.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class NewsSourcesController : ControllerBase
 {
     private readonly INewsSourceService _sourceService;
