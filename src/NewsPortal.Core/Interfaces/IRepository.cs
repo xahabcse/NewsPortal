@@ -39,6 +39,7 @@ public interface INewsSourceRepository : IRepository<NewsSource>
 {
     Task<NewsSource?> GetBySlugAsync(string slug);
     Task<IEnumerable<NewsSource>> GetActiveSourcesAsync();
+    Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync();
     Task<NewsSource?> GetWithScrapingConfigAsync(int id);
     Task UpdateLastFetchedAsync(int id);
 }

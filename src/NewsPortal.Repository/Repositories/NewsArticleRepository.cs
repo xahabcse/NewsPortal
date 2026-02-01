@@ -67,14 +67,15 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
 
     public async Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize)
     {
-        var lowerQuery = query.ToLower();
+        // Use PostgreSQL ILIKE for case-insensitive search (more efficient than ToLower().Contains())
+        var searchPattern = $"%{query}%";
         return await _dbSet
             .Include(x => x.Source)
             .Include(x => x.Category)
             .Where(x => x.IsActive &&
-                (x.Title.ToLower().Contains(lowerQuery) ||
-                 (x.Summary != null && x.Summary.ToLower().Contains(lowerQuery)) ||
-                 (x.PlainText != null && x.PlainText.ToLower().Contains(lowerQuery))))
+                (EF.Functions.ILike(x.Title, searchPattern) ||
+                 (x.Summary != null && EF.Functions.ILike(x.Summary, searchPattern)) ||
+                 (x.PlainText != null && EF.Functions.ILike(x.PlainText, searchPattern))))
             .OrderByDescending(x => x.PublishedAt ?? x.FetchedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

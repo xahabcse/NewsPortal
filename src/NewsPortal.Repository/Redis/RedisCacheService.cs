@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using NewsPortal.Core.Interfaces;
@@ -8,6 +9,7 @@ public class RedisCacheService : ICacheService
 {
     private readonly IDistributedCache _cache;
     private readonly JsonSerializerOptions _jsonOptions;
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
     public RedisCacheService(IDistributedCache cache)
     {
@@ -65,12 +67,36 @@ public class RedisCacheService : ICacheService
 
     public async Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiration = null)
     {
+        // First, try to get from cache
         var cached = await GetAsync<T>(key);
         if (cached != null)
             return cached;
 
-        var value = await factory();
-        await SetAsync(key, value, expiration);
-        return value;
+        // Cache stampede protection: use per-key semaphore to ensure only one thread executes factory
+        var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
+        await semaphore.WaitAsync();
+        try
+        {
+            // Double-check: another thread might have populated the cache while we were waiting
+            cached = await GetAsync<T>(key);
+            if (cached != null)
+                return cached;
+
+            // Execute the factory function (only one thread will reach here)
+            var value = await factory();
+            await SetAsync(key, value, expiration);
+            return value;
+        }
+        finally
+        {
+            semaphore.Release();
+
+            // Clean up the semaphore if no one is waiting
+            if (semaphore.CurrentCount == 1 && _locks.TryRemove(key, out _))
+            {
+                semaphore.Dispose();
+            }
+        }
     }
 }

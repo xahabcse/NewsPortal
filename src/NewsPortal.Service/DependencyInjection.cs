@@ -12,9 +12,22 @@ public static class DependencyInjection
         services.AddScoped<INewsService, NewsService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<INewsSourceService, NewsSourceService>();
-        services.AddScoped<IRssFeedService, RssFeedService>();
+
+        // Configure HttpClient with timeout for ScrapingService
+        services.AddHttpClient<IScrapingService, ScrapingService>()
+            .ConfigureHttpClient(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout for scraping requests
+            });
+
+        // Configure HttpClient with timeout for RssFeedService
+        services.AddHttpClient<IRssFeedService, RssFeedService>()
+            .ConfigureHttpClient(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(20); // 20 second timeout for RSS feed requests
+            });
+
         services.AddScoped<INewsFetcherService, NewsFetcherService>();
-        services.AddHttpClient<IScrapingService, ScrapingService>();
 
         return services;
     }

@@ -116,8 +116,18 @@ public class NewsService : INewsService
         if (article == null)
             return null;
 
-        // Increment view count asynchronously
-        _ = Task.Run(() => _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id));
+        // Increment view count asynchronously with proper error handling
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", article.Id);
+            }
+        });
 
         return MapToDetailDto(article);
     }

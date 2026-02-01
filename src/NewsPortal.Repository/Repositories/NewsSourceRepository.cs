@@ -24,6 +24,16 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
             .ToListAsync();
     }
 
+    public async Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync()
+    {
+        // Efficient single query using GroupJoin to get article counts
+        return await _context.NewsArticles
+            .Where(a => a.IsActive)
+            .GroupBy(a => a.SourceId)
+            .Select(g => new { SourceId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SourceId, x => x.Count);
+    }
+
     public async Task<NewsSource?> GetWithScrapingConfigAsync(int id)
     {
         return await _dbSet

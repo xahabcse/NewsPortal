@@ -31,26 +31,24 @@ public class NewsSourceService : INewsSourceService
     {
         return await _cache.GetOrSetAsync(CacheKeys.ActiveSources, async () =>
         {
+            // Get sources and article counts in separate optimized queries (fixes N+1 problem)
             var sources = await _unitOfWork.NewsSources.GetActiveSourcesAsync();
-            var result = new List<NewsSourceDto>();
+            var articleCounts = await _unitOfWork.NewsSources.GetActiveSourcesWithArticleCountsAsync();
 
-            foreach (var source in sources)
+            // Map to DTOs - no N+1 query problem
+            var result = sources.Select(source => new NewsSourceDto
             {
-                var count = await _unitOfWork.NewsArticles.CountAsync(x => x.SourceId == source.Id && x.IsActive);
-                result.Add(new NewsSourceDto
-                {
-                    Id = source.Id,
-                    Name = source.Name,
-                    Slug = source.Slug,
-                    BaseUrl = source.BaseUrl,
-                    LogoUrl = source.LogoUrl,
-                    FetchMethod = source.FetchMethod,
-                    RssFeedUrl = source.RssFeedUrl,
-                    IsActive = source.IsActive,
-                    LastFetchedAt = source.LastFetchedAt,
-                    ArticleCount = count
-                });
-            }
+                Id = source.Id,
+                Name = source.Name,
+                Slug = source.Slug,
+                BaseUrl = source.BaseUrl,
+                LogoUrl = source.LogoUrl,
+                FetchMethod = source.FetchMethod,
+                RssFeedUrl = source.RssFeedUrl,
+                IsActive = source.IsActive,
+                LastFetchedAt = source.LastFetchedAt,
+                ArticleCount = articleCounts.GetValueOrDefault(source.Id, 0)
+            }).ToList();
 
             return result;
         }, CacheDurations.Long);
