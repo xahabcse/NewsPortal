@@ -104,7 +104,7 @@ services:
       - "8081:80"      # Seq UI (consider restricting to internal network)
     environment:
       ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD:-ChangeThisPassword}
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
     volumes:
       - seq_prod_data:/data
     networks:

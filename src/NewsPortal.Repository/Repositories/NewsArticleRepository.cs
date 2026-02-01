@@ -83,8 +83,11 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
 
     public async Task IncrementViewCountAsync(int id)
     {
-        await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE news_articles SET \"ViewCount\" = \"ViewCount\" + 1 WHERE \"Id\" = {0}", id);
+        // Use ExecuteUpdateAsync for efficient bulk update without loading entity
+        await _dbSet
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(a => a.ViewCount, a => a.ViewCount + 1));
     }
 
     public async Task<bool> ExistsBySourceUrlAsync(string sourceUrl)

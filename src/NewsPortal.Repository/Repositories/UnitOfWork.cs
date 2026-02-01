@@ -12,6 +12,7 @@ public class UnitOfWork : IUnitOfWork
     private INewsArticleRepository? _newsArticles;
     private ICategoryRepository? _categories;
     private INewsSourceRepository? _newsSources;
+    private IUserRepository? _users;
 
     public UnitOfWork(NewsPortalDbContext context)
     {
@@ -26,6 +27,9 @@ public class UnitOfWork : IUnitOfWork
 
     public INewsSourceRepository NewsSources =>
         _newsSources ??= new NewsSourceRepository(_context);
+
+    public IUserRepository Users =>
+        _users ??= new UserRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {
