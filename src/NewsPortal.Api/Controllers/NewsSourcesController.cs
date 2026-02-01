@@ -1,3 +1,5 @@
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Service.Services;
 using NewsPortal.Core.DTOs;
@@ -7,7 +9,8 @@ using NewsPortal.Scheduler.Jobs;
 namespace NewsPortal.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class NewsSourcesController : ControllerBase
 {
     private readonly INewsSourceService _sourceService;
@@ -34,6 +37,7 @@ public class NewsSourcesController : ControllerBase
         return Ok(source);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateNewsSourceDto dto)
     {
@@ -48,6 +52,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateNewsSourceDto dto)
     {
@@ -66,6 +71,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -80,6 +86,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id}/fetch")]
     public async Task<IActionResult> FetchNews(int id)
     {

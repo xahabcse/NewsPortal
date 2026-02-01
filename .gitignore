@@ -74,8 +74,9 @@ Desktop.ini
 .env
 .env.local
 .env.*.local
-appsettings.Development.json
+.env.production
 appsettings.Local.json
+appsettings.*.local.json
 
 # Secrets
 **/secrets/

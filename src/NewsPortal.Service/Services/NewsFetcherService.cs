@@ -32,15 +32,42 @@ public class NewsFetcherService : INewsFetcherService
 
         var feedItems = await _rssFeedService.ParseFeedAsync(source.RssFeedUrl);
 
-        return feedItems.Select(item => new CreateNewsArticleDto
+        var articles = new List<CreateNewsArticleDto>();
+        var totalItems = 0;
+        var validItems = 0;
+
+        foreach (var item in feedItems)
         {
-            Title = item.Title,
-            Summary = StripHtml(item.Summary),
-            SourceUrl = item.Url,
-            OriginalImageUrl = item.ImageUrl,
-            PublishedAt = item.PublishedAt,
-            SourceId = source.Id
-        });
+            totalItems++;
+
+            // Validate minimum required fields
+            if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Url))
+            {
+                _logger.LogWarning("Skipping RSS item with missing title or URL from source {SourceName}. Title: {Title}, URL: {Url}",
+                    source.Name, item.Title ?? "N/A", item.Url ?? "N/A");
+                continue;
+            }
+
+            articles.Add(new CreateNewsArticleDto
+            {
+                Title = item.Title,
+                Summary = StripHtml(item.Summary),
+                SourceUrl = item.Url,
+                OriginalImageUrl = item.ImageUrl,
+                PublishedAt = item.PublishedAt,
+                SourceId = source.Id
+            });
+
+            validItems++;
+        }
+
+        if (totalItems > 0)
+        {
+            _logger.LogInformation("RSS feed {SourceName}: {Valid}/{Total} items validated successfully",
+                source.Name, validItems, totalItems);
+        }
+
+        return articles;
     }
 
     public async Task<IEnumerable<CreateNewsArticleDto>> FetchFromApiAsync(NewsSource source)
@@ -60,6 +87,9 @@ public class NewsFetcherService : INewsFetcherService
         }
 
         var results = new List<CreateNewsArticleDto>();
+        var totalLinks = 0;
+        var successfulArticles = 0;
+        var skippedArticles = 0;
 
         try
         {
@@ -68,19 +98,33 @@ public class NewsFetcherService : INewsFetcherService
                 config.ListPageUrl,
                 config.ArticleLinkSelector ?? "a");
 
-            foreach (var link in articleLinks.Take(20)) // Limit to 20 articles per fetch
+            var linksToProcess = articleLinks.Take(20).ToList(); // Limit to 20 articles per fetch
+            totalLinks = linksToProcess.Count;
+
+            _logger.LogInformation("Found {Count} article links to process from {SourceName}", totalLinks, source.Name);
+
+            foreach (var link in linksToProcess)
             {
                 var article = await FetchArticleContentAsync(link, config);
                 if (article != null)
                 {
                     article.SourceId = source.Id;
                     results.Add(article);
+                    successfulArticles++;
+                }
+                else
+                {
+                    skippedArticles++;
                 }
             }
+
+            _logger.LogInformation("Scraping complete for {SourceName}: {Successful}/{Total} articles extracted, {Skipped} skipped",
+                source.Name, successfulArticles, totalLinks, skippedArticles);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to scrape source: {SourceName}", source.Name);
+            _logger.LogError(ex, "Failed to scrape source: {SourceName}. Partial results: {Count} articles",
+                source.Name, results.Count);
         }
 
         return results;
@@ -90,14 +134,69 @@ public class NewsFetcherService : INewsFetcherService
     {
         try
         {
-            var title = await _scrapingService.ExtractContentAsync(url, config.TitleSelector ?? "h1");
-            if (string.IsNullOrEmpty(title))
-                return null;
+            // Resilient title extraction with multiple fallback strategies
+            var title = await ExtractTitleWithFallbackAsync(url, config.TitleSelector ?? "h1");
 
-            var content = await _scrapingService.ExtractContentAsync(url, config.ContentSelector ?? "article");
-            var summary = await _scrapingService.ExtractContentAsync(url, config.SummarySelector ?? "p");
-            var imageUrl = await _scrapingService.ExtractAttributeAsync(url, config.ImageSelector ?? "img", "src");
-            var author = await _scrapingService.ExtractContentAsync(url, config.AuthorSelector ?? ".author");
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                _logger.LogWarning("Could not extract title from article: {Url}. Skipping article.", url);
+                return null;
+            }
+
+            // Extract other fields with graceful degradation (failures logged but don't stop article save)
+            string? content = null;
+            string? summary = null;
+            string? imageUrl = null;
+            string? author = null;
+
+            try
+            {
+                content = await _scrapingService.ExtractContentAsync(url, config.ContentSelector ?? "article");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to extract content from {Url}. Continuing with partial data.", url);
+            }
+
+            try
+            {
+                summary = await _scrapingService.ExtractContentAsync(url, config.SummarySelector ?? "p");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to extract summary from {Url}. Continuing with partial data.", url);
+            }
+
+            try
+            {
+                imageUrl = await _scrapingService.ExtractAttributeAsync(url, config.ImageSelector ?? "img", "src");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to extract image from {Url}. Continuing without image.", url);
+            }
+
+            try
+            {
+                author = await _scrapingService.ExtractContentAsync(url, config.AuthorSelector ?? ".author");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to extract author from {Url}. Continuing without author.", url);
+            }
+
+            // Log success with partial data indicator
+            var partialDataFields = new List<string>();
+            if (string.IsNullOrEmpty(content)) partialDataFields.Add("content");
+            if (string.IsNullOrEmpty(summary)) partialDataFields.Add("summary");
+            if (string.IsNullOrEmpty(imageUrl)) partialDataFields.Add("image");
+            if (string.IsNullOrEmpty(author)) partialDataFields.Add("author");
+
+            if (partialDataFields.Any())
+            {
+                _logger.LogInformation("Successfully extracted article from {Url} with partial data. Missing fields: {MissingFields}",
+                    url, string.Join(", ", partialDataFields));
+            }
 
             return new CreateNewsArticleDto
             {
@@ -112,7 +211,75 @@ public class NewsFetcherService : INewsFetcherService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch article content from: {Url}", url);
+            _logger.LogError(ex, "Fatal error fetching article content from: {Url}. Skipping article.", url);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts title with multiple fallback strategies to ensure we get at least a title
+    /// </summary>
+    private async Task<string?> ExtractTitleWithFallbackAsync(string url, string primarySelector)
+    {
+        // Strategy 1: Try the configured primary selector (e.g., h1)
+        var title = await _scrapingService.ExtractContentAsync(url, primarySelector);
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogDebug("Extracted title from primary selector '{Selector}': {Title}", primarySelector, StripHtml(title)?.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 2: Try Open Graph title meta tag
+        title = await _scrapingService.ExtractAttributeAsync(url, "//meta[@property='og:title']", "content");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogDebug("Extracted title from og:title meta tag: {Title}", title.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 3: Try Twitter card title meta tag
+        title = await _scrapingService.ExtractAttributeAsync(url, "//meta[@name='twitter:title']", "content");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogDebug("Extracted title from twitter:title meta tag: {Title}", title.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 4: Try HTML title tag
+        title = await _scrapingService.ExtractContentAsync(url, "//title");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogDebug("Extracted title from HTML title tag: {Title}", StripHtml(title)?.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 5: Try any h1 tag
+        title = await _scrapingService.ExtractContentAsync(url, "//h1");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogDebug("Extracted title from first h1 tag: {Title}", StripHtml(title)?.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 6: Try any h2 tag as last resort
+        title = await _scrapingService.ExtractContentAsync(url, "//h2");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            _logger.LogWarning("Using h2 tag as title fallback for {Url}: {Title}", url, StripHtml(title)?.Substring(0, Math.Min(50, title.Length)));
+            return title;
+        }
+
+        // Strategy 7: Last resort - extract from URL (domain + path)
+        try
+        {
+            var uri = new Uri(url);
+            var urlBasedTitle = $"{uri.Host}{uri.AbsolutePath}".Replace("/", " - ").Replace("-", " ").Trim();
+            _logger.LogWarning("Using URL-based title as last resort for {Url}: {Title}", url, urlBasedTitle);
+            return urlBasedTitle;
+        }
+        catch
+        {
+            _logger.LogError("All title extraction strategies failed for {Url}", url);
             return null;
         }
     }

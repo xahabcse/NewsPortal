@@ -15,6 +15,7 @@ public class NewsPortalDbContext : DbContext
     public DbSet<NewsSource> NewsSources => Set<NewsSource>();
     public DbSet<ScrapingConfig> ScrapingConfigs => Set<ScrapingConfig>();
     public DbSet<NewsFetchLog> NewsFetchLogs => Set<NewsFetchLog>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

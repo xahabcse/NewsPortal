@@ -24,6 +24,16 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
             .ToListAsync();
     }
 
+    public async Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync()
+    {
+        // Efficient single query using GroupJoin to get article counts
+        return await _context.NewsArticles
+            .Where(a => a.IsActive)
+            .GroupBy(a => a.SourceId)
+            .Select(g => new { SourceId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SourceId, x => x.Count);
+    }
+
     public async Task<NewsSource?> GetWithScrapingConfigAsync(int id)
     {
         return await _dbSet
@@ -33,8 +43,11 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
 
     public async Task UpdateLastFetchedAsync(int id)
     {
-        await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE news_sources SET \"LastFetchedAt\" = {0} WHERE \"Id\" = {1}",
-            DateTime.UtcNow, id);
+        // Use ExecuteUpdateAsync for efficient bulk update without loading entity
+        var now = DateTime.UtcNow;
+        await _dbSet
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(s => s.LastFetchedAt, now));
     }
 }

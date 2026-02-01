@@ -39,12 +39,28 @@ public class NewsArticleConfiguration : IEntityTypeConfiguration<NewsArticle>
         builder.Property(x => x.Author)
             .HasMaxLength(200);
 
+        // Single column indexes
         builder.HasIndex(x => x.Slug).IsUnique();
         builder.HasIndex(x => x.SourceUrl).IsUnique();
         builder.HasIndex(x => x.PublishedAt);
         builder.HasIndex(x => x.FetchedAt);
         builder.HasIndex(x => x.IsFeatured);
         builder.HasIndex(x => x.IsActive);
+        builder.HasIndex(x => x.CategoryId);
+        builder.HasIndex(x => x.SourceId);
+
+        // Composite indexes for common query patterns (improves performance)
+        builder.HasIndex(x => new { x.IsActive, x.PublishedAt })
+            .IsDescending(false, true); // Active articles sorted by date descending
+
+        builder.HasIndex(x => new { x.CategoryId, x.IsActive, x.PublishedAt })
+            .IsDescending(false, false, true); // Category filtering with date sort
+
+        builder.HasIndex(x => new { x.SourceId, x.IsActive, x.PublishedAt })
+            .IsDescending(false, false, true); // Source filtering with date sort
+
+        builder.HasIndex(x => new { x.IsFeatured, x.IsActive, x.PublishedAt })
+            .IsDescending(false, false, true); // Featured articles
 
         builder.HasOne(x => x.Source)
             .WithMany(x => x.Articles)

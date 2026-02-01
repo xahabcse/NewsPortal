@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.GridFS;
@@ -11,11 +12,14 @@ public class MongoImageStorageService : IImageStorageService
 {
     private readonly IGridFSBucket _gridFsBucket;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<MongoImageStorageService> _logger;
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10 MB
 
-    public MongoImageStorageService(IMongoDatabase database, HttpClient httpClient)
+    public MongoImageStorageService(IMongoDatabase database, HttpClient httpClient, ILogger<MongoImageStorageService> logger)
     {
         _gridFsBucket = new GridFSBucket(database);
         _httpClient = httpClient;
+        _logger = logger;
     }
 
     public async Task<string> UploadImageAsync(byte[] imageData, string fileName, string contentType)
@@ -37,11 +41,40 @@ public class MongoImageStorageService : IImageStorageService
     {
         try
         {
+            // Validate URL to prevent SSRF attacks
+            if (!IsValidImageUrl(imageUrl))
+            {
+                _logger.LogWarning("Invalid or potentially unsafe image URL rejected: {ImageUrl}", imageUrl);
+                return string.Empty;
+            }
+
             var response = await _httpClient.GetAsync(imageUrl);
             if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to download image from {ImageUrl}. Status: {StatusCode}",
+                    imageUrl, response.StatusCode);
                 return string.Empty;
+            }
+
+            // Check content length before downloading
+            if (response.Content.Headers.ContentLength.HasValue &&
+                response.Content.Headers.ContentLength.Value > MaxImageSizeBytes)
+            {
+                _logger.LogWarning("Image too large ({Size} bytes) from {ImageUrl}. Max allowed: {MaxSize} bytes",
+                    response.Content.Headers.ContentLength.Value, imageUrl, MaxImageSizeBytes);
+                return string.Empty;
+            }
 
             var imageData = await response.Content.ReadAsByteArrayAsync();
+
+            // Double-check size after download (in case Content-Length was missing)
+            if (imageData.Length > MaxImageSizeBytes)
+            {
+                _logger.LogWarning("Downloaded image exceeds size limit ({Size} bytes) from {ImageUrl}",
+                    imageData.Length, imageUrl);
+                return string.Empty;
+            }
+
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
             var extension = GetExtensionFromContentType(contentType);
             var fileName = $"news_{newsArticleId}_{DateTime.UtcNow:yyyyMMddHHmmss}{extension}";
@@ -75,12 +108,43 @@ public class MongoImageStorageService : IImageStorageService
             var update = Builders<GridFSFileInfo>.Update.Set("metadata.thumbnailId", new ObjectId(thumbId));
             // Note: GridFS doesn't directly support updates, so we store the reference during upload
 
+            _logger.LogInformation("Successfully uploaded image {ImageId} from {ImageUrl} for article {ArticleId}",
+                id.ToString(), imageUrl, newsArticleId);
+
             return id.ToString();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to upload image from URL {ImageUrl} for article {ArticleId}",
+                imageUrl, newsArticleId);
             return string.Empty;
         }
+    }
+
+    private static bool IsValidImageUrl(string url)
+    {
+        // Validate URL to prevent SSRF attacks
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        // Only allow HTTP and HTTPS schemes
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            return false;
+
+        // Block private IP ranges to prevent SSRF
+        var host = uri.Host.ToLower();
+        if (host == "localhost" || host == "127.0.0.1" || host.StartsWith("192.168.") ||
+            host.StartsWith("10.") || host.StartsWith("172.16.") || host.StartsWith("172.17.") ||
+            host.StartsWith("172.18.") || host.StartsWith("172.19.") || host.StartsWith("172.20.") ||
+            host.StartsWith("172.21.") || host.StartsWith("172.22.") || host.StartsWith("172.23.") ||
+            host.StartsWith("172.24.") || host.StartsWith("172.25.") || host.StartsWith("172.26.") ||
+            host.StartsWith("172.27.") || host.StartsWith("172.28.") || host.StartsWith("172.29.") ||
+            host.StartsWith("172.30.") || host.StartsWith("172.31.") || host.StartsWith("169.254."))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     public async Task<(byte[] Data, string ContentType)?> GetImageAsync(string imageId)
@@ -92,15 +156,19 @@ public class MongoImageStorageService : IImageStorageService
             var fileInfo = await _gridFsBucket.Find(filter).FirstOrDefaultAsync();
 
             if (fileInfo == null)
+            {
+                _logger.LogWarning("Image not found: {ImageId}", imageId);
                 return null;
+            }
 
             var data = await _gridFsBucket.DownloadAsBytesAsync(objectId);
             var contentType = fileInfo.Metadata?.GetValue("contentType", "image/jpeg").AsString ?? "image/jpeg";
 
             return (data, contentType);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve image {ImageId}", imageId);
             return null;
         }
     }
@@ -115,8 +183,9 @@ public class MongoImageStorageService : IImageStorageService
 
             return fileInfo?.Metadata?.GetValue("thumbnailId", BsonNull.Value)?.ToString();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to get thumbnail ID for image {ImageId}", imageId);
             return null;
         }
     }
@@ -132,13 +201,15 @@ public class MongoImageStorageService : IImageStorageService
             if (!string.IsNullOrEmpty(thumbId))
             {
                 await _gridFsBucket.DeleteAsync(new ObjectId(thumbId));
+                _logger.LogInformation("Deleted thumbnail {ThumbId} for image {ImageId}", thumbId, imageId);
             }
 
             await _gridFsBucket.DeleteAsync(objectId);
+            _logger.LogInformation("Deleted image {ImageId}", imageId);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore deletion errors
+            _logger.LogError(ex, "Failed to delete image {ImageId}", imageId);
         }
     }
 

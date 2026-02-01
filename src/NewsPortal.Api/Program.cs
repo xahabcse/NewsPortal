@@ -1,9 +1,13 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using NewsPortal.Api.Middleware;
 using NewsPortal.Repository;
 using NewsPortal.Repository.Data;
 using NewsPortal.Scheduler;
 using NewsPortal.Service;
 using Serilog;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +32,50 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
 
-// Add Swagger/OpenAPI
+// Add API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = Asp.Versioning.ApiVersionReader.Combine(
+        new Asp.Versioning.QueryStringApiVersionReader("api-version"),
+        new Asp.Versioning.HeaderApiVersionReader("X-Api-Version"),
+        new Asp.Versioning.MediaTypeApiVersionReader("ver")
+    );
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+// Add JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// Add Swagger/OpenAPI with JWT support
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -44,6 +91,32 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
+    // Add JWT Authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by a space and your JWT token"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
     // Include XML comments
     var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
@@ -53,19 +126,22 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
-// Add automatic news fetching background service
-builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
+// DISABLED: Background service removed to prevent dual scheduling with Hangfire in McpServer
+// News fetching now handled exclusively by Hangfire recurring job in McpServer (every 15 min)
+// builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
 
-// Enable CORS with environment-based configuration
+// Enable CORS with restricted methods and headers
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewsPortalPolicy", policy =>
     {
         policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+              .WithHeaders("Content-Type", "Authorization", "Accept", "X-Requested-With")
+              .WithExposedHeaders("X-Pagination")
+              .AllowCredentials()
+              .SetIsOriginAllowedToAllowWildcardSubdomains();
     });
 });
 
@@ -95,46 +171,43 @@ using (var scope = app.Services.CreateScope())
 
 
 // Configure the HTTP request pipeline.
+// Add security headers middleware
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Add global exception handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 else
 {
-    app.UseExceptionHandler(exceptionHandlerApp =>
-    {
-        exceptionHandlerApp.Run(async context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-
-            var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-
-            Log.Error(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
-
-            // Don't expose internal details in production
-            await context.Response.WriteAsJsonAsync(new
-            {
-                error = "An error occurred while processing your request.",
-                timestamp = DateTime.UtcNow
-            });
-        });
-    });
+    // Add HTTPS redirection and HSTS for production
+    app.UseHttpsRedirection();
+    app.UseHsts();
 }
 
-// Enable Swagger UI (available in all environments for API documentation)
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Enable Swagger UI only in Development and Staging environments
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
-    options.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root (http://localhost:port/)
-    options.DocumentTitle = "NewsPortal API Documentation";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+        options.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root (http://localhost:port/)
+        options.DocumentTitle = "NewsPortal API Documentation";
+    });
+}
 
 // Add request logging
 app.UseSerilogRequestLogging();
 
 app.UseCors("NewsPortalPolicy");
+
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

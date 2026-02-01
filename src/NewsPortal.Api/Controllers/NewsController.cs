@@ -1,11 +1,14 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Service.Services;
 using NewsPortal.Core.DTOs;
+using System.ComponentModel.DataAnnotations;
 
 namespace NewsPortal.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class NewsController : ControllerBase
 {
     private readonly INewsService _newsService;
@@ -16,7 +19,9 @@ public class NewsController : ControllerBase
     }
 
     [HttpGet("latest")]
-    public async Task<IActionResult> GetLatestNews([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetLatestNews(
+        [FromQuery][Range(1, int.MaxValue)] int page = 1,
+        [FromQuery][Range(1, 100)] int pageSize = 10)
     {
         var result = await _newsService.GetLatestNewsAsync(page, pageSize);
         return Ok(result);
@@ -31,14 +36,17 @@ public class NewsController : ControllerBase
     }
 
     [HttpGet("featured")]
-    public async Task<IActionResult> GetFeaturedNews([FromQuery] int count = 5)
+    public async Task<IActionResult> GetFeaturedNews([FromQuery][Range(1, 100)] int count = 5)
     {
         var result = await _newsService.GetFeaturedNewsAsync(count);
         return Ok(result);
     }
 
     [HttpGet("category/{slug}")]
-    public async Task<IActionResult> GetNewsByCategory(string slug, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetNewsByCategory(
+        string slug,
+        [FromQuery][Range(1, int.MaxValue)] int page = 1,
+        [FromQuery][Range(1, 100)] int pageSize = 10)
     {
         var result = await _newsService.GetNewsByCategoryAsync(slug, page, pageSize);
         return Ok(result);
