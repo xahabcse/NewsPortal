@@ -126,8 +126,9 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
-// Add automatic news fetching background service
-builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
+// DISABLED: Background service removed to prevent dual scheduling with Hangfire in McpServer
+// News fetching now handled exclusively by Hangfire recurring job in McpServer (every 15 min)
+// builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
 
 // Enable CORS with restricted methods and headers
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";

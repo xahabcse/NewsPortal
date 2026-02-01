@@ -209,23 +209,95 @@ public class NewsService : INewsService
     public async Task<int> ImportNewsArticlesAsync(IEnumerable<CreateNewsArticleDto> articles)
     {
         var count = 0;
-        foreach (var dto in articles)
+        var articlesList = articles.ToList();
+
+        if (!articlesList.Any())
         {
-            try
-            {
-                if (!await _unitOfWork.NewsArticles.ExistsBySourceUrlAsync(dto.SourceUrl))
-                {
-                    await CreateNewsAsync(dto);
-                    count++;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to import article: {Title}", dto.Title);
-            }
+            _logger.LogInformation("No articles to import");
+            return 0;
         }
 
-        return count;
+        // Use transaction for atomic batch import
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            _logger.LogInformation("Starting import of {Count} articles in transaction", articlesList.Count);
+
+            foreach (var dto in articlesList)
+            {
+                try
+                {
+                    // Check if article already exists
+                    if (await _unitOfWork.NewsArticles.ExistsBySourceUrlAsync(dto.SourceUrl))
+                    {
+                        _logger.LogDebug("Article already exists, skipping: {Url}", dto.SourceUrl);
+                        continue;
+                    }
+
+                    // Create article entity
+                    var article = new NewsArticle
+                    {
+                        Title = dto.Title,
+                        Slug = SlugHelper.GenerateSlug(dto.Title),
+                        Summary = dto.Summary,
+                        Content = dto.Content,
+                        PlainText = StripHtml(dto.Content),
+                        SourceUrl = dto.SourceUrl,
+                        OriginalImageUrl = dto.OriginalImageUrl,
+                        Author = dto.Author,
+                        PublishedAt = dto.PublishedAt,
+                        SourceId = dto.SourceId,
+                        CategoryId = dto.CategoryId
+                    };
+
+                    // Download and store image (best effort - doesn't fail import)
+                    if (!string.IsNullOrEmpty(dto.OriginalImageUrl))
+                    {
+                        try
+                        {
+                            article.MongoImageId = await _imageStorage.UploadImageFromUrlAsync(dto.OriginalImageUrl, 0);
+                            if (!string.IsNullOrEmpty(article.MongoImageId))
+                            {
+                                article.MongoThumbId = await _imageStorage.GetThumbnailIdAsync(article.MongoImageId);
+                            }
+                        }
+                        catch (Exception imgEx)
+                        {
+                            _logger.LogWarning(imgEx, "Failed to download image for article: {Title}. Continuing without image.", dto.Title);
+                            // Continue import without image - not a critical failure
+                        }
+                    }
+
+                    await _unitOfWork.NewsArticles.AddAsync(article);
+                    count++;
+                }
+                catch (Exception articleEx)
+                {
+                    _logger.LogError(articleEx, "Failed to process article: {Title}. Rolling back entire batch.", dto.Title);
+                    throw; // Propagate to trigger rollback
+                }
+            }
+
+            // Save all articles atomically
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            _logger.LogInformation("Successfully imported {Count}/{Total} articles in transaction",
+                count, articlesList.Count);
+
+            // Clear cache after successful commit
+            await _cache.RemoveAsync(CacheKeys.LatestNews);
+            await _cache.RemoveAsync(CacheKeys.FeaturedNews);
+
+            return count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to import articles. Rolling back transaction.");
+            await _unitOfWork.RollbackTransactionAsync();
+            throw; // Re-throw to notify caller of failure
+        }
     }
 
     private static NewsArticleListDto MapToListDto(NewsArticle article)
