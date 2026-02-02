@@ -22,6 +22,6 @@ public class NewsArticle : BaseEntity
     public int? CategoryId { get; set; }
 
     // Navigation
-    public virtual NewsSource Source { get; set; } = null!;
+    public virtual NewsSource Source { get; set; } = default!;
     public virtual Category? Category { get; set; }
 }

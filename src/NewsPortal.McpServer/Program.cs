@@ -28,8 +28,34 @@ try
     // Add configuration
     builder.Configuration
         .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", optional: true)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+        .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
         .AddEnvironmentVariables();
+
+    // Validate required connection strings
+    var postgresConnection = builder.Configuration.GetConnectionString("PostgreSQL");
+    var mongoConnection = builder.Configuration.GetConnectionString("MongoDB");
+    var redisConnection = builder.Configuration.GetConnectionString("Redis");
+
+    if (string.IsNullOrWhiteSpace(postgresConnection))
+    {
+        Log.Fatal("PostgreSQL connection string is not configured. Set ConnectionStrings__PostgreSQL environment variable.");
+        throw new InvalidOperationException("PostgreSQL connection string is required");
+    }
+
+    if (string.IsNullOrWhiteSpace(mongoConnection))
+    {
+        Log.Fatal("MongoDB connection string is not configured. Set ConnectionStrings__MongoDB environment variable.");
+        throw new InvalidOperationException("MongoDB connection string is required");
+    }
+
+    if (string.IsNullOrWhiteSpace(redisConnection))
+    {
+        Log.Fatal("Redis connection string is not configured. Set ConnectionStrings__Redis environment variable.");
+        throw new InvalidOperationException("Redis connection string is required");
+    }
+
+    Log.Information("All required connection strings validated successfully");
 
     // Add services
     builder.Services.AddInfrastructure(builder.Configuration);
@@ -61,24 +87,30 @@ try
 
     var host = builder.Build();
 
-    // Schedule Recurring Jobs
-    using (var scope = host.Services.CreateScope())
+    // Schedule Recurring Jobs - AddOrUpdate is synchronous and only registers jobs
+    // Actual job execution happens later in Hangfire's background threads with their own scopes
+    var scope = host.Services.CreateScope();
+    try
     {
         var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
-        
+
         // Fetch news every 15 minutes
         recurringJobManager.AddOrUpdate<INewsFetchJob>(
             "news-fetch-all",
             job => job.FetchAllSourcesAsync(),
             "*/15 * * * *");
-            
+
         // Cleanup cache daily
         recurringJobManager.AddOrUpdate<ICacheCleanupJob>(
             "cache-cleanup",
             job => job.CleanupAsync(),
             Cron.Daily);
-            
-        Log.Information("Background jobs scheduled");
+
+        Log.Information("Background jobs scheduled successfully");
+    }
+    finally
+    {
+        scope.Dispose();
     }
 
     await host.RunAsync();
