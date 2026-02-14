@@ -86,6 +86,7 @@ services:
     restart: always
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
     ports:
       - "8081:80"
       - "5341:5341"
@@ -126,12 +127,6 @@ services:
       - ConnectionStrings__Seq=http://seq:5341
       - Cors__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost:5000}
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     depends_on:
       postgres:
         condition: service_healthy
