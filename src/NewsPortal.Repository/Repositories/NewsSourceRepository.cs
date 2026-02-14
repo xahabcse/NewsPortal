@@ -19,6 +19,7 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
     public async Task<IEnumerable<NewsSource>> GetActiveSourcesAsync()
     {
         return await _dbSet
+            .Include(x => x.ScrapingConfig)
             .Where(x => x.IsActive)
             .OrderBy(x => x.Name)
             .ToListAsync();
