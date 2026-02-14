@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: newsportal-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-newsadmin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DevPassword_ChangeMe}
+      POSTGRES_DB: ${POSTGRES_DB:-newsportal}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-newsadmin} -d ${POSTGRES_DB:-newsportal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newsportal-network
+
+  mongodb:
+    image: mongo:4.4
+    container_name: newsportal-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongouser}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-DevPassword_ChangeMe}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - newsportal-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: newsportal-cache
+    restart: unless-stopped
+    command: redis-server --maxmemory 100mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newsportal-network
+
+  seq:
+    image: datalust/seq:latest
+    container_name: newsportal-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "${SEQ_PORT:-5341}:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - newsportal-network
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+  seq_data:
+    driver: local
+
+networks:
+  newsportal-network:
+    driver: bridge
