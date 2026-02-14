@@ -20,12 +20,7 @@ public static class DependencyInjection
                 client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout for scraping requests
             });
 
-        // Configure HttpClient with timeout for RssFeedService
-        services.AddHttpClient<IRssFeedService, RssFeedService>()
-            .ConfigureHttpClient(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(20); // 20 second timeout for RSS feed requests
-            });
+        services.AddScoped<IRssFeedService, RssFeedService>();
 
         services.AddScoped<INewsFetcherService, NewsFetcherService>();
 

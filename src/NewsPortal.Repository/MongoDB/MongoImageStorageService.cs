@@ -101,12 +101,7 @@ public class MongoImageStorageService : IImageStorageService
             var id = await _gridFsBucket.UploadFromBytesAsync(fileName, imageData, options);
 
             // Generate thumbnail
-            var thumbId = await GenerateThumbnailAsync(id.ToString(), 400, 300);
-
-            // Update original with thumbnail reference
-            var filter = Builders<GridFSFileInfo>.Filter.Eq("_id", id);
-            var update = Builders<GridFSFileInfo>.Update.Set("metadata.thumbnailId", new ObjectId(thumbId));
-            // Note: GridFS doesn't directly support updates, so we store the reference during upload
+            await GenerateThumbnailAsync(id.ToString(), 400, 300);
 
             _logger.LogInformation("Successfully uploaded image {ImageId} from {ImageUrl} for article {ArticleId}",
                 id.ToString(), imageUrl, newsArticleId);
@@ -180,8 +175,26 @@ public class MongoImageStorageService : IImageStorageService
             var objectId = new ObjectId(imageId);
             var filter = Builders<GridFSFileInfo>.Filter.Eq("_id", objectId);
             var fileInfo = await _gridFsBucket.Find(filter).FirstOrDefaultAsync();
+            var thumbnailMeta = fileInfo?.Metadata?.GetValue("thumbnailId", BsonNull.Value);
+            if (thumbnailMeta != null && !thumbnailMeta.IsBsonNull)
+            {
+                return thumbnailMeta.BsonType == BsonType.ObjectId
+                    ? thumbnailMeta.AsObjectId.ToString()
+                    : thumbnailMeta.AsString;
+            }
 
-            return fileInfo?.Metadata?.GetValue("thumbnailId", BsonNull.Value)?.ToString();
+            // Fallback: find thumbnail by originalId metadata when original file metadata has no thumbnailId.
+            var thumbnailFilter = Builders<GridFSFileInfo>.Filter.And(
+                Builders<GridFSFileInfo>.Filter.Eq("metadata.type", "thumbnail"),
+                Builders<GridFSFileInfo>.Filter.Eq("metadata.originalId", imageId));
+
+            var thumbFile = await _gridFsBucket.Find(thumbnailFilter).FirstOrDefaultAsync();
+            if (thumbFile == null)
+            {
+                return null;
+            }
+
+            return thumbFile.Id.ToString();
         }
         catch (Exception ex)
         {

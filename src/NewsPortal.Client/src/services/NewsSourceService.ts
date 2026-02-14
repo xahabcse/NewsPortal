@@ -2,12 +2,18 @@ import axios from 'axios';
 import type { NewsSource, CreateNewsSourceDto } from '../types/NewsSource';
 
 const getApiUrl = () => {
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    if (import.meta.env.DEV) return 'http://localhost:5000/api';
-    return `${window.location.protocol}//${window.location.hostname}:5000/api`;
+    const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+    if (envUrl) {
+        const normalized = envUrl.replace(/\/$/, '');
+        return normalized.endsWith('/v1') ? normalized : `${normalized}/v1`;
+    }
+
+    if (import.meta.env.DEV) return 'http://localhost:5000/api/v1';
+    return `${window.location.protocol}//${window.location.hostname}:5000/api/v1`;
 };
 
 const API_URL = getApiUrl();
+export const NEWS_SOURCE_API_URL = API_URL;
 
 export const NewsSourceService = {
     getAll: async (): Promise<NewsSource[]> => {

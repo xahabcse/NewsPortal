@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { NewsSource, CreateNewsSourceDto } from '../types/NewsSource';
-import { NewsSourceService } from '../services/NewsSourceService';
+import { NewsSourceService, NEWS_SOURCE_API_URL } from '../services/NewsSourceService';
 import axios from 'axios';
 
 const NewsSourcesPage = () => {
@@ -95,7 +95,7 @@ const NewsSourcesPage = () => {
     const handleFetch = async (sourceId: number) => {
         try {
             // Call the fetch endpoint for this specific source
-            await axios.post(`${import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000/api`}/newssources/${sourceId}/fetch`);
+            await axios.post(`${NEWS_SOURCE_API_URL}/newssources/${sourceId}/fetch`);
             alert('News fetch started! Check Fetch Logs for progress.');
         } catch (error) {
             console.error('Failed to trigger fetch', error);
