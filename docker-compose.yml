@@ -121,6 +121,7 @@ services:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - AllowedHosts=*
       - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsportal};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Include Error Detail=false
       - ConnectionStrings__MongoDB=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/newsportal?authSource=admin
       - ConnectionStrings__Redis=redis:6379,password=${REDIS_PASSWORD},abortConnect=false

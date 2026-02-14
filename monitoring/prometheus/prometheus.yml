@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: postgres-exporter
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  - job_name: mongodb-exporter
+    static_configs:
+      - targets: ["mongodb-exporter:9216"]
+
+  # TODO: Re-enable app metrics jobs after adding explicit /metrics endpoints.
+  # - job_name: newsportal-api
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ["api:8080"]
+  #
+  # - job_name: newsportal-mcp
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets: ["mcpserver:8080"]
