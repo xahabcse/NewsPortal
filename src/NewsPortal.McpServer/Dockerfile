@@ -31,14 +31,15 @@ WORKDIR /app
 # Install timezone data
 RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
 
-# Create logs directory
-RUN mkdir -p /app/logs && chmod 755 /app/logs
-
 # Copy published application
 COPY --from=publish /app/publish .
 
-# Run as non-root user
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser:appuser /app
+# Create non-root user
+RUN adduser --disabled-password --gecos "" appuser
+
+# Create logs directory and set ownership
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app && chmod -R 755 /app/logs
+
 USER appuser
 
 ENTRYPOINT ["dotnet", "NewsPortal.McpServer.dll"]
