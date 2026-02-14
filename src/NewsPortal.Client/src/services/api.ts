@@ -1,4 +1,18 @@
-const API_BASE_URL = '/api';
+const getApiBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+    if (envUrl) {
+        const normalized = envUrl.replace(/\/$/, '');
+        return normalized.endsWith('/v1') ? normalized : `${normalized}/v1`;
+    }
+
+    if (import.meta.env.DEV) {
+        return 'http://localhost:5000/api/v1';
+    }
+
+    return '/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface NewsArticle {
     id: number;

@@ -199,9 +199,9 @@ public class NewsService : INewsService
         await _unitOfWork.NewsArticles.AddAsync(article);
         await _unitOfWork.SaveChangesAsync();
 
-        // Clear cache
-        await _cache.RemoveAsync(CacheKeys.LatestNews);
-        await _cache.RemoveAsync(CacheKeys.FeaturedNews);
+        // Clear related list/search caches (keys include pagination/count suffixes)
+        await _cache.RemoveByPatternAsync("news:*");
+        await _cache.RemoveByPatternAsync("search:*");
 
         return article;
     }
@@ -286,9 +286,9 @@ public class NewsService : INewsService
             _logger.LogInformation("Successfully imported {Count}/{Total} articles in transaction",
                 count, articlesList.Count);
 
-            // Clear cache after successful commit
-            await _cache.RemoveAsync(CacheKeys.LatestNews);
-            await _cache.RemoveAsync(CacheKeys.FeaturedNews);
+            // Clear related list/search caches after successful commit
+            await _cache.RemoveByPatternAsync("news:*");
+            await _cache.RemoveByPatternAsync("search:*");
 
             return count;
         }
