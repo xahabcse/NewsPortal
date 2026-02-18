@@ -27,6 +27,7 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize);
     Task IncrementViewCountAsync(int id);
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
+    Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
 }
 
 public interface ICategoryRepository : IRepository<Category>
@@ -42,6 +43,12 @@ public interface INewsSourceRepository : IRepository<NewsSource>
     Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync();
     Task<NewsSource?> GetWithScrapingConfigAsync(int id);
     Task UpdateLastFetchedAsync(int id);
+}
+
+public interface ISourceFetchJobRepository : IRepository<SourceFetchJob>
+{
+    Task<SourceFetchJob?> GetByExternalIdAsync(Guid externalId);
+    Task<IEnumerable<SourceFetchJob>> GetRecentBySourceIdAsync(int sourceId, int count);
 }
 
 public interface INewsFetchLogRepository

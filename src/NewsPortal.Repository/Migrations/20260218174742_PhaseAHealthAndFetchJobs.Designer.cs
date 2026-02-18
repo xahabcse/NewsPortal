@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NewsPortal.Repository.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NewsPortal.Repository.Migrations
 {
     [DbContext(typeof(NewsPortalDbContext))]
-    partial class NewsPortalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218174742_PhaseAHealthAndFetchJobs")]
+    partial class PhaseAHealthAndFetchJobs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,11 +96,6 @@ namespace NewsPortal.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("CanonicalUrl")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
@@ -164,8 +162,6 @@ namespace NewsPortal.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CanonicalUrl");
-
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("FetchedAt");
@@ -181,13 +177,11 @@ namespace NewsPortal.Repository.Migrations
 
                     b.HasIndex("SourceId");
 
-                    b.HasIndex("SourceUrl");
+                    b.HasIndex("SourceUrl")
+                        .IsUnique();
 
                     b.HasIndex("IsActive", "PublishedAt")
                         .IsDescending(false, true);
-
-                    b.HasIndex("SourceId", "CanonicalUrl")
-                        .IsUnique();
 
                     b.HasIndex("CategoryId", "IsActive", "PublishedAt")
                         .IsDescending(false, false, true);

@@ -45,8 +45,20 @@ public class NewsSourceService : INewsSourceService
                 LogoUrl = source.LogoUrl,
                 FetchMethod = source.FetchMethod,
                 RssFeedUrl = source.RssFeedUrl,
+                ApiEndpoint = source.ApiEndpoint,
+                ApiKey = source.ApiKey,
+                FetchIntervalMinutes = source.FetchIntervalMinutes > 0 ? source.FetchIntervalMinutes : 30,
                 IsActive = source.IsActive,
                 LastFetchedAt = source.LastFetchedAt,
+                HealthStatus = source.HealthStatus,
+                ConsecutiveFailures = source.ConsecutiveFailures,
+                LastSuccessAt = source.LastSuccessAt,
+                LastFailureAt = source.LastFailureAt,
+                LastErrorCode = source.LastErrorCode,
+                NextRetryAt = source.NextRetryAt,
+                RequestTimeoutSeconds = source.RequestTimeoutSeconds > 0 ? source.RequestTimeoutSeconds : 90,
+                MaxRetryAttempts = source.MaxRetryAttempts > 0 ? source.MaxRetryAttempts : 3,
+                CircuitBreakerThreshold = source.CircuitBreakerThreshold > 0 ? source.CircuitBreakerThreshold : 5,
                 ArticleCount = articleCounts.GetValueOrDefault(source.Id, 0)
             }).ToList();
 
@@ -71,25 +83,41 @@ public class NewsSourceService : INewsSourceService
             LogoUrl = source.LogoUrl,
             FetchMethod = source.FetchMethod,
             RssFeedUrl = source.RssFeedUrl,
+            ApiEndpoint = source.ApiEndpoint,
+            ApiKey = source.ApiKey,
+            FetchIntervalMinutes = source.FetchIntervalMinutes > 0 ? source.FetchIntervalMinutes : 30,
             IsActive = source.IsActive,
             LastFetchedAt = source.LastFetchedAt,
+            HealthStatus = source.HealthStatus,
+            ConsecutiveFailures = source.ConsecutiveFailures,
+            LastSuccessAt = source.LastSuccessAt,
+            LastFailureAt = source.LastFailureAt,
+            LastErrorCode = source.LastErrorCode,
+            NextRetryAt = source.NextRetryAt,
+            RequestTimeoutSeconds = source.RequestTimeoutSeconds > 0 ? source.RequestTimeoutSeconds : 90,
+            MaxRetryAttempts = source.MaxRetryAttempts > 0 ? source.MaxRetryAttempts : 3,
+            CircuitBreakerThreshold = source.CircuitBreakerThreshold > 0 ? source.CircuitBreakerThreshold : 5,
             ArticleCount = count
         };
     }
 
     public async Task<NewsSource> CreateSourceAsync(CreateNewsSourceDto dto)
     {
+        var fetchMethod = NormalizeFetchMethod(dto.FetchMethod);
         var source = new NewsSource
         {
             Name = dto.Name,
             Slug = SlugHelper.GenerateSlug(dto.Name),
             BaseUrl = dto.BaseUrl,
             LogoUrl = dto.LogoUrl,
-            FetchMethod = dto.FetchMethod,
+            FetchMethod = fetchMethod,
             RssFeedUrl = dto.RssFeedUrl,
             ApiEndpoint = dto.ApiEndpoint,
             ApiKey = dto.ApiKey,
-            FetchIntervalMinutes = dto.FetchIntervalMinutes
+            FetchIntervalMinutes = Math.Clamp(dto.FetchIntervalMinutes, 5, 1440),
+            RequestTimeoutSeconds = 90,
+            MaxRetryAttempts = 3,
+            CircuitBreakerThreshold = 5
         };
 
         await _unitOfWork.NewsSources.AddAsync(source);
@@ -108,11 +136,11 @@ public class NewsSourceService : INewsSourceService
         source.Name = dto.Name;
         source.BaseUrl = dto.BaseUrl;
         source.LogoUrl = dto.LogoUrl;
-        source.FetchMethod = dto.FetchMethod;
+        source.FetchMethod = NormalizeFetchMethod(dto.FetchMethod);
         source.RssFeedUrl = dto.RssFeedUrl;
         source.ApiEndpoint = dto.ApiEndpoint;
         source.ApiKey = dto.ApiKey;
-        source.FetchIntervalMinutes = dto.FetchIntervalMinutes;
+        source.FetchIntervalMinutes = Math.Clamp(dto.FetchIntervalMinutes, 5, 1440);
 
         await _unitOfWork.NewsSources.UpdateAsync(source);
         await _unitOfWork.SaveChangesAsync();
@@ -133,5 +161,17 @@ public class NewsSourceService : INewsSourceService
     public async Task<IEnumerable<NewsSource>> GetActiveSourcesForFetchingAsync()
     {
         return await _unitOfWork.NewsSources.GetActiveSourcesAsync();
+    }
+
+    private static Core.Enums.FetchMethod NormalizeFetchMethod(Core.Enums.FetchMethod method)
+    {
+        if ((int)method == 0)
+        {
+            return Core.Enums.FetchMethod.Rss;
+        }
+
+        return Enum.IsDefined(typeof(Core.Enums.FetchMethod), method)
+            ? method
+            : Core.Enums.FetchMethod.Rss;
     }
 }

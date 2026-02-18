@@ -256,17 +256,15 @@ public class NewsTools
             _logger.LogInformation("Fetching news from source: {SourceName} using method: {FetchMethod}",
                 source.Name, source.FetchMethod);
 
-            var articles = source.FetchMethod switch
-            {
-                Core.Enums.FetchMethod.Rss => await _newsFetcherService.FetchFromRssAsync(source),
-                Core.Enums.FetchMethod.Api => await _newsFetcherService.FetchFromApiAsync(source),
-                Core.Enums.FetchMethod.Scrape => await _newsFetcherService.FetchByScrapingAsync(source),
-                _ => Enumerable.Empty<CreateNewsArticleDto>()
-            };
-
-            var count = await _newsService.ImportNewsArticlesAsync(articles);
-            _logger.LogInformation("Successfully imported {Count} articles from {SourceName}", count, source.Name);
-            return $"Imported {count} articles from {source.Name}";
+            var fetchResult = await _newsFetcherService.FetchWithFallbackAsync(source);
+            var importResult = await _newsService.ImportNewsArticlesWithReportAsync(fetchResult.Articles);
+            _logger.LogInformation(
+                "Successfully imported {Count} articles from {SourceName}. Duplicate={Duplicate}, Invalid={Invalid}",
+                importResult.ImportedCount,
+                source.Name,
+                importResult.DuplicateCount,
+                importResult.InvalidCount);
+            return $"Imported {importResult.ImportedCount} articles from {source.Name}";
         }
         catch (Exception ex)
         {

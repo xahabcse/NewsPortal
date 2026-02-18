@@ -3,26 +3,29 @@ import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
 import NewsSourcesPage from './pages/NewsSourcesPage'
+import { AuthProvider } from './context/AuthContext'
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-background text-foreground flex">
-        <Sidebar />
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-background text-foreground flex">
+          <Sidebar />
 
-        <div className="flex-1 ml-64 flex flex-col">
-          <Navbar />
+          <div className="flex-1 ml-64 flex flex-col">
+            <Navbar />
 
-          <div className="mt-16 flex-1">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
-              <Route path="/news-sources" element={<NewsSourcesPage />} />
-            </Routes>
+            <div className="mt-16 flex-1">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
+                <Route path="/news-sources" element={<NewsSourcesPage />} />
+              </Routes>
+            </div>
           </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+    </AuthProvider>
   )
 }
 

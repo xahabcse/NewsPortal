@@ -12,6 +12,7 @@ public class UnitOfWork : IUnitOfWork
     private INewsArticleRepository? _newsArticles;
     private ICategoryRepository? _categories;
     private INewsSourceRepository? _newsSources;
+    private ISourceFetchJobRepository? _sourceFetchJobs;
     private IUserRepository? _users;
 
     public UnitOfWork(NewsPortalDbContext context)
@@ -27,6 +28,9 @@ public class UnitOfWork : IUnitOfWork
 
     public INewsSourceRepository NewsSources =>
         _newsSources ??= new NewsSourceRepository(_context);
+
+    public ISourceFetchJobRepository SourceFetchJobs =>
+        _sourceFetchJobs ??= new SourceFetchJobRepository(_context);
 
     public IUserRepository Users =>
         _users ??= new UserRepository(_context);
