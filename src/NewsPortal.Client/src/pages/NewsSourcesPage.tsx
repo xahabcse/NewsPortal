@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NewsSourceService } from '../services/NewsSourceService';
 import { useAuth } from '../context/AuthContext';
+import FetchJobStatusModal from '../components/FetchJobStatusModal';
 import type {
     NewsSource,
     CreateNewsSourceDto,
@@ -366,6 +367,8 @@ export default function NewsSourcesPage() {
     const [bulkLoading, setBulkLoading] = useState(false);
 
     const [fetchingJobs, setFetchingJobs] = useState<Record<number, string>>({});
+    const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+    const [selectedJobSourceName, setSelectedJobSourceName] = useState('');
 
     const loadSources = useCallback(async () => {
         try {
@@ -412,6 +415,8 @@ export default function NewsSourcesPage() {
         try {
             const resp = await NewsSourceService.fetchNow(source.id);
             setFetchingJobs(prev => ({ ...prev, [source.id]: resp.jobId }));
+            setSelectedJobId(resp.jobId);
+            setSelectedJobSourceName(source.name);
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Fetch failed');
         }
@@ -719,6 +724,16 @@ export default function NewsSourcesPage() {
                 source={deleteTarget}
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
+            />
+            <FetchJobStatusModal
+                isOpen={!!selectedJobId}
+                jobId={selectedJobId}
+                sourceName={selectedJobSourceName}
+                onClose={() => {
+                    setSelectedJobId(null);
+                    setSelectedJobSourceName('');
+                    loadSources(); // Refresh after modal closes
+                }}
             />
         </main>
     );

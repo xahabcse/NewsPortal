@@ -1,105 +1,99 @@
 # NewsPortal Implementation Plan
 
-**Generated:** 2026-02-19  
-**Status:** Remaining features from Robust News Channel Feature Plan  
+**Generated:** 2026-02-19
+**Status:** Phase 3 nearly complete - Engagement features implemented
 **Target:** Production-ready news aggregator with full reader experience
+**Last Updated:** 2026-02-19
 
 ---
 
 ## Executive Summary
 
 ### Current State
-- ✅ **Backend:** 95% complete - All core APIs, health tracking, duplicate detection, CI/CD ready
+- ✅ **Backend:** 98% complete - All core APIs, health tracking, duplicate detection, bookmarks, reading history
 - ✅ **Infrastructure:** 100% complete - Docker, monitoring, backup/rollback scripts deployed
-- ⚠️ **Frontend:** 60% complete - Shell works, but missing critical reader features
+- ✅ **Frontend:** 85% complete - All critical reader features complete, engagement features added
 
 ### Priority Focus
-1. **Critical** - Fix broken UX (detail page, 404, error handling)
-2. **High** - Core reader features (search, pagination, trending)
-3. **Medium** - Engagement features (bookmarks, history, notifications)
-4. **Low** - Polish (PWA, SEO, i18n)
+1. **Critical** - Fix broken UX (detail page, 404, error handling) ✅ **COMPLETE**
+2. **High** - Core reader features (search, pagination, trending) ✅ **COMPLETE**
+3. **Medium** - Engagement features (bookmarks, history, notifications) ⚠️ **80% Complete**
+4. **Low** - Polish (PWA, SEO, i18n) ❌ **Not Started**
 
 ---
 
-## Phase 1: Critical Fixes (Week 1)
+## Phase 1: Critical Fixes (Week 1) ✅ **COMPLETE**
 
-### 1.1 Article Detail Page
+### 1.1 Article Detail Page ✅ **DONE**
 **Priority:** Critical | **Estimate:** 4 hours | **Dependencies:** None
+**Status:** Completed 2026-02-19
 
 **Backend:** ✅ Already exists (`GET /news/{slug}`)
 
-**Frontend Tasks:**
-- [ ] Create `src/pages/ArticleDetailPage.tsx`
-- [ ] Add route in `App.tsx`: `/news/:slug`
-- [ ] Wire "READ MORE" button in `NewsCard.tsx` to `/news/{slug}`
-- [ ] Display: title, author, publish date, source, image, content
-- [ ] Add reading time estimate: `Math.ceil(plainText.split(/\s+/).length / 200)`
-- [ ] Add "Back to Home" navigation
+**Frontend Tasks:** ✅ All Complete
+- [x] Create `src/pages/ArticleDetailPage.tsx`
+- [x] Add route in `App.tsx`: `/news/:slug`
+- [x] Wire "READ MORE" button in `NewsCard.tsx` to `/news/{slug}`
+- [x] Display: title, author, publish date, source, image, content
+- [x] Add reading time estimate: `Math.ceil(plainText.split(/\s+/).length / 200)`
+- [x] Add "Back to Home" navigation
 
-**Acceptance Criteria:**
-- Article loads with full content
-- ViewCount increments on view
-- Reading time displays correctly
-- Mobile-responsive layout
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 1.2 Error Boundary Component
+### 1.2 Error Boundary Component ✅ **DONE**
 **Priority:** Critical | **Estimate:** 2 hours | **Dependencies:** None
+**Status:** Completed 2026-02-19
 
-**Tasks:**
-- [ ] Create `src/components/ErrorBoundary.tsx` (React Class component)
-- [ ] Wrap all route content in `App.tsx` with ErrorBoundary
-- [ ] Show friendly error UI with "Go Home" button
-- [ ] Log errors to console (future: send to backend)
+**Tasks:** ✅ All Complete
+- [x] Create `src/components/ErrorBoundary.tsx` (React Class component)
+- [x] Wrap all route content in `App.tsx` with ErrorBoundary
+- [x] Show friendly error UI with "Go Home" button
+- [x] Log errors to console (future: send to backend)
 
-**Acceptance Criteria:**
-- Unhandled component errors show friendly UI
-- No white screens
-- Error details logged
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 1.3 404 Not Found Page
+### 1.3 404 Not Found Page ✅ **DONE**
 **Priority:** Critical | **Estimate:** 1 hour | **Dependencies:** None
+**Status:** Completed 2026-02-19
 
-**Tasks:**
-- [ ] Create `src/pages/NotFoundPage.tsx`
-- [ ] Add catch-all route in `App.tsx`: `*`
-- [ ] Style with app theme (glass-morphism dark)
-- [ ] Add "Go Home" button
+**Tasks:** ✅ All Complete
+- [x] Create `src/pages/NotFoundPage.tsx`
+- [x] Add catch-all route in `App.tsx`: `*`
+- [x] Style with app theme (glass-morphism dark)
+- [x] Add "Go Home" button
 
-**Acceptance Criteria:**
-- Unknown routes show 404 page
-- Consistent with app design
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 1.4 Delete Unused Mock Data
+### 1.4 Delete Unused Mock Data ✅ **DONE**
 **Priority:** Low | **Estimate:** 15 min | **Dependencies:** None
+**Status:** Completed 2026-02-19
 
-**Tasks:**
-- [ ] Delete `src/data/newsData.ts`
-- [ ] Remove any imports referencing it
+**Tasks:** ✅ All Complete
+- [x] Delete `src/data/newsData.ts`
+- [x] Remove any imports referencing it
 
 ---
 
-### 1.5 Standardize HTTP Client
+### 1.5 Standardize HTTP Client ✅ **DONE**
 **Priority:** Medium | **Estimate:** 3 hours | **Dependencies:** None
+**Status:** Completed 2026-02-19
 
-**Tasks:**
-- [ ] Create `src/services/axiosInstance.ts`
+**Tasks:** ✅ All Complete
+- [x] Create `src/services/axiosInstance.ts`
   - Base URL from env
   - Auth header interceptor
   - Global error handling (401 → logout, 500 → toast)
-- [ ] Migrate `api.ts` from `fetch` to `axios`
-- [ ] Update `AuthService.ts` to use shared instance
-- [ ] Update `NewsSourceService.ts` to use shared instance
+- [x] Migrate `api.ts` from `fetch` to `axios`
+- [x] Update `AuthService.ts` to use shared instance
+- [x] Update `NewsSourceService.ts` to use shared instance
 
-**Acceptance Criteria:**
-- All API calls use single axios instance
-- Auth headers injected automatically
-- Consistent error handling
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
@@ -195,85 +189,86 @@
 
 ---
 
-## Phase 3: Engagement Features (Week 3)
+## Phase 3: Engagement Features (Week 3) ⚠️ **80% Complete**
 
-### 3.1 Bookmarks / Saved Articles
+### 3.1 Bookmarks / Saved Articles ✅ **DONE**
 **Priority:** High | **Estimate:** 8 hours | **Dependencies:** 1.1 (ArticleDetailPage)
+**Status:** Completed 2026-02-19
 
-**Backend Tasks:**
-- [ ] Create `UserBookmark` entity (`UserId`, `ArticleId`, `CreatedAt`)
-- [ ] Add `POST /api/v1/bookmarks/{articleId}`
-- [ ] Add `DELETE /api/v1/bookmarks/{articleId}`
-- [ ] Add `GET /api/v1/bookmarks` (paginated)
-- [ ] Add migration
+**Backend Tasks:** ✅ All Complete
+- [x] Create `UserBookmark` entity (`UserId`, `ArticleId`, `CreatedAt`)
+- [x] Add `POST /api/v1/bookmarks/{articleId}`
+- [x] Add `DELETE /api/v1/bookmarks/{articleId}`
+- [x] Add `GET /api/v1/bookmarks` (paginated)
+- [x] Add migration `AddUserBookmarks`
 
-**Frontend Tasks:**
-- [ ] Add bookmark icon to `NewsCard.tsx`
-- [ ] Create `src/pages/BookmarksPage.tsx`
-- [ ] Add route: `/bookmarks` (auth required)
-- [ ] Add "Saved" badge on bookmarked articles
+**Frontend Tasks:** ✅ All Complete
+- [x] Add bookmark icon to `NewsCard.tsx`
+- [x] Create `src/pages/BookmarksPage.tsx`
+- [x] Add route: `/bookmarks` (auth required)
+- [x] Add "Saved" badge on bookmarked articles
 
-**Acceptance Criteria:**
-- Users can save/remove articles
-- Bookmarks persist across sessions
-- Requires auth
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 3.2 Reading History
+### 3.2 Reading History ✅ **DONE**
 **Priority:** Medium | **Estimate:** 6 hours | **Dependencies:** 1.1 (ArticleDetailPage)
+**Status:** Completed 2026-02-19
 
-**Backend Tasks:**
-- [ ] Create `UserReadHistory` entity (`UserId`, `ArticleId`, `ReadAt`)
-- [ ] Record on article detail view (throttled: 1 per article per user)
-- [ ] Add `GET /api/v1/reading-history` (last 50 items)
+**Backend Tasks:** ✅ All Complete
+- [x] Create `UserReadHistory` entity (`UserId`, `ArticleId`, `ReadAt`)
+- [x] Record on article detail view (throttled: 1 per article per user)
+- [x] Add `GET /api/v1/reading-history` (last 50 items)
+- [x] Add migration `AddUserReadHistory`
 
-**Frontend Tasks:**
-- [ ] Add "Recently Read" section to sidebar or profile
-- [ ] Display as compact list
+**Frontend Tasks:** ✅ All Complete
+- [x] Add "Recently Read" section to sidebar
+- [x] Display as compact list (last 10)
+- [x] Auto-record after 5 second read delay
 
-**Acceptance Criteria:**
-- History auto-updates on read
-- Shows last 50 articles
-- Requires auth
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 3.3 Toast/Notification System
+### 3.3 Toast/Notification System ✅ **DONE**
 **Priority:** Medium | **Estimate:** 3 hours | **Dependencies:** 1.5 (axiosInstance)
+**Status:** Completed 2026-02-19
 
-**Tasks:**
-- [ ] Install `react-hot-toast`
-- [ ] Create `src/components/ToastProvider.tsx`
-- [ ] Wire to axios error interceptor (show error toasts)
-- [ ] Add success toasts for actions (bookmark, fetch, etc.)
+**Tasks:** ✅ All Complete
+- [x] Install `react-hot-toast`
+- [x] Create `src/components/ToastProvider.tsx`
+- [x] Wire to axios error interceptor (show error toasts)
+- [x] Add success toasts for actions (bookmark, fetch, etc.)
 
-**Acceptance Criteria:**
-- Toasts appear on API errors
-- Success feedback on actions
-- Auto-dismiss after 3s
+**Acceptance Criteria:** ✅ All Met
 
 ---
 
-### 3.4 Fetch Job Status Polling
+### 3.4 Fetch Job Status Polling ✅ **DONE**
 **Priority:** Medium | **Estimate:** 4 hours | **Dependencies:** 2.5 (ToastProvider)
+**Status:** Completed 2026-02-19
 
 **Backend:** ✅ Already exists (`GET /fetchjobs/{externalId}`)
 
-**Frontend Tasks:**
-- [ ] When user triggers manual fetch, poll job status every 2s
-- [ ] Show progress modal/toast
-- [ ] Display: status, articles imported, errors
-- [ ] Stop polling on terminal status (Completed/Failed)
+**Frontend Tasks:** ✅ All Complete
+- [x] Create `FetchJobStatusModal` component
+- [x] Poll job status every 2s when fetch triggered
+- [x] Show progress modal with status, articles count
+- [x] Display: status, articles imported, errors, timing
+- [x] Stop polling on terminal status (Completed/Failed)
+- [x] Integrate with NewsSourcesPage fetch button
 
-**Acceptance Criteria:**
+**Acceptance Criteria:** ✅ All Met
 - Real-time fetch progress visible
 - Shows final results summary
+- Auto-refresh after modal closes
 
 ---
 
-### 3.5 Test Source Results Modal
+### 3.5 Test Source Results Modal ❌ **PENDING**
 **Priority:** Medium | **Estimate:** 3 hours | **Dependencies:** 2.5 (ToastProvider)
+**Status:** Not Started
 
 **Backend:** ✅ Already exists (`POST /newssources/test`)
 
@@ -516,11 +511,11 @@
 
 ## Migration Checklist
 
-| Migration | Entity | Status |
-| --------- | ------ | ------ |
-| `AddUserBookmarks` | `UserBookmark` | Pending Phase 3.1 |
-| `AddUserReadHistory` | `UserReadHistory` | Pending Phase 3.2 |
-| `AddComments` | `Comment` | Pending Phase 6.2 |
+| Migration | Entity | Status | Completed |
+| --------- | ------ | ------ | --------- |
+| `AddUserBookmarks` | `UserBookmark` | ✅ Complete | 2026-02-19 |
+| `AddUserReadHistory` | `UserReadHistory` | ✅ Complete | 2026-02-19 |
+| `AddComments` | `Comment` | ❌ Pending Phase 6.2 | - |
 
 ---
 
@@ -597,28 +592,45 @@ src/
 
 ## Timeline Summary
 
-| Phase | Duration | Features |
-| ----- | -------- | -------- |
-| Phase 1 | Week 1 | Critical fixes (detail page, error boundary, 404) |
-| Phase 2 | Week 2 | Core reader (search, pagination, trending) |
-| Phase 3 | Week 3 | Engagement (bookmarks, history, toasts) |
-| Phase 4 | Week 4 | Admin (dashboard, logs, registration) |
-| Phase 5 | Week 5 | SEO (meta tags, sitemap, RSS) |
-| Phase 6 | Week 6+ | Advanced (WebSocket, comments, PWA, i18n) |
+| Phase | Duration | Features | Status |
+| ----- | -------- | -------- | ------ |
+| Phase 1 | Week 1 | Critical fixes (detail page, error boundary, 404) | ✅ **100% Complete** |
+| Phase 2 | Week 2 | Core reader (search, pagination, trending) | ✅ **100% Complete** |
+| Phase 3 | Week 3 | Engagement (bookmarks, history, toasts, fetch polling) | ⚠️ **80% Complete** (4/5) |
+| Phase 4 | Week 4 | Admin (dashboard, logs, registration) | ❌ **Not Started** |
+| Phase 5 | Week 5 | SEO (meta tags, sitemap, RSS) | ❌ **Not Started** |
+| Phase 6 | Week 6+ | Advanced (WebSocket, comments, PWA, i18n) | ❌ **Not Started** |
 
-**Total Estimated Time:** 100-120 hours (5-6 weeks full-time)
+**Total Progress:** 13/30 features (43%) | **Time Spent:** ~40 hours
 
 ---
 
 ## Next Steps
 
-1. **Start with Phase 1.1** (Article Detail Page) - highest impact
-2. **Phase 1.2-1.3** (Error Boundary, 404) - quick wins
-3. **Phase 1.5** (Standardize HTTP Client) - foundation for Phase 2
-4. **Phase 2** - complete core reader experience
-5. **Iterate** based on user feedback
+### Immediate (Remaining Phase 3)
+1. **Test Source Results Modal** (3.5) - Show validation results after testing source
+
+### Phase 4: Admin & Operations
+2. **Admin Dashboard** (4.1) - Operational metrics and stats
+3. **Fetch History Log Viewer** (4.2) - Filterable log viewer
+4. **User Registration Page** (4.3) - Registration form
+5. **User Profile Page** (4.4) - Profile and change password
+6. **Responsive Mobile Layout** (4.5) - Hamburger menu, mobile-friendly
+
+### Phase 5: SEO & Polish
+7. **Dynamic Meta Tags** (5.1) - Social sharing previews
+8. **Sitemap.xml** (5.2) - Search engine indexing
+9. **RSS Feed** (5.3) - Feed for readers
+10. **Related Articles** (5.4) - Keep readers engaged
+11. **Infinite Scroll** (5.5) - Seamless pagination
+
+### Phase 6: Advanced (Optional)
+12. **WebSocket Live Updates** (6.1) - Real-time new articles
+13. **Article Comments** (6.2) - Community engagement
+14. **PWA Support** (6.3) - Installable app
+15. **Internationalization** (6.4) - Bangla language support
 
 ---
 
-**Last Updated:** 2026-02-19  
-**Version:** 1.0
+**Last Updated:** 2026-02-19
+**Version:** 2.0
