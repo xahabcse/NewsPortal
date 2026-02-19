@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
+import NewsCard from '../components/NewsCard';
 
 interface NewsArticleDetail {
     id: number;
@@ -21,6 +22,17 @@ interface NewsArticleDetail {
     sourceName: string;
     categoryName: string | null;
     categorySlug: string | null;
+}
+
+interface RelatedArticle {
+    id: number;
+    title: string;
+    slug: string;
+    summary: string | null;
+    thumbnailUrl: string | null;
+    publishedAt: string;
+    sourceName: string;
+    categoryName: string | null;
 }
 
 const calculateReadingTime = (content: string | null): number => {
@@ -49,6 +61,7 @@ const ArticleDetailPage = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const [article, setArticle] = useState<NewsArticleDetail | null>(null);
+    const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [imgFailed, setImgFailed] = useState(false);
@@ -64,6 +77,10 @@ const ArticleDetailPage = () => {
             try {
                 const response = await axiosInstance.get<NewsArticleDetail>(`/news/${slug}`);
                 setArticle(response.data);
+
+                // Fetch related articles
+                const relatedResponse = await axiosInstance.get<RelatedArticle[]>(`/news/${slug}/related?count=4`);
+                setRelatedArticles(relatedResponse.data);
 
                 // Record reading history if user is authenticated
                 if (isAuthenticated && response.data?.id) {
@@ -294,6 +311,27 @@ const ArticleDetailPage = () => {
                             <line x1="10" y1="14" x2="21" y2="3"></line>
                         </svg>
                     </a>
+                </div>
+            )}
+
+            {/* Related Articles */}
+            {relatedArticles.length > 0 && (
+                <div className="mt-12 pt-8 border-t border-glass-border">
+                    <h2 className="text-2xl font-bold text-white mb-6">Related Articles</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {relatedArticles.map((related) => (
+                            <NewsCard
+                                key={related.id}
+                                title={related.title}
+                                summary={related.summary}
+                                categoryName={related.categoryName}
+                                sourceName={related.sourceName}
+                                publishedAt={related.publishedAt}
+                                thumbnailUrl={related.thumbnailUrl}
+                                slug={related.slug}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
