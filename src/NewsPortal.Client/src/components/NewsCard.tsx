@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 
 interface NewsCardProps {
     title: string;
@@ -9,7 +9,26 @@ interface NewsCardProps {
     thumbnailUrl: string | null;
 }
 
+const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
+    <div className="w-full h-full bg-gradient-to-br from-accent/20 via-purple-500/10 to-background flex flex-col items-center justify-center gap-3">
+        <div className="w-14 h-14 rounded-2xl bg-accent/15 border border-accent/20 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+                <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8l-4 4v14a2 2 0 0 0 2 2z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <line x1="10" y1="12" x2="10" y2="18" />
+                <line x1="14" y1="12" x2="14" y2="18" />
+                <line x1="10" y1="15" x2="14" y2="15" />
+            </svg>
+        </div>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-secondary/50">{category}</span>
+    </div>
+);
+
 const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl }) => {
+    const [imgFailed, setImgFailed] = useState(false);
+    const showImage = thumbnailUrl && !imgFailed;
+    const category = categoryName || 'General';
+
     const formattedDate = new Date(publishedAt).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -19,13 +38,18 @@ const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName,
     return (
         <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
             <div className="relative h-48 overflow-hidden">
-                <img
-                    src={thumbnailUrl || 'https://via.placeholder.com/400x200?text=NewsPortal'}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
+                {showImage ? (
+                    <img
+                        src={thumbnailUrl}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        onError={() => setImgFailed(true)}
+                    />
+                ) : (
+                    <ImagePlaceholder category={category} />
+                )}
                 <div className="absolute top-4 left-4 bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded backdrop-blur-md">
-                    {categoryName || 'General'}
+                    {category}
                 </div>
             </div>
 
