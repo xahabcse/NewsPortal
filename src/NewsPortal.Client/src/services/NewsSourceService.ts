@@ -65,6 +65,18 @@ export const NewsSourceService = {
         return response.data;
     },
 
+    resume: async (id: number): Promise<void> => {
+        await axios.post(`${API_URL}/newssources/${id}/resume`, null, { headers: getAuthHeaders() });
+    },
+
+    pause: async (id: number): Promise<void> => {
+        await axios.post(`${API_URL}/newssources/${id}/pause`, null, { headers: getAuthHeaders() });
+    },
+
+    disable: async (id: number): Promise<void> => {
+        await axios.post(`${API_URL}/newssources/${id}/disable`, null, { headers: getAuthHeaders() });
+    },
+
     testSource: async (dto: CreateNewsSourceDto): Promise<NewsSourceTestResult> => {
         const response = await axios.post<NewsSourceTestResult>(
             `${API_URL}/newssources/test`,

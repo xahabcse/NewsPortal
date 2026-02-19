@@ -231,7 +231,7 @@ public class NewsFetchJob : INewsFetchJob
         fetchLog.Duration = stopwatch.Elapsed;
         fetchLog.Success = false;
         fetchLog.ErrorMessage = finalError.Message;
-        fetchLog.Details = finalError.ToString();
+        fetchLog.Details = BuildFailureDetails(errorCode, finalError, maxAttempts);
         await _fetchLogRepository.AddAsync(fetchLog);
 
         if (trackedJob != null)
@@ -258,38 +258,7 @@ public class NewsFetchJob : INewsFetchJob
 
     private static string MapErrorCode(Exception exception)
     {
-        if (exception is TimeoutException || exception is TaskCanceledException)
-        {
-            return "NETWORK_TIMEOUT";
-        }
-
-        if (exception is HttpRequestException)
-        {
-            var message = exception.Message.ToLowerInvariant();
-            if (message.Contains("429"))
-            {
-                return "RATE_LIMITED";
-            }
-
-            if (message.Contains("401") || message.Contains("403"))
-            {
-                return "AUTH_FAILED";
-            }
-
-            return "DNS_FAILURE";
-        }
-
-        if (exception is FormatException || exception is InvalidDataException)
-        {
-            return "INVALID_PAYLOAD";
-        }
-
-        if (exception is InvalidOperationException || exception is NotSupportedException)
-        {
-            return "PARSER_FAILED";
-        }
-
-        return "UNKNOWN";
+        return NewsPortal.Service.Helpers.FetchErrorClassifier.Classify(exception);
     }
 
     private static string BuildFetchDetails(NewsPortal.Core.DTOs.FetchExecutionResultDto fetchResult, NewsPortal.Core.DTOs.NewsImportResultDto importResult)
@@ -305,9 +274,27 @@ public class NewsFetchJob : INewsFetchJob
                 importResult.TotalReceived,
                 importResult.ImportedCount,
                 importResult.DuplicateCount,
-                importResult.InvalidCount
+                importResult.InvalidCount,
+                importResult.NearDuplicateCount
             },
             validationIssues = importResult.Issues.Take(20).Select(x => new { x.Code, x.Message, x.SourceUrl, x.Title })
+        };
+
+        return JsonSerializer.Serialize(details);
+    }
+
+    private static string BuildFailureDetails(string errorCode, Exception exception, int attempts)
+    {
+        var details = new
+        {
+            errorCode,
+            attempts,
+            exceptionType = exception.GetType().Name,
+            message = exception.Message,
+            innerMessage = exception.InnerException?.Message,
+            stackTrace = exception.StackTrace?.Length > 500
+                ? exception.StackTrace[..500]
+                : exception.StackTrace
         };
 
         return JsonSerializer.Serialize(details);

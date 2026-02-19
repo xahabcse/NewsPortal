@@ -12,10 +12,12 @@ namespace NewsPortal.API.Controllers;
 public class NewsController : ControllerBase
 {
     private readonly INewsService _newsService;
+    private readonly ICategoryService _categoryService;
 
-    public NewsController(INewsService newsService)
+    public NewsController(INewsService newsService, ICategoryService categoryService)
     {
         _newsService = newsService;
+        _categoryService = categoryService;
     }
 
     [HttpGet("latest")]
@@ -56,6 +58,22 @@ public class NewsController : ControllerBase
     public async Task<IActionResult> SearchNews([FromBody] SearchQueryDto query)
     {
         var result = await _newsService.SearchNewsAsync(query);
+        return Ok(result);
+    }
+
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        var result = await _categoryService.GetAllCategoriesAsync();
+        return Ok(result);
+    }
+
+    [HttpGet("trending")]
+    public async Task<IActionResult> GetTrendingNews(
+        [FromQuery][Range(1, 100)] int count = 12,
+        [FromQuery][Range(1, 72)] int hours = 24)
+    {
+        var result = await _newsService.GetTrendingNewsAsync(count, hours);
         return Ok(result);
     }
 }

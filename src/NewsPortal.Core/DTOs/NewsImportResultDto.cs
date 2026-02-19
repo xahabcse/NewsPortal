@@ -5,6 +5,7 @@ public class NewsImportResultDto
     public int TotalReceived { get; set; }
     public int ImportedCount { get; set; }
     public int DuplicateCount { get; set; }
+    public int NearDuplicateCount { get; set; }
     public int InvalidCount { get; set; }
     public List<NewsImportIssueDto> Issues { get; set; } = new();
 }

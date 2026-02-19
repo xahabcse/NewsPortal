@@ -65,6 +65,19 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<NewsArticle>> GetTrendingAsync(int count, DateTime since)
+    {
+        // Get articles with highest view count in the specified time period
+        return await _dbSet
+            .Include(x => x.Source)
+            .Include(x => x.Category)
+            .Where(x => x.IsActive && x.FetchedAt >= since)
+            .OrderByDescending(x => x.ViewCount)
+            .ThenByDescending(x => x.PublishedAt ?? x.FetchedAt)
+            .Take(count)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize)
     {
         // Use PostgreSQL ILIKE for case-insensitive search (more efficient than ToLower().Contains())
@@ -99,5 +112,13 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
     public async Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl)
     {
         return await _dbSet.AnyAsync(x => x.SourceId == sourceId && x.CanonicalUrl == canonicalUrl);
+    }
+
+    public async Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since)
+    {
+        return await _dbSet
+            .Where(x => x.SourceId == sourceId && x.FetchedAt >= since)
+            .Select(x => x.Title)
+            .ToListAsync();
     }
 }

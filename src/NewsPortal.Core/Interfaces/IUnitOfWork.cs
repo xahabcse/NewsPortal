@@ -7,6 +7,7 @@ public interface IUnitOfWork : IDisposable
     INewsSourceRepository NewsSources { get; }
     ISourceFetchJobRepository SourceFetchJobs { get; }
     IUserRepository Users { get; }
+    IBookmarkRepository Bookmarks { get; }
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();
     Task CommitTransactionAsync();

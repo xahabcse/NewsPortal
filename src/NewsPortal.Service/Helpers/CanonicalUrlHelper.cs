@@ -12,7 +12,24 @@ public static class CanonicalUrlHelper
         "mc_cid",
         "mc_eid",
         "ref",
-        "ref_src"
+        "ref_src",
+        "_ga",
+        "_gid",
+        "_gl",
+        "yclid",
+        "_openstat",
+        "pk_campaign",
+        "pk_source",
+        "pk_medium",
+        "pk_keyword",
+        "pk_content",
+        "si",
+        "spm",
+        "share",
+        "mkt_tok",
+        "trk",
+        "vero_id",
+        "ncid"
     };
 
     public static string? Normalize(string? url)
