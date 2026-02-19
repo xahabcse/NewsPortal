@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import Sidebar from './components/Sidebar'
@@ -18,16 +19,18 @@ import FetchLogPage from './pages/admin/FetchLogPage'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <AuthProvider>
       <HelmetProvider>
         <ErrorBoundary>
           <Router>
             <div className="min-h-screen bg-background text-foreground flex">
-              <Sidebar />
+              <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-              <div className="flex-1 ml-64 flex flex-col">
-                <Navbar />
+              <div className="flex-1 lg:ml-64 flex flex-col">
+                <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
                 <div className="mt-16 flex-1">
                   <Routes>
