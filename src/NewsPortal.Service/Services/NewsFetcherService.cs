@@ -22,6 +22,70 @@ public class NewsFetcherService : INewsFetcherService
         _logger = logger;
     }
 
+    public async Task<FetchExecutionResultDto> FetchWithFallbackAsync(NewsSource source)
+    {
+        var result = new FetchExecutionResultDto
+        {
+            PrimaryMethod = source.FetchMethod,
+            SuccessfulMethod = source.FetchMethod
+        };
+
+        Exception? lastException = null;
+
+        foreach (var method in GetFetchOrder(source.FetchMethod))
+        {
+            if (!IsMethodConfigured(source, method))
+            {
+                result.Issues.Add(new FetchAttemptIssueDto
+                {
+                    Method = method,
+                    Code = "METHOD_NOT_CONFIGURED",
+                    Message = $"Fetch method {method} is not configured for source {source.Name}."
+                });
+                continue;
+            }
+
+            try
+            {
+                var articles = (await FetchByMethodAsync(source, method)).ToList();
+                result.Articles = articles;
+                result.SuccessfulMethod = method;
+                result.UsedFallback = method != source.FetchMethod;
+
+                if (result.UsedFallback)
+                {
+                    _logger.LogWarning(
+                        "Primary method {PrimaryMethod} failed or unavailable for {SourceName}. Fallback method {Method} succeeded with {Count} articles.",
+                        source.FetchMethod,
+                        source.Name,
+                        method,
+                        articles.Count);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                result.Issues.Add(new FetchAttemptIssueDto
+                {
+                    Method = method,
+                    Code = MapFetchErrorCode(ex),
+                    Message = ex.Message
+                });
+
+                _logger.LogWarning(ex, "Fetch method {Method} failed for source {SourceName}", method, source.Name);
+            }
+        }
+
+        if (lastException != null)
+        {
+            throw new InvalidOperationException($"All fetch methods failed for source {source.Name}.", lastException);
+        }
+
+        throw new InvalidOperationException($"No configured fetch methods available for source {source.Name}.");
+    }
+
     public async Task<IEnumerable<CreateNewsArticleDto>> FetchFromRssAsync(NewsSource source)
     {
         if (string.IsNullOrEmpty(source.RssFeedUrl))
@@ -292,5 +356,56 @@ public class NewsFetcherService : INewsFetcherService
         var doc = new HtmlAgilityPack.HtmlDocument();
         doc.LoadHtml(html);
         return doc.DocumentNode.InnerText.Trim();
+    }
+
+    private Task<IEnumerable<CreateNewsArticleDto>> FetchByMethodAsync(NewsSource source, FetchMethod method)
+    {
+        return method switch
+        {
+            FetchMethod.Rss => FetchFromRssAsync(source),
+            FetchMethod.Api => FetchFromApiAsync(source),
+            FetchMethod.Scrape => FetchByScrapingAsync(source),
+            _ => throw new NotSupportedException($"Fetch method not supported: {method}")
+        };
+    }
+
+    private static IEnumerable<FetchMethod> GetFetchOrder(FetchMethod primaryMethod)
+    {
+        var methods = new[] { FetchMethod.Rss, FetchMethod.Api, FetchMethod.Scrape };
+        yield return primaryMethod;
+
+        foreach (var method in methods)
+        {
+            if (method != primaryMethod)
+            {
+                yield return method;
+            }
+        }
+    }
+
+    private static bool IsMethodConfigured(NewsSource source, FetchMethod method)
+    {
+        return method switch
+        {
+            FetchMethod.Rss => !string.IsNullOrWhiteSpace(source.RssFeedUrl),
+            FetchMethod.Api => !string.IsNullOrWhiteSpace(source.ApiEndpoint),
+            FetchMethod.Scrape => source.ScrapingConfig != null && !string.IsNullOrWhiteSpace(source.ScrapingConfig.ListPageUrl),
+            _ => false
+        };
+    }
+
+    private static string MapFetchErrorCode(Exception ex)
+    {
+        if (ex is TimeoutException or TaskCanceledException)
+        {
+            return "NETWORK_TIMEOUT";
+        }
+
+        if (ex is HttpRequestException)
+        {
+            return "NETWORK_FAILURE";
+        }
+
+        return "PARSER_FAILED";
     }
 }

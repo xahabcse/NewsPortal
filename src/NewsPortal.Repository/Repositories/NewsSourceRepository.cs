@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NewsPortal.Core.Entities;
+using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
 using NewsPortal.Repository.Data;
 
@@ -20,7 +21,7 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
     {
         return await _dbSet
             .Include(x => x.ScrapingConfig)
-            .Where(x => x.IsActive)
+            .Where(x => x.IsActive && x.HealthStatus != SourceHealthStatus.Disabled)
             .OrderBy(x => x.Name)
             .ToListAsync();
     }

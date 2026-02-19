@@ -4,6 +4,7 @@ using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace NewsPortal.Scheduler.Jobs;
 
@@ -11,6 +12,7 @@ public interface INewsFetchJob
 {
     Task FetchAllSourcesAsync();
     Task FetchSourceAsync(int sourceId);
+    Task FetchSourceWithTrackingAsync(int sourceId, int fetchJobId);
 }
 
 public class NewsFetchJob : INewsFetchJob
@@ -48,11 +50,25 @@ public class NewsFetchJob : INewsFetchJob
         {
             try
             {
+                if (source.HealthStatus == SourceHealthStatus.Disabled)
+                {
+                    _logger.LogDebug("Skipping source {SourceName} - source is disabled", source.Name);
+                    continue;
+                }
+
+                if (source.HealthStatus == SourceHealthStatus.Paused &&
+                    (!source.NextRetryAt.HasValue || source.NextRetryAt.Value > DateTime.UtcNow))
+                {
+                    _logger.LogDebug("Skipping source {SourceName} - paused until {RetryAt}", source.Name, source.NextRetryAt);
+                    continue;
+                }
+
                 // Check if it's time to fetch
                 if (source.LastFetchedAt.HasValue)
                 {
+                    var effectiveFetchInterval = source.FetchIntervalMinutes > 0 ? source.FetchIntervalMinutes : 30;
                     var timeSinceLastFetch = DateTime.UtcNow - source.LastFetchedAt.Value;
-                    if (timeSinceLastFetch.TotalMinutes < source.FetchIntervalMinutes)
+                    if (timeSinceLastFetch.TotalMinutes < effectiveFetchInterval)
                     {
                         _logger.LogDebug("Skipping source {SourceName} - not yet time to fetch", source.Name);
                         continue;
@@ -72,14 +88,47 @@ public class NewsFetchJob : INewsFetchJob
 
     public async Task FetchSourceAsync(int sourceId)
     {
-        var stopwatch = Stopwatch.StartNew();
-        var sources = await _sourceService.GetActiveSourcesForFetchingAsync();
-        var source = sources.FirstOrDefault(s => s.Id == sourceId);
+        await ExecuteSourceFetchAsync(sourceId, fetchJobId: null);
+    }
 
-        if (source == null)
+    public async Task FetchSourceWithTrackingAsync(int sourceId, int fetchJobId)
+    {
+        await ExecuteSourceFetchAsync(sourceId, fetchJobId);
+    }
+
+    private async Task ExecuteSourceFetchAsync(int sourceId, int? fetchJobId)
+    {
+        var source = await _unitOfWork.NewsSources.GetWithScrapingConfigAsync(sourceId);
+        if (source == null || !source.IsActive)
         {
-            _logger.LogWarning("Source not found: {SourceId}", sourceId);
+            _logger.LogWarning("Source not found or inactive: {SourceId}", sourceId);
             return;
+        }
+
+        if (source.HealthStatus == SourceHealthStatus.Disabled)
+        {
+            _logger.LogWarning("Source is disabled and cannot be fetched: {SourceName}", source.Name);
+            return;
+        }
+
+        if (source.HealthStatus == SourceHealthStatus.Paused &&
+            (!source.NextRetryAt.HasValue || source.NextRetryAt.Value > DateTime.UtcNow))
+        {
+            _logger.LogInformation("Source {SourceName} is paused until {RetryAt}", source.Name, source.NextRetryAt);
+            return;
+        }
+
+        SourceFetchJob? trackedJob = null;
+        if (fetchJobId.HasValue)
+        {
+            trackedJob = await _unitOfWork.SourceFetchJobs.GetByIdAsync(fetchJobId.Value);
+            if (trackedJob != null)
+            {
+                trackedJob.Status = FetchJobStatus.Running;
+                trackedJob.StartedAt = DateTime.UtcNow;
+                await _unitOfWork.SourceFetchJobs.UpdateAsync(trackedJob);
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
 
         _logger.LogInformation("Fetching news from source: {SourceName}", source.Name);
@@ -91,45 +140,176 @@ public class NewsFetchJob : INewsFetchJob
             FetchedAt = DateTime.UtcNow
         };
 
-        try
+        var stopwatch = Stopwatch.StartNew();
+        var maxAttempts = source.MaxRetryAttempts < 1 ? 1 : source.MaxRetryAttempts;
+        Exception? lastException = null;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var articles = source.FetchMethod switch
+            try
             {
-                FetchMethod.Rss => await _fetcherService.FetchFromRssAsync(source),
-                FetchMethod.Api => await _fetcherService.FetchFromApiAsync(source),
-                FetchMethod.Scrape => await _fetcherService.FetchByScrapingAsync(source),
-                _ => throw new NotSupportedException($"Fetch method not supported: {source.FetchMethod}")
-            };
+                var timeoutSeconds = source.RequestTimeoutSeconds < 5 ? 5 : source.RequestTimeoutSeconds;
+                var fetchResult = await _fetcherService.FetchWithFallbackAsync(source).WaitAsync(TimeSpan.FromSeconds(timeoutSeconds));
+                var articleList = fetchResult.Articles.ToList();
 
-            fetchLog.ArticlesFetched = articles.Count();
-            var importedCount = await _newsService.ImportNewsArticlesAsync(articles);
-            fetchLog.NewArticles = importedCount;
-            fetchLog.UpdatedArticles = fetchLog.ArticlesFetched - fetchLog.NewArticles;
+                fetchLog.ArticlesFetched = articleList.Count;
+                var importResult = await _newsService.ImportNewsArticlesWithReportAsync(articleList);
+                fetchLog.NewArticles = importResult.ImportedCount;
+                fetchLog.UpdatedArticles = Math.Max(0, fetchLog.ArticlesFetched - fetchLog.NewArticles);
 
-            // Update last fetched time
-            await _unitOfWork.NewsSources.UpdateLastFetchedAsync(sourceId);
+                source.LastFetchedAt = DateTime.UtcNow;
+                source.LastSuccessAt = DateTime.UtcNow;
+                source.ConsecutiveFailures = 0;
+                source.HealthStatus = SourceHealthStatus.Active;
+                source.LastErrorCode = null;
+                source.LastErrorMessage = null;
+                source.NextRetryAt = null;
 
-            stopwatch.Stop();
-            fetchLog.Duration = stopwatch.Elapsed;
-            fetchLog.Success = true;
-            fetchLog.Details = $"Successfully fetched {fetchLog.ArticlesFetched} articles ({fetchLog.NewArticles} new, {fetchLog.UpdatedArticles} updated)";
+                stopwatch.Stop();
+                fetchLog.Duration = stopwatch.Elapsed;
+                fetchLog.Success = true;
+                fetchLog.Details = BuildFetchDetails(fetchResult, importResult);
+                await _fetchLogRepository.AddAsync(fetchLog);
 
-            await _fetchLogRepository.AddAsync(fetchLog);
+                if (trackedJob != null)
+                {
+                    trackedJob.Status = FetchJobStatus.Succeeded;
+                    trackedJob.Attempts = attempt;
+                    trackedJob.ArticlesFetched = fetchLog.ArticlesFetched;
+                    trackedJob.NewArticles = fetchLog.NewArticles;
+                    trackedJob.UpdatedArticles = fetchLog.UpdatedArticles;
+                    trackedJob.FinishedAt = DateTime.UtcNow;
+                    trackedJob.ErrorCode = null;
+                    trackedJob.ErrorSummary = null;
+                    await _unitOfWork.SourceFetchJobs.UpdateAsync(trackedJob);
+                }
 
-            _logger.LogInformation("Imported {Count} articles from {SourceName}", importedCount, source.Name);
+                await _unitOfWork.NewsSources.UpdateAsync(source);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "Imported {Count} articles from {SourceName}. Duplicate={Duplicate}, Invalid={Invalid}, FallbackUsed={FallbackUsed}",
+                    importResult.ImportedCount,
+                    source.Name,
+                    importResult.DuplicateCount,
+                    importResult.InvalidCount,
+                    fetchResult.UsedFallback);
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Attempt {Attempt}/{MaxAttempts} failed for source {SourceName}", attempt, maxAttempts, source.Name);
+
+                if (attempt < maxAttempts)
+                {
+                    var delaySeconds = (int)Math.Min(60, Math.Pow(2, attempt) * 5);
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                }
+            }
         }
-        catch (Exception ex)
+
+        stopwatch.Stop();
+        var finalError = lastException ?? new Exception("Unknown fetch failure");
+        var errorCode = MapErrorCode(finalError);
+
+        source.ConsecutiveFailures += 1;
+        source.LastFailureAt = DateTime.UtcNow;
+        source.LastErrorCode = errorCode;
+        source.LastErrorMessage = finalError.Message;
+        source.NextRetryAt = DateTime.UtcNow.AddMinutes(CalculateBackoffMinutes(source.ConsecutiveFailures));
+
+        if (source.ConsecutiveFailures >= source.CircuitBreakerThreshold)
         {
-            stopwatch.Stop();
-            fetchLog.Duration = stopwatch.Elapsed;
-            fetchLog.Success = false;
-            fetchLog.ErrorMessage = ex.Message;
-            fetchLog.Details = ex.ToString();
-
-            await _fetchLogRepository.AddAsync(fetchLog);
-
-            _logger.LogError(ex, "Failed to fetch news from source: {SourceName}", source.Name);
-            // Don't rethrow - let the job complete with failure status
+            source.HealthStatus = SourceHealthStatus.Paused;
         }
+        else
+        {
+            source.HealthStatus = SourceHealthStatus.Degraded;
+        }
+
+        fetchLog.Duration = stopwatch.Elapsed;
+        fetchLog.Success = false;
+        fetchLog.ErrorMessage = finalError.Message;
+        fetchLog.Details = finalError.ToString();
+        await _fetchLogRepository.AddAsync(fetchLog);
+
+        if (trackedJob != null)
+        {
+            trackedJob.Status = FetchJobStatus.Failed;
+            trackedJob.Attempts = maxAttempts;
+            trackedJob.FinishedAt = DateTime.UtcNow;
+            trackedJob.ErrorCode = errorCode;
+            trackedJob.ErrorSummary = finalError.Message;
+            await _unitOfWork.SourceFetchJobs.UpdateAsync(trackedJob);
+        }
+
+        await _unitOfWork.NewsSources.UpdateAsync(source);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogError(finalError, "Failed to fetch news from source: {SourceName}", source.Name);
+    }
+
+    private static int CalculateBackoffMinutes(int consecutiveFailures)
+    {
+        var exponent = Math.Min(6, Math.Max(1, consecutiveFailures));
+        return (int)Math.Min(360, Math.Pow(2, exponent) * 5);
+    }
+
+    private static string MapErrorCode(Exception exception)
+    {
+        if (exception is TimeoutException || exception is TaskCanceledException)
+        {
+            return "NETWORK_TIMEOUT";
+        }
+
+        if (exception is HttpRequestException)
+        {
+            var message = exception.Message.ToLowerInvariant();
+            if (message.Contains("429"))
+            {
+                return "RATE_LIMITED";
+            }
+
+            if (message.Contains("401") || message.Contains("403"))
+            {
+                return "AUTH_FAILED";
+            }
+
+            return "DNS_FAILURE";
+        }
+
+        if (exception is FormatException || exception is InvalidDataException)
+        {
+            return "INVALID_PAYLOAD";
+        }
+
+        if (exception is InvalidOperationException || exception is NotSupportedException)
+        {
+            return "PARSER_FAILED";
+        }
+
+        return "UNKNOWN";
+    }
+
+    private static string BuildFetchDetails(NewsPortal.Core.DTOs.FetchExecutionResultDto fetchResult, NewsPortal.Core.DTOs.NewsImportResultDto importResult)
+    {
+        var details = new
+        {
+            primaryMethod = fetchResult.PrimaryMethod.ToString(),
+            successfulMethod = fetchResult.SuccessfulMethod.ToString(),
+            usedFallback = fetchResult.UsedFallback,
+            fetchIssues = fetchResult.Issues.Take(10).Select(x => new { method = x.Method.ToString(), x.Code, x.Message }),
+            importSummary = new
+            {
+                importResult.TotalReceived,
+                importResult.ImportedCount,
+                importResult.DuplicateCount,
+                importResult.InvalidCount
+            },
+            validationIssues = importResult.Issues.Take(20).Select(x => new { x.Code, x.Message, x.SourceUrl, x.Title })
+        };
+
+        return JsonSerializer.Serialize(details);
     }
 }

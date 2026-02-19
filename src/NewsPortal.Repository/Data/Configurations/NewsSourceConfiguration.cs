@@ -36,8 +36,25 @@ public class NewsSourceConfiguration : IEntityTypeConfiguration<NewsSource>
         builder.Property(x => x.ApiKey)
             .HasMaxLength(200);
 
+        builder.Property(x => x.LastErrorCode)
+            .HasMaxLength(64);
+
+        builder.Property(x => x.LastErrorMessage)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.RequestTimeoutSeconds)
+            .HasDefaultValue(90);
+
+        builder.Property(x => x.MaxRetryAttempts)
+            .HasDefaultValue(3);
+
+        builder.Property(x => x.CircuitBreakerThreshold)
+            .HasDefaultValue(5);
+
         builder.HasIndex(x => x.Slug).IsUnique();
         builder.HasIndex(x => x.IsActive);
+        builder.HasIndex(x => x.HealthStatus);
+        builder.HasIndex(x => x.NextRetryAt);
 
         builder.HasOne(x => x.ScrapingConfig)
             .WithOne(x => x.Source)
