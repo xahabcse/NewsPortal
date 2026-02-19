@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import toast from 'react-hot-toast';
 
 const getApiBaseUrl = () => {
     const envUrl = import.meta.env.VITE_API_URL as string | undefined;
@@ -41,11 +42,20 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
+        // Don't show toast for 401 (handled by redirect)
         if (error.response?.status === 401) {
-            // Unauthorized - clear auth and redirect to login
             localStorage.removeItem('authToken');
             window.location.reload();
+            return Promise.reject(error);
         }
+
+        // Show error toast for other errors
+        const message = (error.response?.data as { message?: string })?.message ||
+                       error.message ||
+                       'An unexpected error occurred';
+
+        toast.error(message);
+
         return Promise.reject(error);
     }
 );

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, type FC } from 'react';
+import toast from 'react-hot-toast';
 
 interface NewsCardProps {
     title: string;
@@ -54,6 +55,7 @@ const NewsCard: FC<NewsCardProps> = ({
         if (articleId && onBookmarkToggle) {
             onBookmarkToggle(articleId, !bookmarked);
             setBookmarked(!bookmarked);
+            toast.success(bookmarked ? 'Bookmark removed' : 'Article saved to bookmarks');
         }
     };
 

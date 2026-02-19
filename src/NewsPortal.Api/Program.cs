@@ -10,6 +10,7 @@ using NewsPortal.Scheduler;
 using NewsPortal.Service;
 using Serilog;
 using System.Text;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,8 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<NewsPortal.Api.Services.ISignalRNotificationService, NewsPortal.Api.Services.SignalRNotificationService>();
 
 // Add Hangfire client for queueing manual fetch jobs.
 // Worker execution is handled by NewsPortal.McpServer.
@@ -214,6 +217,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 // Add request logging
 app.UseSerilogRequestLogging();
 
+// Add Prometheus metrics
+app.UseHttpMetrics();
+
 app.UseCors("NewsPortalPolicy");
 
 // Add authentication and authorization middleware
@@ -222,6 +228,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapHub<NewsPortal.Api.Hubs.NewsHub>("/newsHub");
+
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
+app.MapMetrics("/metrics");
 
 app.Run();

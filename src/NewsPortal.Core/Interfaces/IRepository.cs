@@ -71,3 +71,17 @@ public interface IBookmarkRepository : IRepository<UserBookmark>
     Task<bool> ExistsAsync(int userId, int articleId);
     Task<int> GetCountByUserIdAsync(int userId);
 }
+
+public interface IReadHistoryRepository : IRepository<UserReadHistory>
+{
+    Task<UserReadHistory?> GetByUserAndArticleAsync(int userId, int articleId);
+    Task<IEnumerable<UserReadHistory>> GetByUserIdAsync(int userId, int limit = 50);
+    Task<bool> ExistsAsync(int userId, int articleId);
+    Task UpsertAsync(int userId, int articleId);
+}
+
+public interface ICommentRepository : IRepository<Comment>
+{
+    Task<IEnumerable<Comment>> GetByArticleAsync(int articleId);
+    Task<Comment?> GetByIdAsync(int id);
+}

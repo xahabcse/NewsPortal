@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
+import toast from 'react-hot-toast';
 import { BookmarkService, type Bookmark } from '../services/BookmarkService';
 import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
@@ -53,6 +55,7 @@ const BookmarksPage = () => {
             await BookmarkService.removeBookmark(articleId);
             setBookmarks(prev => prev.filter(b => b.articleId !== articleId));
             setTotalCount(prev => Math.max(0, prev - 1));
+            toast.success('Bookmark removed');
         } catch (err) {
             console.error('Failed to remove bookmark:', err);
         }
@@ -94,7 +97,12 @@ const BookmarksPage = () => {
     }
 
     return (
-        <div className="p-8">
+        <>
+            <SEO
+                title="Saved Articles - My Bookmarks"
+                description="Access your saved and bookmarked news articles. Read your personalized collection of important stories anytime."
+            />
+            <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
@@ -284,6 +292,7 @@ const BookmarksPage = () => {
                 </>
             )}
         </div>
+        </>
     );
 };
 

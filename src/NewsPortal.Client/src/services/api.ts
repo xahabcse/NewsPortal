@@ -74,6 +74,15 @@ export const newsApi = {
         return response.json();
     },
 
+    getNewsBySource: async (slug: string, page = 1, pageSize = 10): Promise<PagedResult<NewsArticle>> => {
+        const response = await fetch(`${API_BASE_URL}/news/source/${slug}?page=${page}&pageSize=${pageSize}`);
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch source news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
+        return response.json();
+    },
+
     getCategories: async (): Promise<Category[]> => {
         const response = await fetch(`${API_BASE_URL}/news/categories`);
         if (!response.ok) {

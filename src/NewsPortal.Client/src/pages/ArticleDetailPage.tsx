@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { axiosInstance } from '../services/axiosInstance';
+import { ReadHistoryService } from '../services/ReadHistoryService';
+import { useAuth } from '../context/AuthContext';
+import NewsCard from '../components/NewsCard';
+import CommentsSection from '../components/CommentsSection';
 
 interface NewsArticleDetail {
     id: number;
@@ -18,6 +23,17 @@ interface NewsArticleDetail {
     sourceName: string;
     categoryName: string | null;
     categorySlug: string | null;
+}
+
+interface RelatedArticle {
+    id: number;
+    title: string;
+    slug: string;
+    summary: string | null;
+    thumbnailUrl: string | null;
+    publishedAt: string;
+    sourceName: string;
+    categoryName: string | null;
 }
 
 const calculateReadingTime = (content: string | null): number => {
@@ -44,7 +60,9 @@ const ImagePlaceholder: React.FC<{ category: string }> = ({ category }) => (
 const ArticleDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
     const [article, setArticle] = useState<NewsArticleDetail | null>(null);
+    const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [imgFailed, setImgFailed] = useState(false);
@@ -60,6 +78,19 @@ const ArticleDetailPage = () => {
             try {
                 const response = await axiosInstance.get<NewsArticleDetail>(`/news/${slug}`);
                 setArticle(response.data);
+
+                // Fetch related articles
+                const relatedResponse = await axiosInstance.get<RelatedArticle[]>(`/news/${slug}/related?count=4`);
+                setRelatedArticles(relatedResponse.data);
+
+                // Record reading history if user is authenticated
+                if (isAuthenticated && response.data?.id) {
+                    // Debounce: wait 5 seconds before recording (user actually reading)
+                    const timer = setTimeout(() => {
+                        ReadHistoryService.recordRead(response.data.id).catch(console.error);
+                    }, 5000);
+                    return () => clearTimeout(timer);
+                }
             } catch (err: unknown) {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
@@ -77,7 +108,7 @@ const ArticleDetailPage = () => {
         };
 
         fetchArticle();
-    }, [slug]);
+    }, [slug, isAuthenticated]);
 
     if (loading) {
         return (
@@ -130,7 +161,66 @@ const ArticleDetailPage = () => {
     });
 
     return (
-        <div className="p-8 max-w-4xl mx-auto">
+        <>
+            {/* Dynamic Meta Tags for Article */}
+            <Helmet>
+                <title>{article.title} - {article.sourceName}</title>
+                <meta name="description" content={article.summary || `Read ${article.title} from ${article.sourceName}`} />
+                <meta name="author" content={article.author || article.sourceName} />
+                <meta name="publish_date" content={article.publishedAt} />
+
+                {/* Open Graph */}
+                <meta property="og:title" content={article.title} />
+                <meta property="og:description" content={article.summary || ''} />
+                <meta property="og:image" content={article.imageUrl || article.thumbnailUrl || ''} />
+                <meta property="og:type" content="article" />
+                <meta property="article:published_time" content={article.publishedAt} />
+                <meta property="article:author" content={article.author || ''} />
+                <meta property="article:section" content={article.categoryName || ''} />
+                <meta property="og:site_name" content={article.sourceName} />
+
+                {/* Twitter */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={article.title} />
+                <meta name="twitter:description" content={article.summary || ''} />
+                <meta name="twitter:image" content={article.imageUrl || article.thumbnailUrl || ''} />
+
+                {/* Schema.org JSON-LD for NewsArticle */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "NewsArticle",
+                        "headline": article.title,
+                        "description": article.summary || '',
+                        "image": article.imageUrl || article.thumbnailUrl || '',
+                        "datePublished": article.publishedAt,
+                        "dateModified": article.publishedAt,
+                        "author": article.author ? {
+                            "@type": "Person",
+                            "name": article.author
+                        } : {
+                            "@type": "Organization",
+                            "name": article.sourceName
+                        },
+                        "publisher": {
+                            "@type": "Organization",
+                            "name": article.sourceName,
+                            "logo": {
+                                "@type": "ImageObject",
+                                "url": `${window.location.origin}/logo.png`
+                            }
+                        },
+                        "mainEntityOfPage": {
+                            "@type": "WebPage",
+                            "@id": `${window.location.origin}/news/${article.slug}`
+                        },
+                        "articleSection": article.categoryName || 'News',
+                        "wordCount": article.content ? article.content.split(/\s+/).length : 0
+                    })}
+                </script>
+            </Helmet>
+
+            <div className="p-8 max-w-4xl mx-auto">
             {/* Back Button */}
             <button
                 onClick={() => navigate(-1)}
@@ -258,7 +348,32 @@ const ArticleDetailPage = () => {
                     </a>
                 </div>
             )}
+
+            {/* Related Articles */}
+            {relatedArticles.length > 0 && (
+                <div className="mt-12 pt-8 border-t border-glass-border">
+                    <h2 className="text-2xl font-bold text-white mb-6">Related Articles</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {relatedArticles.map((related) => (
+                            <NewsCard
+                                key={related.id}
+                                title={related.title}
+                                summary={related.summary}
+                                categoryName={related.categoryName}
+                                sourceName={related.sourceName}
+                                publishedAt={related.publishedAt}
+                                thumbnailUrl={related.thumbnailUrl}
+                                slug={related.slug}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Comments Section */}
+            <CommentsSection />
         </div>
+        </>
     );
 };
 
