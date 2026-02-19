@@ -7,6 +7,7 @@ import NewsSourcesPage from './pages/NewsSourcesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SearchResultsPage from './pages/SearchResultsPage'
+import TrendingPage from './pages/TrendingPage'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
@@ -24,7 +25,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
-                  <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
+                  <Route path="/trending" element={<TrendingPage />} />
                   <Route path="/news-sources" element={<NewsSourcesPage />} />
                   <Route path="/news/:slug" element={<ArticleDetailPage />} />
                   <Route path="*" element={<NotFoundPage />} />
@@ -37,15 +38,5 @@ function App() {
     </AuthProvider>
   )
 }
-
-// Placeholder component for routes that aren't implemented yet
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="p-8">
-    <div className="text-center p-12 bg-white/2 rounded-2xl border border-dashed border-glass-border">
-      <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
-      <p className="text-secondary text-sm">This page is coming soon...</p>
-    </div>
-  </div>
-)
 
 export default App

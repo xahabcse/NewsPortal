@@ -18,6 +18,7 @@ public interface INewsService
     Task<NewsArticle> CreateNewsAsync(CreateNewsArticleDto dto);
     Task<int> ImportNewsArticlesAsync(IEnumerable<CreateNewsArticleDto> articles);
     Task<NewsImportResultDto> ImportNewsArticlesWithReportAsync(IEnumerable<CreateNewsArticleDto> articles);
+    Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24);
 }
 
 public class NewsService : INewsService
@@ -138,6 +139,18 @@ public class NewsService : INewsService
         return await _cache.GetOrSetAsync($"{CacheKeys.FeaturedNews}:{count}", async () =>
         {
             var articles = await _unitOfWork.NewsArticles.GetFeaturedAsync(count);
+            return articles.Select(MapToListDto).ToList();
+        }, CacheDurations.Short);
+    }
+
+    public async Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24)
+    {
+        var cacheKey = $"{CacheKeys.TrendingNews}:{count}:{hours}";
+
+        return await _cache.GetOrSetAsync(cacheKey, async () =>
+        {
+            var since = DateTime.UtcNow.AddHours(-hours);
+            var articles = await _unitOfWork.NewsArticles.GetTrendingAsync(count, since);
             return articles.Select(MapToListDto).ToList();
         }, CacheDurations.Short);
     }

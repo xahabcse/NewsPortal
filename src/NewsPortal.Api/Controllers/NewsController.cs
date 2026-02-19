@@ -67,4 +67,13 @@ public class NewsController : ControllerBase
         var result = await _categoryService.GetAllCategoriesAsync();
         return Ok(result);
     }
+
+    [HttpGet("trending")]
+    public async Task<IActionResult> GetTrendingNews(
+        [FromQuery][Range(1, 100)] int count = 12,
+        [FromQuery][Range(1, 72)] int hours = 24)
+    {
+        var result = await _newsService.GetTrendingNewsAsync(count, hours);
+        return Ok(result);
+    }
 }

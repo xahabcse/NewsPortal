@@ -24,6 +24,7 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<IEnumerable<NewsArticle>> GetByCategoryAsync(int categoryId, int page, int pageSize);
     Task<IEnumerable<NewsArticle>> GetBySourceAsync(int sourceId, int page, int pageSize);
     Task<IEnumerable<NewsArticle>> GetFeaturedAsync(int count);
+    Task<IEnumerable<NewsArticle>> GetTrendingAsync(int count, DateTime since);
     Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize);
     Task IncrementViewCountAsync(int id);
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
