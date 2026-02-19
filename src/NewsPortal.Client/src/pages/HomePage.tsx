@@ -1,19 +1,30 @@
 import { useState, useEffect, useCallback } from 'react'
 import NewsCard from '../components/NewsCard'
 import SkeletonCard from '../components/SkeletonCard'
-import { newsApi } from '../services/api'
-import type { NewsArticle } from '../services/api'
+import { newsApi, type NewsArticle, type Category } from '../services/api'
 
 const PAGE_SIZE = 9
 
 const HomePage = () => {
   const [news, setNews] = useState<NewsArticle[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const result = await newsApi.getCategories()
+      setCategories(result)
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+      // Non-critical error, don't show to user
+    }
+  }, [])
 
   const fetchNews = useCallback(async (pageNum: number, append = false) => {
     try {
@@ -22,15 +33,20 @@ const HomePage = () => {
       } else {
         setLoading(true)
       }
-      
-      const result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
-      
+
+      let result
+      if (selectedCategory) {
+        result = await newsApi.getNewsByCategory(selectedCategory, pageNum, PAGE_SIZE)
+      } else {
+        result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
+      }
+
       if (append) {
         setNews(prev => [...prev, ...result.items])
       } else {
         setNews(result.items)
       }
-      
+
       setHasNextPage(result.hasNextPage)
       setTotalCount(result.totalCount)
       setError(null)
@@ -41,11 +57,16 @@ const HomePage = () => {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [])
+  }, [selectedCategory])
 
   useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
+
+  useEffect(() => {
+    setPage(1)
     fetchNews(1, false)
-  }, [fetchNews])
+  }, [selectedCategory, fetchNews])
 
   const handleLoadMore = () => {
     const nextPage = page + 1
@@ -55,24 +76,54 @@ const HomePage = () => {
 
   return (
     <main className="p-8 overflow-y-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Morning, Reader</h1>
-          <p className="text-secondary text-sm">
-            {loading ? (
-              'Loading latest headlines...'
-            ) : (
-              <>
-                Stay updated with <span className="text-accent font-semibold">{totalCount}</span> latest headlines.
-              </>
-            )}
-          </p>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Morning, Reader</h1>
+            <p className="text-secondary text-sm">
+              {loading ? (
+                'Loading latest headlines...'
+              ) : (
+                <>
+                  Stay updated with <span className="text-accent font-semibold">{totalCount}</span> latest headlines.
+                </>
+              )}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-glass-border">
-          <button className="px-4 py-1.5 text-xs font-semibold rounded-md bg-accent text-white shadow-lg shadow-accent/20">All News</button>
-          <button className="px-4 py-1.5 text-xs font-semibold rounded-md text-secondary hover:text-white transition-colors">Popular</button>
-          <button className="px-4 py-1.5 text-xs font-semibold rounded-md text-secondary hover:text-white transition-colors">Recent</button>
+        {/* Category Filter Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
+              selectedCategory === null
+                ? 'bg-accent text-white shadow-lg shadow-accent/20'
+                : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+            }`}
+          >
+            All News
+          </button>
+          {categories.map(category => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.slug)}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
+                selectedCategory === category.slug
+                  ? 'bg-accent text-white shadow-lg shadow-accent/20'
+                  : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+              }`}
+              style={selectedCategory === category.slug && category.color ? { backgroundColor: category.color } : {}}
+            >
+              {category.icon && (
+                <span className="mr-1.5">{category.icon}</span>
+              )}
+              {category.name}
+              {category.articleCount !== undefined && (
+                <span className="ml-1.5 text-[10px] opacity-70">({category.articleCount})</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
