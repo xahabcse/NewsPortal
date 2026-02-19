@@ -94,6 +94,8 @@ logs/
 # Backup files
 *.bak
 *.backup
+backups/
+.deploy-history
 
 # Temporary files
 *.tmp

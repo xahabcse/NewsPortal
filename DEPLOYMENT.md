@@ -254,40 +254,15 @@ mkdir -p logs
 ### Step 2: Configure Environment
 
 ```bash
-# Create production environment file
-nano .env.production
+# Copy the environment example file and edit with production values
+cp .env.example .env
+nano .env
 
-# Add the following (replace with your actual values):
-```
-
-```env
-# Database Configuration
-POSTGRES_USER=newsadmin
-POSTGRES_PASSWORD=<STRONG_PASSWORD_HERE>
-POSTGRES_DB=newsportal
-
-MONGO_USER=mongouser
-MONGO_PASSWORD=<STRONG_PASSWORD_HERE>
-MONGO_DB=newsportal
-
-REDIS_PASSWORD=<STRONG_PASSWORD_HERE>
-
-# Seq Configuration
-SEQ_ADMIN_PASSWORD=<STRONG_PASSWORD_HERE>
-
-# Application Configuration
-ASPNETCORE_ENVIRONMENT=Production
-API_PORT=8080
-WEB_PORT=80
-
-# CORS Configuration
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
-VITE_API_URL=https://api.yourdomain.com
-
-# Docker Registry
-DOCKER_REGISTRY=ghcr.io
-DOCKER_USERNAME=sujoncep
-IMAGE_TAG=latest
+# See .env.example for all variables with inline documentation.
+# At minimum, update these with strong passwords:
+#   POSTGRES_PASSWORD, MONGO_PASSWORD, REDIS_PASSWORD, JWT_SECRET_KEY
+#   CORS_ALLOWED_ORIGINS (set to your production domain)
+#   WEB_PORT=80
 ```
 
 ### Step 3: Copy Docker Compose File
@@ -309,10 +284,10 @@ echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password
 
 ```bash
 # Pull images
-docker compose -f docker-compose.prod.yml --env-file .env.production pull
+docker compose -f docker-compose.prod.yml pull
 
 # Start services
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # View logs
 docker compose -f docker-compose.prod.yml logs -f
@@ -320,6 +295,18 @@ docker compose -f docker-compose.prod.yml logs -f
 # Check status
 docker compose -f docker-compose.prod.yml ps
 ```
+
+### Step 5.1: Production Nginx Configuration
+
+The Docker image uses the production Nginx config (`src/NewsPortal.Client/nginx.prod.conf`) which includes:
+- Gzip compression
+- Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc.)
+- API rate limiting (30 req/s per IP)
+- Static asset caching (1 year for Vite hashed assets)
+- `/healthz` health check endpoint
+- Real IP forwarding for API proxy
+
+To use it in production builds, update the Dockerfile `COPY` line to use `nginx.prod.conf`.
 
 ### Step 6: Setup Reverse Proxy (Nginx)
 
@@ -680,6 +667,63 @@ docker compose exec mongodb mongorestore --username mongouser --password MongoPa
 
 ---
 
+## Backup & Restore
+
+### Automated Backups
+
+```bash
+# Run backup manually
+./script/backup.sh
+
+# Run backup to custom directory
+./script/backup.sh /mnt/backups
+
+# Setup daily cron (2:00 AM)
+crontab -e
+# Add: 0 2 * * * /home/ubuntu/newsportal/script/backup.sh >> /home/ubuntu/newsportal/logs/backup.log 2>&1
+```
+
+Retention policy:
+- **Daily backups:** last 7 days
+- **Weekly backups:** last 4 weeks (copied every Sunday)
+
+### Manual Restore
+
+**PostgreSQL:**
+```bash
+# Restore from backup
+gunzip -c backups/daily/postgres/pg_newsportal_20260101_020000.sql.gz | \
+  docker exec -i newsportal-db psql -U newsadmin newsportal
+```
+
+**MongoDB:**
+```bash
+# Restore from backup
+docker exec -i newsportal-mongodb mongorestore \
+  --username mongouser --password YOUR_PASSWORD \
+  --authenticationDatabase admin \
+  --db newsportal --archive --gzip < backups/daily/mongodb/mongo_20260101_020000.archive.gz
+```
+
+## Rollback
+
+```bash
+# Rollback to a specific image tag (git SHA)
+./script/rollback.sh abc1234
+
+# Rollback to the previously deployed version
+./script/rollback.sh previous
+```
+
+The rollback script:
+1. Updates `IMAGE_TAG` in `.env`
+2. Pulls the specified image version
+3. Restarts containers
+4. Runs health checks
+5. Auto-restores previous tag if health checks fail
+
+---
+
 ## Summary: Quick Reference
 
 ### Development Workflow
@@ -714,13 +758,24 @@ docker compose -f docker-compose.yml down
 git push origin main
 
 # 2. GitHub Actions automatically:
-#    - Builds .NET app
-#    - Runs tests
-#    - Builds Docker images
-#    - Pushes to GHCR
-#    - Deploys to Linux server
+#    - Builds .NET app and runs tests
+#    - Builds Docker images (API, Web, MCP)
+#    - Pushes to GHCR (tagged with latest + git SHA)
+#    - Deploys to Linux server via SSH
+#    - Runs smoke tests
 
 # 3. Monitor deployment in GitHub Actions UI
+
+# 4. If deployment fails, rollback:
+./script/rollback.sh previous
+```
+
+### Backup Workflow
+```bash
+# Manual backup
+./script/backup.sh
+
+# Automated: runs daily at 2 AM via cron
 ```
 
 ---
@@ -736,5 +791,11 @@ git push origin main
 
 ---
 
-**Last Updated:** 2026-01-27
-**Version:** 1.0
+## GitHub Actions Secrets
+
+See [.github/SECRETS.md](.github/SECRETS.md) for the full list of required GitHub secrets for CI/CD.
+
+---
+
+**Last Updated:** 2026-02-19
+**Version:** 2.0
