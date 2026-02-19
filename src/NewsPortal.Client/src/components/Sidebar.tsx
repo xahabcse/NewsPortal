@@ -1,12 +1,16 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
 
 const Sidebar = () => {
     const location = useLocation()
+    const { role } = useAuth()
 
     const isActive = (path: string) => {
         return location.pathname === path ? 'active' : ''
     }
+
+    const isAdmin = role === 'Admin'
 
     return (
         <aside className="fixed left-0 top-0 h-screen w-64 glass-morphism border-r border-glass-border p-6 flex flex-col gap-8">
@@ -43,6 +47,24 @@ const Sidebar = () => {
             <nav className="flex flex-col gap-2 mt-4">
                 <ReadingHistory />
             </nav>
+
+            {isAdmin && (
+                <nav className="flex flex-col gap-2 mt-4 pt-4 border-t border-glass-border">
+                    <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Admin</div>
+                    <Link to="/admin/dashboard" className={`huly-sidebar-item ${isActive('/admin/dashboard')}`}>
+                        <div className="flex flex-col">
+                            <span>Dashboard</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">System overview</span>
+                        </div>
+                    </Link>
+                    <Link to="/admin/fetch-logs" className={`huly-sidebar-item ${isActive('/admin/fetch-logs')}`}>
+                        <div className="flex flex-col">
+                            <span>Fetch Logs</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Import history</span>
+                        </div>
+                    </Link>
+                </nav>
+            )}
         </aside>
     );
 };
