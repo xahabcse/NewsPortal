@@ -396,16 +396,6 @@ public class NewsFetcherService : INewsFetcherService
 
     private static string MapFetchErrorCode(Exception ex)
     {
-        if (ex is TimeoutException or TaskCanceledException)
-        {
-            return "NETWORK_TIMEOUT";
-        }
-
-        if (ex is HttpRequestException)
-        {
-            return "NETWORK_FAILURE";
-        }
-
-        return "PARSER_FAILED";
+        return Helpers.FetchErrorClassifier.Classify(ex);
     }
 }

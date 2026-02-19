@@ -35,7 +35,16 @@ export interface PagedResult<T> {
     hasPreviousPage: boolean;
 }
 
-
+export interface Category {
+    id: number;
+    name: string;
+    nameBn?: string;
+    slug: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+    articleCount?: number;
+}
 
 export const newsApi = {
     getLatestNews: async (page = 1, pageSize = 10): Promise<PagedResult<NewsArticle>> => {
@@ -61,6 +70,15 @@ export const newsApi = {
         if (!response.ok) {
             const body = await response.text().catch(() => 'No body');
             throw new Error(`Failed to fetch category news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
+        return response.json();
+    },
+
+    getCategories: async (): Promise<Category[]> => {
+        const response = await fetch(`${API_BASE_URL}/news/categories`);
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch categories. Status: ${response.status} ${response.statusText}. Body: ${body}`);
         }
         return response.json();
     }

@@ -24,10 +24,12 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<IEnumerable<NewsArticle>> GetByCategoryAsync(int categoryId, int page, int pageSize);
     Task<IEnumerable<NewsArticle>> GetBySourceAsync(int sourceId, int page, int pageSize);
     Task<IEnumerable<NewsArticle>> GetFeaturedAsync(int count);
+    Task<IEnumerable<NewsArticle>> GetTrendingAsync(int count, DateTime since);
     Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize);
     Task IncrementViewCountAsync(int id);
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
+    Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
 }
 
 public interface ICategoryRepository : IRepository<Category>
@@ -60,4 +62,12 @@ public interface INewsFetchLogRepository
     Task<long> GetTotalCountAsync();
     Task<IEnumerable<NewsFetchLog>> GetRecentAsync(int count);
     Task<IEnumerable<NewsFetchLog>> GetFailedLogsAsync(int page, int pageSize);
+}
+
+public interface IBookmarkRepository : IRepository<UserBookmark>
+{
+    Task<UserBookmark?> GetByUserAndArticleAsync(int userId, int articleId);
+    Task<IEnumerable<UserBookmark>> GetByUserIdAsync(int userId, int page, int pageSize);
+    Task<bool> ExistsAsync(int userId, int articleId);
+    Task<int> GetCountByUserIdAsync(int userId);
 }

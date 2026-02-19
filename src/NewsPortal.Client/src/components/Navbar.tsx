@@ -1,14 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
+    const navigate = useNavigate();
     const { session, isAuthenticated, login, logout } = useAuth();
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+
+        // Clear existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        // Debounce search - navigate after 300ms
+        searchTimeoutRef.current = setTimeout(() => {
+            if (value.trim()) {
+                navigate(`/search?q=${encodeURIComponent(value.trim())}`);
+            } else if (window.location.pathname === '/search') {
+                navigate('/');
+            }
+        }, 300);
+    };
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -58,6 +90,8 @@ const Navbar = () => {
                     <div className="relative w-full">
                         <input
                             type="text"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
                             placeholder="Search news, topics, or authors..."
                             className="w-full bg-white/5 border border-glass-border rounded-lg py-2 pl-4 pr-10 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                         />

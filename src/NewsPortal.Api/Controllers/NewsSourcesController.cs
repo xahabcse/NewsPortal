@@ -307,6 +307,66 @@ public class NewsSourcesController : ControllerBase
     }
 
     [Authorize(Roles = "Admin,Editor")]
+    [HttpPost("{id}/resume")]
+    public async Task<IActionResult> Resume(int id)
+    {
+        var source = await _unitOfWork.NewsSources.GetByIdAsync(id);
+        if (source == null)
+            return NotFound(new { message = "Source not found" });
+
+        source.HealthStatus = SourceHealthStatus.Active;
+        source.ConsecutiveFailures = 0;
+        source.NextRetryAt = null;
+        source.LastErrorCode = null;
+        source.LastErrorMessage = null;
+
+        await _unitOfWork.NewsSources.UpdateAsync(source);
+        await _unitOfWork.SaveChangesAsync();
+        await _cache.RemoveAsync(CacheKeys.ActiveSources);
+
+        return Ok(new { message = "Source resumed successfully", sourceId = id });
+    }
+
+    [Authorize(Roles = "Admin,Editor")]
+    [HttpPost("{id}/pause")]
+    public async Task<IActionResult> Pause(int id)
+    {
+        var source = await _unitOfWork.NewsSources.GetByIdAsync(id);
+        if (source == null)
+            return NotFound(new { message = "Source not found" });
+
+        source.HealthStatus = SourceHealthStatus.Paused;
+        source.NextRetryAt = null;
+        source.LastErrorCode = "MANUAL_PAUSE";
+        source.LastErrorMessage = "Paused manually by operator.";
+
+        await _unitOfWork.NewsSources.UpdateAsync(source);
+        await _unitOfWork.SaveChangesAsync();
+        await _cache.RemoveAsync(CacheKeys.ActiveSources);
+
+        return Ok(new { message = "Source paused successfully", sourceId = id });
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{id}/disable")]
+    public async Task<IActionResult> Disable(int id)
+    {
+        var source = await _unitOfWork.NewsSources.GetByIdAsync(id);
+        if (source == null)
+            return NotFound(new { message = "Source not found" });
+
+        source.HealthStatus = SourceHealthStatus.Disabled;
+        source.LastErrorCode = "MANUAL_DISABLE";
+        source.LastErrorMessage = "Disabled manually by admin.";
+
+        await _unitOfWork.NewsSources.UpdateAsync(source);
+        await _unitOfWork.SaveChangesAsync();
+        await _cache.RemoveAsync(CacheKeys.ActiveSources);
+
+        return Ok(new { message = "Source disabled successfully", sourceId = id });
+    }
+
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id}/fetch")]
     public async Task<IActionResult> FetchNews(int id)
     {

@@ -4,6 +4,7 @@ public static class CacheKeys
 {
     public const string LatestNews = "news:latest";
     public const string FeaturedNews = "news:featured";
+    public const string TrendingNews = "news:trending";
     public const string Categories = "categories:all";
     public const string ActiveSources = "sources:active:v2";
 
