@@ -8,6 +8,7 @@ import ArticleDetailPage from './pages/ArticleDetailPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import TrendingPage from './pages/TrendingPage'
+import BookmarksPage from './pages/BookmarksPage'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
                   <Route path="/trending" element={<TrendingPage />} />
+                  <Route path="/bookmarks" element={<BookmarksPage />} />
                   <Route path="/news-sources" element={<NewsSourcesPage />} />
                   <Route path="/news/:slug" element={<ArticleDetailPage />} />
                   <Route path="*" element={<NotFoundPage />} />

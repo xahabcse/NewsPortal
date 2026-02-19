@@ -63,3 +63,11 @@ public interface INewsFetchLogRepository
     Task<IEnumerable<NewsFetchLog>> GetRecentAsync(int count);
     Task<IEnumerable<NewsFetchLog>> GetFailedLogsAsync(int page, int pageSize);
 }
+
+public interface IBookmarkRepository : IRepository<UserBookmark>
+{
+    Task<UserBookmark?> GetByUserAndArticleAsync(int userId, int articleId);
+    Task<IEnumerable<UserBookmark>> GetByUserIdAsync(int userId, int page, int pageSize);
+    Task<bool> ExistsAsync(int userId, int articleId);
+    Task<int> GetCountByUserIdAsync(int userId);
+}

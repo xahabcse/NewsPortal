@@ -9,6 +9,10 @@ interface NewsCardProps {
     publishedAt: string;
     thumbnailUrl: string | null;
     slug: string;
+    articleId?: number;
+    isBookmarked?: boolean;
+    onBookmarkToggle?: (articleId: number, isBookmarked: boolean) => void;
+    showBookmark?: boolean;
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
@@ -26,10 +30,32 @@ const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
     </div>
 );
 
-const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl, slug }) => {
+const NewsCard: FC<NewsCardProps> = ({
+    title,
+    summary,
+    categoryName,
+    sourceName,
+    publishedAt,
+    thumbnailUrl,
+    slug,
+    articleId,
+    isBookmarked = false,
+    onBookmarkToggle,
+    showBookmark = false
+}) => {
     const [imgFailed, setImgFailed] = useState(false);
+    const [bookmarked, setBookmarked] = useState(isBookmarked);
     const showImage = thumbnailUrl && !imgFailed;
     const category = categoryName || 'General';
+
+    const handleBookmarkClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (articleId && onBookmarkToggle) {
+            onBookmarkToggle(articleId, !bookmarked);
+            setBookmarked(!bookmarked);
+        }
+    };
 
     const formattedDate = new Date(publishedAt).toLocaleDateString('en-US', {
         month: 'short',
@@ -53,6 +79,28 @@ const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName,
                 <div className="absolute top-4 left-4 bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded backdrop-blur-md">
                     {category}
                 </div>
+                {showBookmark && articleId && (
+                    <button
+                        onClick={handleBookmarkClick}
+                        className="absolute top-4 right-4 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                        title={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill={bookmarked ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={bookmarked ? 'text-accent' : 'text-white'}
+                        >
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </button>
+                )}
             </div>
 
             <div className="p-6 flex flex-col flex-1">
