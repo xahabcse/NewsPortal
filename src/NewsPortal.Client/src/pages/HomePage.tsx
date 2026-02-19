@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
 import SkeletonCard from '../components/SkeletonCard'
 import { newsApi, type NewsArticle, type Category } from '../services/api'
@@ -75,7 +76,12 @@ const HomePage = () => {
   }
 
   return (
-    <main className="p-8 overflow-y-auto">
+    <>
+      <SEO
+        title="Latest News & Headlines"
+        description="Stay updated with the latest headlines from trusted news sources worldwide. Real-time news aggregation with smart categorization."
+      />
+      <main className="p-8 overflow-y-auto">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -230,6 +236,7 @@ const HomePage = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
       </div>
     </main>
+    </>
   )
 }
 

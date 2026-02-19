@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
@@ -142,7 +143,32 @@ const ArticleDetailPage = () => {
     });
 
     return (
-        <div className="p-8 max-w-4xl mx-auto">
+        <>
+            {/* Dynamic Meta Tags for Article */}
+            <Helmet>
+                <title>{article.title} - {article.sourceName}</title>
+                <meta name="description" content={article.summary || `Read ${article.title} from ${article.sourceName}`} />
+                <meta name="author" content={article.author || article.sourceName} />
+                <meta name="publish_date" content={article.publishedAt} />
+
+                {/* Open Graph */}
+                <meta property="og:title" content={article.title} />
+                <meta property="og:description" content={article.summary || ''} />
+                <meta property="og:image" content={article.imageUrl || article.thumbnailUrl || ''} />
+                <meta property="og:type" content="article" />
+                <meta property="article:published_time" content={article.publishedAt} />
+                <meta property="article:author" content={article.author || ''} />
+                <meta property="article:section" content={article.categoryName || ''} />
+                <meta property="og:site_name" content={article.sourceName} />
+
+                {/* Twitter */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={article.title} />
+                <meta name="twitter:description" content={article.summary || ''} />
+                <meta name="twitter:image" content={article.imageUrl || article.thumbnailUrl || ''} />
+            </Helmet>
+
+            <div className="p-8 max-w-4xl mx-auto">
             {/* Back Button */}
             <button
                 onClick={() => navigate(-1)}
@@ -271,6 +297,7 @@ const ArticleDetailPage = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
 
