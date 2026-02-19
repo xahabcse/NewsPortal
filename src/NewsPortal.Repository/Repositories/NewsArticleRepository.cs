@@ -95,4 +95,9 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
     {
         return await _dbSet.AnyAsync(x => x.SourceUrl == sourceUrl);
     }
+
+    public async Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl)
+    {
+        return await _dbSet.AnyAsync(x => x.SourceId == sourceId && x.CanonicalUrl == canonicalUrl);
+    }
 }

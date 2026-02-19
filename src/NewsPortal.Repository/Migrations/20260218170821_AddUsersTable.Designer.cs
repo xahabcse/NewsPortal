@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NewsPortal.Repository.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NewsPortal.Repository.Migrations
 {
     [DbContext(typeof(NewsPortalDbContext))]
-    partial class NewsPortalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218170821_AddUsersTable")]
+    partial class AddUsersTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,11 +96,6 @@ namespace NewsPortal.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("CanonicalUrl")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
@@ -164,8 +162,6 @@ namespace NewsPortal.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CanonicalUrl");
-
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("FetchedAt");
@@ -181,13 +177,11 @@ namespace NewsPortal.Repository.Migrations
 
                     b.HasIndex("SourceId");
 
-                    b.HasIndex("SourceUrl");
+                    b.HasIndex("SourceUrl")
+                        .IsUnique();
 
                     b.HasIndex("IsActive", "PublishedAt")
                         .IsDescending(false, true);
-
-                    b.HasIndex("SourceId", "CanonicalUrl")
-                        .IsUnique();
 
                     b.HasIndex("CategoryId", "IsActive", "PublishedAt")
                         .IsDescending(false, false, true);
@@ -263,14 +257,6 @@ namespace NewsPortal.Repository.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("CircuitBreakerThreshold")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(5);
-
-                    b.Property<int>("ConsecutiveFailures")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -280,50 +266,20 @@ namespace NewsPortal.Repository.Migrations
                     b.Property<int>("FetchMethod")
                         .HasColumnType("integer");
 
-                    b.Property<int>("HealthStatus")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LastErrorCode")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("LastErrorMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("LastFailureAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime?>("LastFetchedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("LastSuccessAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("MaxRetryAttempts")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(3);
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("NextRetryAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("RequestTimeoutSeconds")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(90);
 
                     b.Property<string>("RssFeedUrl")
                         .HasMaxLength(500)
@@ -339,11 +295,7 @@ namespace NewsPortal.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HealthStatus");
-
                     b.HasIndex("IsActive");
-
-                    b.HasIndex("NextRetryAt");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -409,84 +361,6 @@ namespace NewsPortal.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("scraping_configs", (string)null);
-                });
-
-            modelBuilder.Entity("NewsPortal.Core.Entities.SourceFetchJob", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ArticlesFetched")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Attempts")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ErrorCode")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("ErrorSummary")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid>("ExternalId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("FinishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("HangfireJobId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("NewArticles")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("RequestedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SourceId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TriggerType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<int>("UpdatedArticles")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("ExternalId")
-                        .IsUnique();
-
-                    b.HasIndex("SourceId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("source_fetch_jobs", (string)null);
                 });
 
             modelBuilder.Entity("NewsPortal.Core.Entities.User", b =>
@@ -585,17 +459,6 @@ namespace NewsPortal.Repository.Migrations
                     b.Navigation("Source");
                 });
 
-            modelBuilder.Entity("NewsPortal.Core.Entities.SourceFetchJob", b =>
-                {
-                    b.HasOne("NewsPortal.Core.Entities.NewsSource", "Source")
-                        .WithMany("FetchJobs")
-                        .HasForeignKey("SourceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Source");
-                });
-
             modelBuilder.Entity("NewsPortal.Core.Entities.Category", b =>
                 {
                     b.Navigation("Articles");
@@ -604,8 +467,6 @@ namespace NewsPortal.Repository.Migrations
             modelBuilder.Entity("NewsPortal.Core.Entities.NewsSource", b =>
                 {
                     b.Navigation("Articles");
-
-                    b.Navigation("FetchJobs");
 
                     b.Navigation("ScrapingConfig");
                 });

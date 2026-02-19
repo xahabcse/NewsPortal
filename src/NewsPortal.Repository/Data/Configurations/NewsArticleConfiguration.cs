@@ -20,6 +20,10 @@ public class NewsArticleConfiguration : IEntityTypeConfiguration<NewsArticle>
             .IsRequired()
             .HasMaxLength(550);
 
+        builder.Property(x => x.CanonicalUrl)
+            .IsRequired()
+            .HasMaxLength(2000);
+
         builder.Property(x => x.Summary)
             .HasMaxLength(1000);
 
@@ -41,13 +45,15 @@ public class NewsArticleConfiguration : IEntityTypeConfiguration<NewsArticle>
 
         // Single column indexes
         builder.HasIndex(x => x.Slug).IsUnique();
-        builder.HasIndex(x => x.SourceUrl).IsUnique();
+        builder.HasIndex(x => x.SourceUrl);
+        builder.HasIndex(x => x.CanonicalUrl);
         builder.HasIndex(x => x.PublishedAt);
         builder.HasIndex(x => x.FetchedAt);
         builder.HasIndex(x => x.IsFeatured);
         builder.HasIndex(x => x.IsActive);
         builder.HasIndex(x => x.CategoryId);
         builder.HasIndex(x => x.SourceId);
+        builder.HasIndex(x => new { x.SourceId, x.CanonicalUrl }).IsUnique();
 
         // Composite indexes for common query patterns (improves performance)
         builder.HasIndex(x => new { x.IsActive, x.PublishedAt })

@@ -5,6 +5,7 @@ namespace NewsPortal.Core.Interfaces;
 
 public interface INewsFetcherService
 {
+    Task<FetchExecutionResultDto> FetchWithFallbackAsync(NewsSource source);
     Task<IEnumerable<CreateNewsArticleDto>> FetchFromRssAsync(NewsSource source);
     Task<IEnumerable<CreateNewsArticleDto>> FetchFromApiAsync(NewsSource source);
     Task<IEnumerable<CreateNewsArticleDto>> FetchByScrapingAsync(NewsSource source);

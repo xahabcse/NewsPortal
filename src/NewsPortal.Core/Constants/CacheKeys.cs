@@ -5,7 +5,7 @@ public static class CacheKeys
     public const string LatestNews = "news:latest";
     public const string FeaturedNews = "news:featured";
     public const string Categories = "categories:all";
-    public const string ActiveSources = "sources:active";
+    public const string ActiveSources = "sources:active:v2";
 
     public static string NewsByCategory(int categoryId) => $"news:category:{categoryId}";
     public static string NewsBySource(int sourceId) => $"news:source:{sourceId}";

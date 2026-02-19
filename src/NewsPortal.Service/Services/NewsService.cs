@@ -17,6 +17,7 @@ public interface INewsService
     Task<PagedResultDto<NewsArticleListDto>> SearchNewsAsync(SearchQueryDto query);
     Task<NewsArticle> CreateNewsAsync(CreateNewsArticleDto dto);
     Task<int> ImportNewsArticlesAsync(IEnumerable<CreateNewsArticleDto> articles);
+    Task<NewsImportResultDto> ImportNewsArticlesWithReportAsync(IEnumerable<CreateNewsArticleDto> articles);
 }
 
 public class NewsService : INewsService
@@ -158,33 +159,46 @@ public class NewsService : INewsService
 
     public async Task<NewsArticle> CreateNewsAsync(CreateNewsArticleDto dto)
     {
-        // Check if article already exists
-        if (await _unitOfWork.NewsArticles.ExistsBySourceUrlAsync(dto.SourceUrl))
+        var normalizedDto = NewsArticleIngestionHelper.Normalize(dto);
+        var canonicalUrl = CanonicalUrlHelper.Normalize(normalizedDto.SourceUrl);
+        var validationIssues = NewsArticleIngestionHelper.Validate(normalizedDto, canonicalUrl);
+        if (validationIssues.Any())
         {
-            throw new InvalidOperationException("Article with this source URL already exists");
+            throw new InvalidOperationException(validationIssues[0].Message);
+        }
+
+        if (canonicalUrl == null)
+        {
+            throw new InvalidOperationException("Article URL is invalid.");
+        }
+
+        if (await _unitOfWork.NewsArticles.ExistsByCanonicalUrlAsync(normalizedDto.SourceId, canonicalUrl))
+        {
+            throw new InvalidOperationException("Article with this canonical URL already exists for the source.");
         }
 
         var article = new NewsArticle
         {
-            Title = dto.Title,
-            Slug = SlugHelper.GenerateSlug(dto.Title),
-            Summary = dto.Summary,
-            Content = dto.Content,
-            PlainText = StripHtml(dto.Content),
-            SourceUrl = dto.SourceUrl,
-            OriginalImageUrl = dto.OriginalImageUrl,
-            Author = dto.Author,
-            PublishedAt = dto.PublishedAt,
-            SourceId = dto.SourceId,
-            CategoryId = dto.CategoryId
+            Title = normalizedDto.Title,
+            Slug = await GenerateUniqueSlugAsync(normalizedDto.Title),
+            CanonicalUrl = canonicalUrl,
+            Summary = normalizedDto.Summary,
+            Content = normalizedDto.Content,
+            PlainText = StripHtml(normalizedDto.Content),
+            SourceUrl = normalizedDto.SourceUrl,
+            OriginalImageUrl = normalizedDto.OriginalImageUrl,
+            Author = normalizedDto.Author,
+            PublishedAt = normalizedDto.PublishedAt,
+            SourceId = normalizedDto.SourceId,
+            CategoryId = normalizedDto.CategoryId
         };
 
         // Download and store image
-        if (!string.IsNullOrEmpty(dto.OriginalImageUrl))
+        if (!string.IsNullOrEmpty(normalizedDto.OriginalImageUrl))
         {
             try
             {
-                article.MongoImageId = await _imageStorage.UploadImageFromUrlAsync(dto.OriginalImageUrl, 0);
+                article.MongoImageId = await _imageStorage.UploadImageFromUrlAsync(normalizedDto.OriginalImageUrl, 0);
                 if (!string.IsNullOrEmpty(article.MongoImageId))
                 {
                     article.MongoThumbId = await _imageStorage.GetThumbnailIdAsync(article.MongoImageId);
@@ -208,96 +222,174 @@ public class NewsService : INewsService
 
     public async Task<int> ImportNewsArticlesAsync(IEnumerable<CreateNewsArticleDto> articles)
     {
-        var count = 0;
+        var result = await ImportNewsArticlesWithReportAsync(articles);
+        return result.ImportedCount;
+    }
+
+    public async Task<NewsImportResultDto> ImportNewsArticlesWithReportAsync(IEnumerable<CreateNewsArticleDto> articles)
+    {
         var articlesList = articles.ToList();
+        var result = new NewsImportResultDto
+        {
+            TotalReceived = articlesList.Count
+        };
 
         if (!articlesList.Any())
         {
             _logger.LogInformation("No articles to import");
-            return 0;
+            return result;
         }
 
-        // Use transaction for atomic batch import
         await _unitOfWork.BeginTransactionAsync();
 
         try
         {
             _logger.LogInformation("Starting import of {Count} articles in transaction", articlesList.Count);
+            var batchCanonicalKeys = new HashSet<string>(StringComparer.Ordinal);
+            var batchSlugs = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (var dto in articlesList)
+            foreach (var rawDto in articlesList)
             {
-                try
-                {
-                    // Check if article already exists
-                    if (await _unitOfWork.NewsArticles.ExistsBySourceUrlAsync(dto.SourceUrl))
-                    {
-                        _logger.LogDebug("Article already exists, skipping: {Url}", dto.SourceUrl);
-                        continue;
-                    }
+                var dto = NewsArticleIngestionHelper.Normalize(rawDto);
+                var canonicalUrl = CanonicalUrlHelper.Normalize(dto.SourceUrl);
+                var validationIssues = NewsArticleIngestionHelper.Validate(dto, canonicalUrl);
 
-                    // Create article entity
-                    var article = new NewsArticle
+                if (validationIssues.Any())
+                {
+                    result.InvalidCount += 1;
+                    result.Issues.AddRange(validationIssues);
+                    continue;
+                }
+
+                if (canonicalUrl == null)
+                {
+                    result.InvalidCount += 1;
+                    result.Issues.Add(new NewsImportIssueDto
                     {
-                        Title = dto.Title,
-                        Slug = SlugHelper.GenerateSlug(dto.Title),
-                        Summary = dto.Summary,
-                        Content = dto.Content,
-                        PlainText = StripHtml(dto.Content),
+                        Code = "INVALID_URL",
+                        Message = "Failed to build canonical URL.",
                         SourceUrl = dto.SourceUrl,
-                        OriginalImageUrl = dto.OriginalImageUrl,
-                        Author = dto.Author,
-                        PublishedAt = dto.PublishedAt,
-                        SourceId = dto.SourceId,
-                        CategoryId = dto.CategoryId
-                    };
+                        Title = dto.Title
+                    });
+                    continue;
+                }
 
-                    // Download and store image (best effort - doesn't fail import)
-                    if (!string.IsNullOrEmpty(dto.OriginalImageUrl))
+                var batchCanonicalKey = $"{dto.SourceId}:{canonicalUrl}";
+                if (!batchCanonicalKeys.Add(batchCanonicalKey))
+                {
+                    result.DuplicateCount += 1;
+                    result.Issues.Add(new NewsImportIssueDto
                     {
-                        try
+                        Code = "DUPLICATE_IN_BATCH",
+                        Message = "Article skipped because canonical URL is duplicated in this fetch batch.",
+                        SourceUrl = dto.SourceUrl,
+                        Title = dto.Title
+                    });
+                    continue;
+                }
+
+                if (await _unitOfWork.NewsArticles.ExistsByCanonicalUrlAsync(dto.SourceId, canonicalUrl))
+                {
+                    result.DuplicateCount += 1;
+                    result.Issues.Add(new NewsImportIssueDto
+                    {
+                        Code = "DUPLICATE_IN_STORAGE",
+                        Message = "Article skipped because canonical URL already exists for this source.",
+                        SourceUrl = dto.SourceUrl,
+                        Title = dto.Title
+                    });
+                    continue;
+                }
+
+                var article = new NewsArticle
+                {
+                    Title = dto.Title,
+                    Slug = await GenerateUniqueSlugAsync(dto.Title, batchSlugs),
+                    CanonicalUrl = canonicalUrl,
+                    Summary = dto.Summary,
+                    Content = dto.Content,
+                    PlainText = StripHtml(dto.Content),
+                    SourceUrl = dto.SourceUrl,
+                    OriginalImageUrl = dto.OriginalImageUrl,
+                    Author = dto.Author,
+                    PublishedAt = dto.PublishedAt,
+                    SourceId = dto.SourceId,
+                    CategoryId = dto.CategoryId
+                };
+
+                if (!string.IsNullOrEmpty(dto.OriginalImageUrl))
+                {
+                    try
+                    {
+                        article.MongoImageId = await _imageStorage.UploadImageFromUrlAsync(dto.OriginalImageUrl, 0);
+                        if (!string.IsNullOrEmpty(article.MongoImageId))
                         {
-                            article.MongoImageId = await _imageStorage.UploadImageFromUrlAsync(dto.OriginalImageUrl, 0);
-                            if (!string.IsNullOrEmpty(article.MongoImageId))
-                            {
-                                article.MongoThumbId = await _imageStorage.GetThumbnailIdAsync(article.MongoImageId);
-                            }
-                        }
-                        catch (Exception imgEx)
-                        {
-                            _logger.LogWarning(imgEx, "Failed to download image for article: {Title}. Continuing without image.", dto.Title);
-                            // Continue import without image - not a critical failure
+                            article.MongoThumbId = await _imageStorage.GetThumbnailIdAsync(article.MongoImageId);
                         }
                     }
+                    catch (Exception imgEx)
+                    {
+                        _logger.LogWarning(imgEx, "Failed to download image for article: {Title}. Continuing without image.", dto.Title);
+                    }
+                }
 
-                    await _unitOfWork.NewsArticles.AddAsync(article);
-                    count++;
-                }
-                catch (Exception articleEx)
-                {
-                    _logger.LogError(articleEx, "Failed to process article: {Title}. Rolling back entire batch.", dto.Title);
-                    throw; // Propagate to trigger rollback
-                }
+                await _unitOfWork.NewsArticles.AddAsync(article);
+                result.ImportedCount += 1;
             }
 
-            // Save all articles atomically
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
-            _logger.LogInformation("Successfully imported {Count}/{Total} articles in transaction",
-                count, articlesList.Count);
+            _logger.LogInformation(
+                "Import completed: {Imported}/{Total} imported, {Duplicate} duplicates, {Invalid} invalid",
+                result.ImportedCount,
+                result.TotalReceived,
+                result.DuplicateCount,
+                result.InvalidCount);
 
-            // Clear related list/search caches after successful commit
-            await _cache.RemoveByPatternAsync("news:*");
-            await _cache.RemoveByPatternAsync("search:*");
+            if (result.ImportedCount > 0)
+            {
+                await _cache.RemoveByPatternAsync("news:*");
+                await _cache.RemoveByPatternAsync("search:*");
+            }
 
-            return count;
+            return result;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to import articles. Rolling back transaction.");
             await _unitOfWork.RollbackTransactionAsync();
-            throw; // Re-throw to notify caller of failure
+            throw;
         }
+    }
+
+    private async Task<string> GenerateUniqueSlugAsync(string title, HashSet<string>? reservedSlugs = null)
+    {
+        var baseSlug = SlugHelper.GenerateSlug(title);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            baseSlug = "article";
+        }
+
+        var normalizedBaseSlug = baseSlug.Length > 540 ? baseSlug[..540] : baseSlug;
+        var candidate = normalizedBaseSlug;
+        var suffix = 2;
+
+        while ((reservedSlugs != null && reservedSlugs.Contains(candidate)) ||
+               await _unitOfWork.NewsArticles.ExistsAsync(x => x.Slug == candidate))
+        {
+            var suffixText = $"-{suffix}";
+            var maxBaseLength = 550 - suffixText.Length;
+            var truncatedBase = normalizedBaseSlug.Length > maxBaseLength
+                ? normalizedBaseSlug[..maxBaseLength]
+                : normalizedBaseSlug;
+
+            candidate = $"{truncatedBase}{suffixText}";
+            suffix++;
+        }
+
+        reservedSlugs?.Add(candidate);
+        return candidate;
     }
 
     private static NewsArticleListDto MapToListDto(NewsArticle article)

@@ -12,8 +12,20 @@ public class NewsSourceDto
     public string? LogoUrl { get; set; }
     public FetchMethod FetchMethod { get; set; }
     public string? RssFeedUrl { get; set; }
+    public string? ApiEndpoint { get; set; }
+    public string? ApiKey { get; set; }
+    public int FetchIntervalMinutes { get; set; }
     public bool IsActive { get; set; }
     public DateTime? LastFetchedAt { get; set; }
+    public SourceHealthStatus HealthStatus { get; set; }
+    public int ConsecutiveFailures { get; set; }
+    public DateTime? LastSuccessAt { get; set; }
+    public DateTime? LastFailureAt { get; set; }
+    public string? LastErrorCode { get; set; }
+    public DateTime? NextRetryAt { get; set; }
+    public int RequestTimeoutSeconds { get; set; }
+    public int MaxRetryAttempts { get; set; }
+    public int CircuitBreakerThreshold { get; set; }
     public int ArticleCount { get; set; }
 }
 
