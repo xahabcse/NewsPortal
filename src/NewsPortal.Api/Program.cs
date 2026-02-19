@@ -10,6 +10,7 @@ using NewsPortal.Scheduler;
 using NewsPortal.Service;
 using Serilog;
 using System.Text;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -216,6 +217,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 // Add request logging
 app.UseSerilogRequestLogging();
 
+// Add Prometheus metrics
+app.UseHttpMetrics();
+
 app.UseCors("NewsPortalPolicy");
 
 // Add authentication and authorization middleware
@@ -227,5 +231,6 @@ app.MapControllers();
 app.MapHub<NewsPortal.Api.Hubs.NewsHub>("/newsHub");
 
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
+app.MapMetrics("/metrics");
 
 app.Run();

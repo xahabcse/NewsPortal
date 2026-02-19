@@ -3,6 +3,7 @@ using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
+using System.Text.Json;
 
 namespace NewsPortal.Service.Services;
 
@@ -136,9 +137,196 @@ public class NewsFetcherService : INewsFetcherService
 
     public async Task<IEnumerable<CreateNewsArticleDto>> FetchFromApiAsync(NewsSource source)
     {
-        // Implement API fetching logic based on source configuration
-        _logger.LogInformation("API fetching not implemented for source: {SourceName}", source.Name);
-        return await Task.FromResult(Enumerable.Empty<CreateNewsArticleDto>());
+        if (string.IsNullOrEmpty(source.ApiEndpoint))
+        {
+            _logger.LogWarning("API endpoint is empty for source: {SourceName}", source.Name);
+            return Enumerable.Empty<CreateNewsArticleDto>();
+        }
+
+        var articles = new List<CreateNewsArticleDto>();
+
+        try
+        {
+            // Support for The Guardian Open Platform API
+            if (source.ApiEndpoint.Contains("guardianapis.com", StringComparison.OrdinalIgnoreCase))
+            {
+                articles = await FetchFromGuardianApiAsync(source);
+            }
+            // Support for Hacker News Firebase API
+            else if (source.ApiEndpoint.Contains("hacker-news.firebaseio.com", StringComparison.OrdinalIgnoreCase))
+            {
+                articles = await FetchFromHackerNewsApiAsync(source);
+            }
+            // Generic JSON API support
+            else
+            {
+                articles = await FetchFromGenericJsonApiAsync(source);
+            }
+
+            _logger.LogInformation("API fetch successful for {SourceName}: {Count} articles", source.Name, articles.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "API fetch failed for source {SourceName}: {Error}", source.Name, ex.Message);
+        }
+
+        return articles;
+    }
+
+    private async Task<List<CreateNewsArticleDto>> FetchFromGuardianApiAsync(NewsSource source)
+    {
+        var articles = new List<CreateNewsArticleDto>();
+        var apiKey = source.ApiKey;
+        var url = string.IsNullOrEmpty(apiKey)
+            ? $"{source.ApiEndpoint}?page-size=20"
+            : $"{source.ApiEndpoint}?page-size=20&api-key={apiKey}";
+
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetStringAsync(url);
+
+        // Parse Guardian API JSON response
+        using var doc = JsonDocument.Parse(response);
+        var result = doc.RootElement.GetProperty("response");
+        var contentArray = result.GetProperty("results");
+
+        foreach (var item in contentArray.EnumerateArray())
+        {
+            var fields = item.GetProperty("fields");
+            articles.Add(new CreateNewsArticleDto
+            {
+                Title = item.GetProperty("webTitle").GetString() ?? "",
+                Summary = fields.TryGetProperty("trailText", out var trail) ? trail.GetString() : "",
+                Content = fields.TryGetProperty("body", out var body) ? body.GetString() : "",
+                SourceUrl = item.GetProperty("webUrl").GetString() ?? "",
+                OriginalImageUrl = fields.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                PublishedAt = DateTimeOffset.TryParse(item.GetProperty("webPublicationDate").GetString(), out var date) ? date.DateTime : DateTime.UtcNow,
+                SourceId = source.Id
+            });
+        }
+
+        return articles;
+    }
+
+    private async Task<List<CreateNewsArticleDto>> FetchFromHackerNewsApiAsync(NewsSource source)
+    {
+        var articles = new List<CreateNewsArticleDto>();
+
+        using var httpClient = new HttpClient();
+        // Get top story IDs
+        var idsResponse = await httpClient.GetStringAsync("https://hacker-news.firebaseio.com/v0/topstories.json");
+        var storyIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(idsResponse)?.Take(20) ?? new List<int>();
+
+        // Fetch each story
+        foreach (var id in storyIds)
+        {
+            try
+            {
+                var storyResponse = await httpClient.GetStringAsync($"https://hacker-news.firebaseio.com/v0/item/{id}.json");
+                using var doc = JsonDocument.Parse(storyResponse);
+                var story = doc.RootElement;
+
+                if (story.TryGetProperty("title", out var titleElem) &&
+                    story.TryGetProperty("url", out var urlElem) &&
+                    !string.IsNullOrEmpty(titleElem.GetString()) &&
+                    !string.IsNullOrEmpty(urlElem.GetString()))
+                {
+                    articles.Add(new CreateNewsArticleDto
+                    {
+                        Title = titleElem.GetString() ?? "",
+                        Summary = "",
+                        SourceUrl = urlElem.GetString() ?? "",
+                        PublishedAt = story.TryGetProperty("time", out var timeElem)
+                            ? DateTimeOffset.FromUnixTimeSeconds(timeElem.GetInt64()).DateTime
+                            : DateTime.UtcNow,
+                        SourceId = source.Id
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch HN story {StoryId}", id);
+            }
+        }
+
+        return articles;
+    }
+
+    private async Task<List<CreateNewsArticleDto>> FetchFromGenericJsonApiAsync(NewsSource source)
+    {
+        var articles = new List<CreateNewsArticleDto>();
+
+        using var httpClient = new HttpClient();
+
+        // Add API key to headers if provided
+        if (!string.IsNullOrEmpty(source.ApiKey))
+        {
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {source.ApiKey}");
+        }
+
+        var response = await httpClient.GetStringAsync(source.ApiEndpoint);
+
+        // Try to parse as generic JSON array or object with items array
+        using var doc = JsonDocument.Parse(response);
+        var itemsArray = doc.RootElement;
+
+        // Handle both array root and object with items property
+        if (itemsArray.ValueKind == JsonValueKind.Object && itemsArray.TryGetProperty("items", out var itemsProp))
+        {
+            itemsArray = itemsProp;
+        }
+
+        if (itemsArray.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in itemsArray.EnumerateArray())
+            {
+                // Try common field names
+                var title = GetJsonProperty(item, "title", "name", "headline") ?? "";
+                var url = GetJsonProperty(item, "url", "link", "sourceUrl") ?? "";
+                var summary = GetJsonProperty(item, "summary", "description", "excerpt");
+                var content = GetJsonProperty(item, "content", "body", "fullText");
+                var imageUrl = GetJsonProperty(item, "imageUrl", "image", "thumbnail", "mainImage");
+
+                DateTime? publishedAt = null;
+                if (item.TryGetProperty("publishedAt", out var pubDate) ||
+                    item.TryGetProperty("published_at", out pubDate) ||
+                    item.TryGetProperty("date", out pubDate) ||
+                    item.TryGetProperty("createdAt", out pubDate))
+                {
+                    if (DateTimeOffset.TryParse(pubDate.GetString(), out var date))
+                    {
+                        publishedAt = date.DateTime;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(url))
+                {
+                    articles.Add(new CreateNewsArticleDto
+                    {
+                        Title = title,
+                        Summary = summary,
+                        Content = content,
+                        SourceUrl = url,
+                        OriginalImageUrl = imageUrl,
+                        PublishedAt = publishedAt,
+                        SourceId = source.Id
+                    });
+                }
+            }
+        }
+
+        return articles;
+    }
+
+    private string? GetJsonProperty(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propName in propertyNames)
+        {
+            if (element.TryGetProperty(propName, out var prop) && prop.ValueKind != JsonValueKind.Null)
+            {
+                return prop.GetString();
+            }
+        }
+        return null;
     }
 
     public async Task<IEnumerable<CreateNewsArticleDto>> FetchByScrapingAsync(NewsSource source)
@@ -358,15 +546,66 @@ public class NewsFetcherService : INewsFetcherService
         return doc.DocumentNode.InnerText.Trim();
     }
 
-    private Task<IEnumerable<CreateNewsArticleDto>> FetchByMethodAsync(NewsSource source, FetchMethod method)
+    private async Task<IEnumerable<CreateNewsArticleDto>> FetchByMethodAsync(NewsSource source, FetchMethod method)
     {
-        return method switch
+        var result = await TryFetchMethod(source, method);
+        if (result.Any())
         {
-            FetchMethod.Rss => FetchFromRssAsync(source),
-            FetchMethod.Api => FetchFromApiAsync(source),
-            FetchMethod.Scrape => FetchByScrapingAsync(source),
-            _ => throw new NotSupportedException($"Fetch method not supported: {method}")
+            return result;
+        }
+
+        // Fallback chain: RSS → API → Scrape
+        FetchMethod[] fallbackChain = method switch
+        {
+            FetchMethod.Rss => [FetchMethod.Api, FetchMethod.Scrape],
+            FetchMethod.Api => [FetchMethod.Rss, FetchMethod.Scrape],
+            FetchMethod.Scrape => [FetchMethod.Rss, FetchMethod.Api],
+            _ => Array.Empty<FetchMethod>()
         };
+
+        foreach (var fallbackMethod in fallbackChain)
+        {
+            _logger.LogInformation("Primary method {PrimaryMethod} failed, trying fallback {FallbackMethod} for source {SourceName}",
+                method, fallbackMethod, source.Name);
+
+            result = await TryFetchMethod(source, fallbackMethod);
+            if (result.Any())
+            {
+                _logger.LogInformation("Fallback method {FallbackMethod} succeeded for source {SourceName}",
+                    fallbackMethod, source.Name);
+                return result;
+            }
+        }
+
+        _logger.LogWarning("All fetch methods failed for source {SourceName}", source.Name);
+        return Enumerable.Empty<CreateNewsArticleDto>();
+    }
+
+    private async Task<List<CreateNewsArticleDto>> TryFetchMethod(NewsSource source, FetchMethod method)
+    {
+        try
+        {
+            var articles = method switch
+            {
+                FetchMethod.Rss => await FetchFromRssAsync(source),
+                FetchMethod.Api => await FetchFromApiAsync(source),
+                FetchMethod.Scrape => await FetchByScrapingAsync(source),
+                _ => Enumerable.Empty<CreateNewsArticleDto>()
+            };
+
+            var articleList = articles.ToList();
+            if (articleList.Any())
+            {
+                _logger.LogInformation("Fetch method {Method} succeeded for source {SourceName}: {Count} articles",
+                    method, source.Name, articleList.Count);
+            }
+            return articleList;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fetch method {Method} failed for source {SourceName}", method, source.Name);
+            return new List<CreateNewsArticleDto>();
+        }
     }
 
     private static IEnumerable<FetchMethod> GetFetchOrder(FetchMethod primaryMethod)
