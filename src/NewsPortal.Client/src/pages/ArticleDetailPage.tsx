@@ -184,6 +184,40 @@ const ArticleDetailPage = () => {
                 <meta name="twitter:title" content={article.title} />
                 <meta name="twitter:description" content={article.summary || ''} />
                 <meta name="twitter:image" content={article.imageUrl || article.thumbnailUrl || ''} />
+
+                {/* Schema.org JSON-LD for NewsArticle */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "NewsArticle",
+                        "headline": article.title,
+                        "description": article.summary || '',
+                        "image": article.imageUrl || article.thumbnailUrl || '',
+                        "datePublished": article.publishedAt,
+                        "dateModified": article.publishedAt,
+                        "author": article.author ? {
+                            "@type": "Person",
+                            "name": article.author
+                        } : {
+                            "@type": "Organization",
+                            "name": article.sourceName
+                        },
+                        "publisher": {
+                            "@type": "Organization",
+                            "name": article.sourceName,
+                            "logo": {
+                                "@type": "ImageObject",
+                                "url": `${window.location.origin}/logo.png`
+                            }
+                        },
+                        "mainEntityOfPage": {
+                            "@type": "WebPage",
+                            "@id": `${window.location.origin}/news/${article.slug}`
+                        },
+                        "articleSection": article.categoryName || 'News',
+                        "wordCount": article.content ? article.content.split(/\s+/).length : 0
+                    })}
+                </script>
             </Helmet>
 
             <div className="p-8 max-w-4xl mx-auto">

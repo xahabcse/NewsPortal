@@ -3,13 +3,17 @@ import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
 import SkeletonCard from '../components/SkeletonCard'
 import { newsApi, type NewsArticle, type Category } from '../services/api'
+import { NewsSourceService } from '../services/NewsSourceService'
+import type { NewsSource } from '../types/NewsSource'
 
 const PAGE_SIZE = 9
 
 const HomePage = () => {
   const [news, setNews] = useState<NewsArticle[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [sources, setSources] = useState<NewsSource[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedSource, setSelectedSource] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -28,6 +32,15 @@ const HomePage = () => {
     }
   }, [])
 
+  const fetchSources = useCallback(async () => {
+    try {
+      const result = await NewsSourceService.getAll()
+      setSources(result.filter(s => s.isActive))
+    } catch (err) {
+      console.error('Error fetching sources:', err)
+    }
+  }, [])
+
   const fetchNews = useCallback(async (pageNum: number, append = false) => {
     try {
       if (append) {
@@ -37,7 +50,15 @@ const HomePage = () => {
       }
 
       let result
-      if (selectedCategory) {
+      if (selectedSource) {
+        // Fetch by source
+        const source = sources.find(s => s.id === selectedSource)
+        if (source) {
+          result = await newsApi.getNewsBySource(source.slug, pageNum, PAGE_SIZE)
+        } else {
+          result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
+        }
+      } else if (selectedCategory) {
         result = await newsApi.getNewsByCategory(selectedCategory, pageNum, PAGE_SIZE)
       } else {
         result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
@@ -63,12 +84,13 @@ const HomePage = () => {
 
   useEffect(() => {
     fetchCategories()
-  }, [fetchCategories])
+    fetchSources()
+  }, [fetchCategories, fetchSources])
 
   useEffect(() => {
     setPage(1)
     fetchNews(1, false)
-  }, [selectedCategory, fetchNews])
+  }, [selectedCategory, selectedSource, fetchNews])
 
   // Infinite Scroll with Intersection Observer
   useEffect(() => {
@@ -114,11 +136,11 @@ const HomePage = () => {
         </div>
 
         {/* Category Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide mb-3">
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => { setSelectedCategory(null); setSelectedSource(null); }}
             className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
-              selectedCategory === null
+              selectedCategory === null && selectedSource === null
                 ? 'bg-accent text-white shadow-lg shadow-accent/20'
                 : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
             }`}
@@ -128,7 +150,7 @@ const HomePage = () => {
           {categories.map(category => (
             <button
               key={category.id}
-              onClick={() => setSelectedCategory(category.slug)}
+              onClick={() => { setSelectedCategory(category.slug); setSelectedSource(null); }}
               className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
                 selectedCategory === category.slug
                   ? 'bg-accent text-white shadow-lg shadow-accent/20'
@@ -146,6 +168,35 @@ const HomePage = () => {
             </button>
           ))}
         </div>
+
+        {/* Source Filter Chips */}
+        {sources.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <button
+              onClick={() => setSelectedSource(null)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                selectedSource === null
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                  : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+              }`}
+            >
+              All Sources
+            </button>
+            {sources.map(source => (
+              <button
+                key={source.id}
+                onClick={() => { setSelectedSource(source.id); setSelectedCategory(null); }}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                  selectedSource === source.id
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                    : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+                }`}
+              >
+                {source.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (

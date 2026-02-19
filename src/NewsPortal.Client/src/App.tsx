@@ -16,6 +16,7 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
+import CategoriesPage from './pages/admin/CategoriesPage'
 import { AuthProvider } from './context/AuthContext'
 import { signalRService } from './services/SignalRService'
 
@@ -51,6 +52,7 @@ function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/fetch-logs" element={<FetchLogPage />} />
+                    <Route path="/admin/categories" element={<CategoriesPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </div>

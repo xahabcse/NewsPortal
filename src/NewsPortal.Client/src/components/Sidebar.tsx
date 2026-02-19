@@ -95,6 +95,12 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                             <span className="text-[10px] text-secondary/50 font-normal leading-tight">Import history</span>
                         </div>
                     </Link>
+                    <Link to="/admin/categories" className={`huly-sidebar-item ${isActive('/admin/categories')}`}>
+                        <div className="flex flex-col">
+                            <span>Categories</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage categories</span>
+                        </div>
+                    </Link>
                 </nav>
             )}
             </aside>
