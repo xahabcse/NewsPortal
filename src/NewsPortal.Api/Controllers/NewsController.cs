@@ -76,4 +76,11 @@ public class NewsController : ControllerBase
         var result = await _newsService.GetTrendingNewsAsync(count, hours);
         return Ok(result);
     }
+
+    [HttpGet("{slug}/related")]
+    public async Task<IActionResult> GetRelatedNews(string slug, [FromQuery][Range(1, 10)] int count = 4)
+    {
+        var result = await _newsService.GetRelatedNewsAsync(slug, count);
+        return Ok(result);
+    }
 }

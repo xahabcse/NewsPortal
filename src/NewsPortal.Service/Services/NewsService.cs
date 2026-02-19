@@ -19,6 +19,7 @@ public interface INewsService
     Task<int> ImportNewsArticlesAsync(IEnumerable<CreateNewsArticleDto> articles);
     Task<NewsImportResultDto> ImportNewsArticlesWithReportAsync(IEnumerable<CreateNewsArticleDto> articles);
     Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24);
+    Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
 }
 
 public class NewsService : INewsService
@@ -168,6 +169,27 @@ public class NewsService : INewsService
             Page = query.Page,
             PageSize = query.PageSize
         };
+    }
+
+    public async Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count)
+    {
+        var currentArticle = await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+        if (currentArticle == null || !currentArticle.CategoryId.HasValue)
+            return Enumerable.Empty<NewsArticleListDto>();
+
+        // Get articles from the same category, excluding current article
+        var relatedArticles = await _unitOfWork.NewsArticles.GetByCategoryAsync(
+            currentArticle.CategoryId.Value,
+            1,
+            count + 5 // Get extra to filter out current
+        );
+
+        // Filter out current article and limit to count
+        return relatedArticles
+            .Where(a => a.Id != currentArticle.Id)
+            .Take(count)
+            .Select(MapToListDto)
+            .ToList();
     }
 
     public async Task<NewsArticle> CreateNewsAsync(CreateNewsArticleDto dto)
