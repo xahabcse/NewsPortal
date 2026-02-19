@@ -11,6 +11,8 @@ import NotFoundPage from './pages/NotFoundPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import TrendingPage from './pages/TrendingPage'
 import BookmarksPage from './pages/BookmarksPage'
+import RegisterPage from './pages/RegisterPage'
+import ProfilePage from './pages/ProfilePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
 import { AuthProvider } from './context/AuthContext'
@@ -35,6 +37,8 @@ function App() {
                     <Route path="/bookmarks" element={<BookmarksPage />} />
                     <Route path="/news-sources" element={<NewsSourcesPage />} />
                     <Route path="/news/:slug" element={<ArticleDetailPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/fetch-logs" element={<FetchLogPage />} />
                     <Route path="*" element={<NotFoundPage />} />
