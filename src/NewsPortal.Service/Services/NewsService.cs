@@ -20,6 +20,7 @@ public interface INewsService
     Task<NewsImportResultDto> ImportNewsArticlesWithReportAsync(IEnumerable<CreateNewsArticleDto> articles);
     Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24);
     Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
+    Task<int> GetArticlesCountTodayAsync();
 }
 
 public class NewsService : INewsService
@@ -190,6 +191,12 @@ public class NewsService : INewsService
             .Take(count)
             .Select(MapToListDto)
             .ToList();
+    }
+
+    public async Task<int> GetArticlesCountTodayAsync()
+    {
+        var today = DateTime.UtcNow.Date;
+        return await _unitOfWork.NewsArticles.CountAsync(x => x.FetchedAt >= today && x.IsActive);
     }
 
     public async Task<NewsArticle> CreateNewsAsync(CreateNewsArticleDto dto)

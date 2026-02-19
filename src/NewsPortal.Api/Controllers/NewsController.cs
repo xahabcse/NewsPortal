@@ -126,4 +126,11 @@ public class NewsController : ControllerBase
         await _categoryService.DeleteCategoryAsync(id);
         return NoContent();
     }
+
+    [HttpGet("stats/today")]
+    public async Task<IActionResult> GetTodayStats()
+    {
+        var count = await _newsService.GetArticlesCountTodayAsync();
+        return Ok(new { count, timestamp = DateTime.UtcNow });
+    }
 }

@@ -1,10 +1,17 @@
 import * as signalR from '@microsoft/signalr';
 import toast from 'react-hot-toast';
 
+type NotificationCallback = (type: 'article' | 'breaking', title: string, category?: string) => void;
+
 class SignalRService {
     private connection: signalR.HubConnection | null = null;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
+    private notificationCallbacks: NotificationCallback[] = [];
+
+    public onNotification(callback: NotificationCallback): void {
+        this.notificationCallbacks.push(callback);
+    }
 
     public start(): void {
         const token = localStorage.getItem('authToken');
@@ -65,6 +72,10 @@ class SignalRService {
     }
 
     private handleNewArticle(title: string, categoryName: string): void {
+        // Call notification callbacks
+        this.notificationCallbacks.forEach(cb => cb('article', title, categoryName));
+
+        // Also show toast
         toast.success(
             `New Article: ${title} (${categoryName})`,
             {
@@ -75,6 +86,10 @@ class SignalRService {
     }
 
     private handleBreakingNews(title: string): void {
+        // Call notification callbacks
+        this.notificationCallbacks.forEach(cb => cb('breaking', title));
+
+        // Also show toast
         toast(
             `🔴 Breaking News: ${title}`,
             {

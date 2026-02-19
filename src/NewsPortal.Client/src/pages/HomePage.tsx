@@ -5,6 +5,7 @@ import SkeletonCard from '../components/SkeletonCard'
 import { newsApi, type NewsArticle, type Category } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
+import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
 
@@ -21,6 +22,21 @@ const HomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const observerTarget = useRef<HTMLDivElement>(null)
+
+  const handlePremiumClick = () => {
+    toast(
+        () => (
+            <div>
+                <strong>NewsPortal+ Coming Soon!</strong>
+                <p className="text-xs opacity-70 mt-1">We're working on premium features. Stay tuned!</p>
+            </div>
+        ),
+        {
+            duration: 5000,
+            position: 'top-right',
+        }
+    );
+  };
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -281,7 +297,10 @@ const HomePage = () => {
             <h2 className="text-2xl font-bold text-white mb-2">Upgrade to NewsPortal+</h2>
             <p className="text-secondary text-sm italic">Unlock exclusive analysis, ad-free experience, and early access to breaking news stories from around the globe.</p>
           </div>
-          <button className="bg-white text-background px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all transform hover:scale-105">
+          <button
+              onClick={handlePremiumClick}
+              className="bg-white text-background px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all transform hover:scale-105"
+          >
             Explore Premium
           </button>
         </div>
