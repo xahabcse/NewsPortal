@@ -5,6 +5,7 @@ import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
+import CommentsSection from '../components/CommentsSection';
 
 interface NewsArticleDetail {
     id: number;
@@ -334,6 +335,9 @@ const ArticleDetailPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Comments Section */}
+            <CommentsSection />
         </div>
         </>
     );

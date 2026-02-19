@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import LanguageToggle from './LanguageToggle';
 
 interface NavbarProps {
     onMenuClick?: () => void;
@@ -137,19 +138,25 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </div>
 
                     {isAuthenticated ? (
-                        <button
-                            onClick={logout}
-                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                            Logout
-                        </button>
+                        <>
+                            <LanguageToggle />
+                            <button
+                                onClick={logout}
+                                className="px-3 py-1.5 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                Logout
+                            </button>
+                        </>
                     ) : (
-                        <button
-                            onClick={openLoginModal}
-                            className="px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-sm text-white hover:bg-accent/30 transition-colors"
-                        >
-                            Login
-                        </button>
+                        <>
+                            <LanguageToggle />
+                            <button
+                                onClick={openLoginModal}
+                                className="px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-sm text-white hover:bg-accent/30 transition-colors"
+                            >
+                                Login
+                            </button>
+                        </>
                     )}
                 </div>
             </header>

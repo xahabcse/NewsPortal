@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import Sidebar from './components/Sidebar'
@@ -17,9 +17,16 @@ import ProfilePage from './pages/ProfilePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
 import { AuthProvider } from './context/AuthContext'
+import { signalRService } from './services/SignalRService'
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Start SignalR connection on app mount
+  useEffect(() => {
+    signalRService.start()
+    return () => signalRService.stop()
+  }, [])
 
   return (
     <AuthProvider>

@@ -9,6 +9,7 @@ public interface IUnitOfWork : IDisposable
     IUserRepository Users { get; }
     IBookmarkRepository Bookmarks { get; }
     IReadHistoryRepository ReadHistory { get; }
+    ICommentRepository Comments { get; }
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();
     Task CommitTransactionAsync();

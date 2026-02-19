@@ -16,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
     private IUserRepository? _users;
     private IBookmarkRepository? _bookmarks;
     private IReadHistoryRepository? _readHistory;
+    private ICommentRepository? _comments;
 
     public UnitOfWork(NewsPortalDbContext context)
     {
@@ -42,6 +43,9 @@ public class UnitOfWork : IUnitOfWork
 
     public IReadHistoryRepository ReadHistory =>
         _readHistory ??= new ReadHistoryRepository(_context);
+
+    public ICommentRepository Comments =>
+        _comments ??= new CommentRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {

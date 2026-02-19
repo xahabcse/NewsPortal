@@ -33,6 +33,8 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddBackgroundJobs();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<NewsPortal.Api.Services.ISignalRNotificationService, NewsPortal.Api.Services.SignalRNotificationService>();
 
 // Add Hangfire client for queueing manual fetch jobs.
 // Worker execution is handled by NewsPortal.McpServer.
@@ -221,6 +223,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<NewsPortal.Api.Hubs.NewsHub>("/newsHub");
 
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
 

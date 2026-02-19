@@ -79,3 +79,9 @@ public interface IReadHistoryRepository : IRepository<UserReadHistory>
     Task<bool> ExistsAsync(int userId, int articleId);
     Task UpsertAsync(int userId, int articleId);
 }
+
+public interface ICommentRepository : IRepository<Comment>
+{
+    Task<IEnumerable<Comment>> GetByArticleAsync(int articleId);
+    Task<Comment?> GetByIdAsync(int id);
+}
