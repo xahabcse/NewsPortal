@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import NewsSourcesPage from './pages/NewsSourcesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
 import NotFoundPage from './pages/NotFoundPage'
+import SearchResultsPage from './pages/SearchResultsPage'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
               <div className="mt-16 flex-1">
                 <Routes>
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/search" element={<SearchResultsPage />} />
                   <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
                   <Route path="/news-sources" element={<NewsSourcesPage />} />
                   <Route path="/news/:slug" element={<ArticleDetailPage />} />
