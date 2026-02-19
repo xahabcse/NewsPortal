@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Service.Services;
 using NewsPortal.Core.DTOs;
@@ -54,6 +55,16 @@ public class NewsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("source/{slug}")]
+    public async Task<IActionResult> GetNewsBySource(
+        string slug,
+        [FromQuery][Range(1, int.MaxValue)] int page = 1,
+        [FromQuery][Range(1, 100)] int pageSize = 10)
+    {
+        var result = await _newsService.GetNewsBySourceAsync(slug, page, pageSize);
+        return Ok(result);
+    }
+
     [HttpPost("search")]
     public async Task<IActionResult> SearchNews([FromBody] SearchQueryDto query)
     {
@@ -75,5 +86,51 @@ public class NewsController : ControllerBase
     {
         var result = await _newsService.GetTrendingNewsAsync(count, hours);
         return Ok(result);
+    }
+
+    [HttpGet("{slug}/related")]
+    public async Task<IActionResult> GetRelatedNews(string slug, [FromQuery][Range(1, 10)] int count = 4)
+    {
+        var result = await _newsService.GetRelatedNewsAsync(slug, count);
+        return Ok(result);
+    }
+
+    [HttpGet("categories/{id}")]
+    public async Task<IActionResult> GetCategory(int id)
+    {
+        var result = await _categoryService.GetCategoryBySlugAsync(id.ToString());
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPost("categories")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryDto dto)
+    {
+        var result = await _categoryService.CreateCategoryAsync(dto);
+        return CreatedAtAction(nameof(GetCategory), new { id = result.Id }, result);
+    }
+
+    [HttpPut("categories/{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateCategory(int id, [FromBody] CreateCategoryDto dto)
+    {
+        await _categoryService.UpdateCategoryAsync(id, dto);
+        return NoContent();
+    }
+
+    [HttpDelete("categories/{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteCategory(int id)
+    {
+        await _categoryService.DeleteCategoryAsync(id);
+        return NoContent();
+    }
+
+    [HttpGet("stats/today")]
+    public async Task<IActionResult> GetTodayStats()
+    {
+        var count = await _newsService.GetArticlesCountTodayAsync();
+        return Ok(new { count, timestamp = DateTime.UtcNow });
     }
 }

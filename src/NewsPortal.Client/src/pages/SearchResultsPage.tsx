@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import NewsCard from '../components/NewsCard';
 
@@ -96,8 +97,13 @@ const SearchResultsPage = () => {
 
     if (!query.trim()) {
         return (
-            <div className="p-8">
-                <div className="max-w-2xl mx-auto text-center">
+            <>
+                <SEO
+                    title="Search News"
+                    description="Search through thousands of news articles from trusted sources worldwide."
+                />
+                <div className="p-8">
+                    <div className="max-w-2xl mx-auto text-center">
                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -144,8 +150,9 @@ const SearchResultsPage = () => {
                             </div>
                         </div>
                     )}
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 

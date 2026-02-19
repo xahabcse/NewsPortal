@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import NewsCard from '../components/NewsCard';
 
@@ -57,7 +58,12 @@ const TrendingPage = () => {
     ];
 
     return (
-        <div className="p-8">
+        <>
+            <SEO
+                title="Trending News - Most Viewed Articles"
+                description="Discover the most popular and trending news articles. See what everyone is reading right now."
+            />
+            <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
@@ -215,6 +221,7 @@ const TrendingPage = () => {
                 </>
             )}
         </div>
+        </>
     );
 };
 

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NewsSourceService } from '../services/NewsSourceService';
 import { useAuth } from '../context/AuthContext';
+import FetchJobStatusModal from '../components/FetchJobStatusModal';
+import TestSourceResultsModal from '../components/TestSourceResultsModal';
 import type {
     NewsSource,
     CreateNewsSourceDto,
@@ -69,12 +71,14 @@ function SourceFormModal({
     onClose,
     onSave,
     canTest,
+    onTestResult,
 }: {
     isOpen: boolean;
     editingSource: NewsSource | null;
     onClose: () => void;
     onSave: (form: CreateNewsSourceDto, id: number | null) => Promise<void>;
     canTest: boolean;
+    onTestResult?: (result: NewsSourceTestResult, sourceName: string) => void;
 }) {
     const [form, setForm] = useState<CreateNewsSourceDto>(emptyForm);
     const [saving, setSaving] = useState(false);
@@ -108,7 +112,11 @@ function SourceFormModal({
         setError('');
         try {
             const result = await NewsSourceService.testSource(form);
+            const sourceName = form.name || (editingSource?.name) || 'New Source';
             setTestResult(result);
+            if (onTestResult) {
+                onTestResult(result, sourceName);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Test failed');
         } finally {
@@ -215,24 +223,15 @@ function SourceFormModal({
                             {testResult.isSuccess ? '✓ Test Passed' : '✗ Test Failed'}
                         </div>
                         <p className="text-secondary text-xs mb-2">{testResult.message} ({testResult.durationMs}ms)</p>
-                        {testResult.articlesFetched > 0 && (
-                            <div className="text-xs text-secondary space-y-1">
-                                <p>Fetched: {testResult.articlesFetched} · Valid: {testResult.validArticles} · Invalid: {testResult.invalidArticles}</p>
-                                {testResult.sampleTitles.length > 0 && (
-                                    <div>
-                                        <span className="text-white/60">Sample titles:</span>
-                                        <ul className="list-disc list-inside mt-1 text-secondary/80">
-                                            {testResult.sampleTitles.map((t, i) => <li key={i} className="truncate">{t}</li>)}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {testResult.issues.length > 0 && (
-                            <ul className="mt-2 text-xs text-red-400/80 list-disc list-inside">
-                                {testResult.issues.map((issue, i) => <li key={i}>[{issue.code}] {issue.message}</li>)}
-                            </ul>
-                        )}
+                        <button
+                            onClick={() => {
+                                const sourceName = form.name || (editingSource?.name) || 'New Source';
+                                if (onTestResult) onTestResult(testResult, sourceName);
+                            }}
+                            className="text-xs text-accent hover:text-accent/80 transition-colors font-medium"
+                        >
+                            View detailed results →
+                        </button>
                     </div>
                 )}
 
@@ -366,6 +365,11 @@ export default function NewsSourcesPage() {
     const [bulkLoading, setBulkLoading] = useState(false);
 
     const [fetchingJobs, setFetchingJobs] = useState<Record<number, string>>({});
+    const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+    const [selectedJobSourceName, setSelectedJobSourceName] = useState('');
+
+    const [testResult, setTestResult] = useState<NewsSourceTestResult | null>(null);
+    const [testSourceName, setTestSourceName] = useState('');
 
     const loadSources = useCallback(async () => {
         try {
@@ -412,6 +416,8 @@ export default function NewsSourcesPage() {
         try {
             const resp = await NewsSourceService.fetchNow(source.id);
             setFetchingJobs(prev => ({ ...prev, [source.id]: resp.jobId }));
+            setSelectedJobId(resp.jobId);
+            setSelectedJobSourceName(source.name);
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Fetch failed');
         }
@@ -711,14 +717,37 @@ export default function NewsSourcesPage() {
             <SourceFormModal
                 isOpen={modalOpen}
                 editingSource={editingSource}
-                onClose={() => { setModalOpen(false); setEditingSource(null); }}
+                onClose={() => { setModalOpen(false); setEditingSource(null); setTestResult(null); }}
                 onSave={handleSave}
                 canTest={canFetchSources}
+                onTestResult={(result, name) => {
+                    setTestResult(result);
+                    setTestSourceName(name);
+                }}
             />
             <DeleteDialog
                 source={deleteTarget}
                 onClose={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
+            />
+            <FetchJobStatusModal
+                isOpen={!!selectedJobId}
+                jobId={selectedJobId}
+                sourceName={selectedJobSourceName}
+                onClose={() => {
+                    setSelectedJobId(null);
+                    setSelectedJobSourceName('');
+                    loadSources(); // Refresh after modal closes
+                }}
+            />
+            <TestSourceResultsModal
+                isOpen={!!testResult}
+                result={testResult}
+                sourceName={testSourceName}
+                onClose={() => {
+                    setTestResult(null);
+                    setTestSourceName('');
+                }}
             />
         </main>
     );
