@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
+import ToastProvider from './components/ToastProvider'
 import HomePage from './pages/HomePage'
 import NewsSourcesPage from './pages/NewsSourcesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
@@ -35,6 +36,7 @@ function App() {
               </div>
             </div>
           </div>
+          <ToastProvider />
         </Router>
       </ErrorBoundary>
     </AuthProvider>
