@@ -52,7 +52,16 @@ const HomePage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {news.map(item => (
-            <NewsCard key={item.id} {...item} />
+            <NewsCard
+                key={item.id}
+                title={item.title}
+                summary={item.summary}
+                categoryName={item.categoryName}
+                sourceName={item.sourceName}
+                publishedAt={item.publishedAt}
+                thumbnailUrl={item.thumbnailUrl}
+                slug={item.slug}
+            />
           ))}
         </div>
       )}

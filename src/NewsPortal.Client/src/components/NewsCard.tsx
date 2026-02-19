@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState, type FC } from 'react';
 
 interface NewsCardProps {
@@ -7,6 +8,7 @@ interface NewsCardProps {
     sourceName: string;
     publishedAt: string;
     thumbnailUrl: string | null;
+    slug: string;
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
@@ -24,7 +26,7 @@ const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
     </div>
 );
 
-const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl }) => {
+const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName, publishedAt, thumbnailUrl, slug }) => {
     const [imgFailed, setImgFailed] = useState(false);
     const showImage = thumbnailUrl && !imgFailed;
     const category = categoryName || 'General';
@@ -68,10 +70,13 @@ const NewsCard: FC<NewsCardProps> = ({ title, summary, categoryName, sourceName,
                     {summary || 'No summary available'}
                 </p>
 
-                <button className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all">
+                <Link
+                    to={`/news/${slug}`}
+                    className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
+                >
                     READ MORE
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </button>
+                </Link>
             </div>
         </div>
     );
