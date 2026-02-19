@@ -100,4 +100,12 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
     {
         return await _dbSet.AnyAsync(x => x.SourceId == sourceId && x.CanonicalUrl == canonicalUrl);
     }
+
+    public async Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since)
+    {
+        return await _dbSet
+            .Where(x => x.SourceId == sourceId && x.FetchedAt >= since)
+            .Select(x => x.Title)
+            .ToListAsync();
+    }
 }

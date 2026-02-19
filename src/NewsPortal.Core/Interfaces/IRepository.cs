@@ -28,6 +28,7 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task IncrementViewCountAsync(int id);
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
+    Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
 }
 
 public interface ICategoryRepository : IRepository<Category>

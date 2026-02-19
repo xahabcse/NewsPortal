@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
+import NewsSourcesPage from './pages/NewsSourcesPage'
 import { AuthProvider } from './context/AuthContext'
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/trending" element={<PlaceholderPage title="Trending" />} />
-                <Route path="/news-sources" element={<PlaceholderPage title="News Channels" />} />
+                <Route path="/news-sources" element={<NewsSourcesPage />} />
               </Routes>
             </div>
           </div>

@@ -248,6 +248,15 @@ public class NewsService : INewsService
             var batchCanonicalKeys = new HashSet<string>(StringComparer.Ordinal);
             var batchSlugs = new HashSet<string>(StringComparer.Ordinal);
 
+            var sourceIds = articlesList.Select(a => a.SourceId).Distinct().ToList();
+            var recentTitlesBySource = new Dictionary<int, List<string>>();
+            var since = DateTime.UtcNow.AddHours(-48);
+            foreach (var sid in sourceIds)
+            {
+                var titles = (await _unitOfWork.NewsArticles.GetRecentTitlesBySourceAsync(sid, since)).ToList();
+                recentTitlesBySource[sid] = titles;
+            }
+
             foreach (var rawDto in articlesList)
             {
                 var dto = NewsArticleIngestionHelper.Normalize(rawDto);
@@ -301,6 +310,22 @@ public class NewsService : INewsService
                     continue;
                 }
 
+                if (recentTitlesBySource.TryGetValue(dto.SourceId, out var existingTitles))
+                {
+                    var nearDupes = TitleSimilarityHelper.FindNearDuplicates(dto.Title, existingTitles);
+                    if (nearDupes.Count > 0)
+                    {
+                        result.NearDuplicateCount += 1;
+                        result.Issues.Add(new NewsImportIssueDto
+                        {
+                            Code = "NEAR_DUPLICATE_TITLE",
+                            Message = $"Title is near-duplicate of existing article: '{nearDupes[0][..Math.Min(80, nearDupes[0].Length)]}'",
+                            SourceUrl = dto.SourceUrl,
+                            Title = dto.Title
+                        });
+                    }
+                }
+
                 var article = new NewsArticle
                 {
                     Title = dto.Title,
@@ -335,6 +360,9 @@ public class NewsService : INewsService
 
                 await _unitOfWork.NewsArticles.AddAsync(article);
                 result.ImportedCount += 1;
+
+                if (recentTitlesBySource.TryGetValue(dto.SourceId, out var titleList))
+                    titleList.Add(dto.Title);
             }
 
             await _unitOfWork.SaveChangesAsync();
