@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import ReadingHistory from './ReadingHistory'
 
 const Sidebar = () => {
     const location = useLocation()
@@ -37,6 +38,10 @@ const Sidebar = () => {
                         <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage sources</span>
                     </div>
                 </Link>
+            </nav>
+
+            <nav className="flex flex-col gap-2 mt-4">
+                <ReadingHistory />
             </nav>
         </aside>
     );

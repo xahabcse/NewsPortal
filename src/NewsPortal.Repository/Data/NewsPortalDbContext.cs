@@ -18,6 +18,7 @@ public class NewsPortalDbContext : DbContext
     public DbSet<NewsFetchLog> NewsFetchLogs => Set<NewsFetchLog>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserBookmark> UserBookmarks => Set<UserBookmark>();
+    public DbSet<UserReadHistory> UserReadHistory => Set<UserReadHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

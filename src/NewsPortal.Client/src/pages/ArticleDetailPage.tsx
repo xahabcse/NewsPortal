@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { axiosInstance } from '../services/axiosInstance';
+import { ReadHistoryService } from '../services/ReadHistoryService';
+import { useAuth } from '../context/AuthContext';
 
 interface NewsArticleDetail {
     id: number;
@@ -44,6 +46,7 @@ const ImagePlaceholder: React.FC<{ category: string }> = ({ category }) => (
 const ArticleDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
     const [article, setArticle] = useState<NewsArticleDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -60,6 +63,15 @@ const ArticleDetailPage = () => {
             try {
                 const response = await axiosInstance.get<NewsArticleDetail>(`/news/${slug}`);
                 setArticle(response.data);
+
+                // Record reading history if user is authenticated
+                if (isAuthenticated && response.data?.id) {
+                    // Debounce: wait 5 seconds before recording (user actually reading)
+                    const timer = setTimeout(() => {
+                        ReadHistoryService.recordRead(response.data.id).catch(console.error);
+                    }, 5000);
+                    return () => clearTimeout(timer);
+                }
             } catch (err: unknown) {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
@@ -77,7 +89,7 @@ const ArticleDetailPage = () => {
         };
 
         fetchArticle();
-    }, [slug]);
+    }, [slug, isAuthenticated]);
 
     if (loading) {
         return (

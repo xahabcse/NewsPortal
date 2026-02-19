@@ -15,6 +15,7 @@ public class UnitOfWork : IUnitOfWork
     private ISourceFetchJobRepository? _sourceFetchJobs;
     private IUserRepository? _users;
     private IBookmarkRepository? _bookmarks;
+    private IReadHistoryRepository? _readHistory;
 
     public UnitOfWork(NewsPortalDbContext context)
     {
@@ -38,6 +39,9 @@ public class UnitOfWork : IUnitOfWork
 
     public IBookmarkRepository Bookmarks =>
         _bookmarks ??= new BookmarkRepository(_context);
+
+    public IReadHistoryRepository ReadHistory =>
+        _readHistory ??= new ReadHistoryRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {
