@@ -171,7 +171,7 @@ $option = Read-Host "Enter option (1-6)"
 switch ($option) {
     "1" {
         $MonitoringFile = $null
-        Print-Info "[Step 1/3] Pulling images (showing progress)..."
+        Print-Info "[Step 1/3] Pulling external images..."
         Invoke-DockerCompose pull
         Print-Info "[Step 2/3] Building and starting containers..."
         Invoke-DockerCompose up -d --build
@@ -180,7 +180,7 @@ switch ($option) {
     }
     "2" {
         $MonitoringFile = "docker-compose.monitoring.windows.yml"
-        Print-Info "[Step 1/3] Pulling images (showing progress)..."
+        Print-Info "[Step 1/3] Pulling external images..."
         Invoke-DockerCompose pull
         Print-Info "[Step 2/3] Building and starting monitoring stack..."
         Invoke-DockerCompose up -d --build

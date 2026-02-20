@@ -180,16 +180,16 @@ read -r -p "Enter option (1-6): " option
 case "$option" in
     1)
         MONITORING_FILE=""
-        print_info "[Step 1/3] Pulling images (showing progress)..."
-        dc pull
+        print_info "[Step 1/3] Pulling external images..."
+        dc pull || print_warning "Some images are local-only and will be built in the next step."
         print_info "[Step 2/3] Building and starting containers..."
         dc up -d --build
         print_info "[Step 3/3] Verifying health..."
         health_check
         ;;
     2)
-        print_info "[Step 1/3] Pulling images (showing progress)..."
-        dc pull
+        print_info "[Step 1/3] Pulling external images..."
+        dc pull || print_warning "Some images are local-only and will be built in the next step."
         print_info "[Step 2/3] Building and starting monitoring stack..."
         dc up -d --build
         print_info "[Step 3/3] Verifying health..."
