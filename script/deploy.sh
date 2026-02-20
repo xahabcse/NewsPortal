@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # News Portal - Deployment Script
-# Supports local development mode and Ubuntu server mode
+# Simple deployment for Windows (Docker Desktop) and Ubuntu Server
 
 set -euo pipefail
 
@@ -13,10 +13,11 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-DEPLOY_MODE="ubuntu-server"
-COMPOSE_FILE="docker-compose.yml"
+PLATFORM="windows"
+MONITORING_FILE=""
 
 print_section() {
     echo ""
@@ -42,110 +43,59 @@ print_info() {
 }
 
 dc() {
-    docker compose -f "$COMPOSE_FILE" "$@"
+    if [ -n "$MONITORING_FILE" ]; then
+        docker compose -f docker-compose.yml -f "$MONITORING_FILE" "$@"
+    else
+        docker compose -f docker-compose.yml "$@"
+    fi
 }
 
-select_deployment_mode() {
-    print_section "Select Deployment Mode"
-    echo "1) Development Environment (local Docker dev stack)"
-    echo "2) Ubuntu Server Deployment (default)"
+select_platform() {
+    print_section "Select Platform"
+    echo "1) Windows (Docker Desktop)"
+    echo "2) Ubuntu Server (Linux)"
     echo ""
-    read -r -p "Enter mode (1-2, default 2): " mode
+    read -r -p "Enter platform (1-2, default 1): " platform_choice
 
-    case "${mode:-2}" in
+    case "${platform_choice:-1}" in
         1)
-            DEPLOY_MODE="development"
-            if [ -f "docker-compose.dev.yml" ]; then
-                COMPOSE_FILE="docker-compose.dev.yml"
-                print_success "Development mode selected with docker-compose.dev.yml"
-            else
-                COMPOSE_FILE="docker-compose.yml"
-                print_warning "docker-compose.dev.yml not found. Falling back to docker-compose.yml for development mode."
-            fi
+            PLATFORM="windows"
+            MONITORING_FILE="docker-compose.monitoring.windows.yml"
+            print_success "Windows mode selected"
             ;;
         2)
-            DEPLOY_MODE="ubuntu-server"
-            COMPOSE_FILE="docker-compose.yml"
-            print_success "Ubuntu server mode selected"
+            PLATFORM="ubuntu"
+            MONITORING_FILE="docker-compose.monitoring.yml"
+            print_success "Ubuntu Server mode selected"
             ;;
         *)
-            print_error "Invalid mode selection"
+            print_error "Invalid selection"
             exit 1
             ;;
     esac
-
-    print_info "Using compose file: ${COMPOSE_FILE}"
 }
 
-validate_deployment() {
-    print_section "Deployment Configuration Validation"
-
-    local errors=0
-    local warnings=0
-
-    if command -v docker >/dev/null 2>&1; then
-        print_success "Docker is installed: $(docker --version)"
-    else
-        print_error "Docker is not installed"
-        ((errors++))
-    fi
-
-    if docker compose version >/dev/null 2>&1; then
-        print_success "Docker Compose is available"
-    else
-        print_error "Docker Compose is not available"
-        ((errors++))
-    fi
-
-    local critical_files=(
-        "NewsPortal.sln"
-        "$COMPOSE_FILE"
-        ".dockerignore"
-    )
-
-    if [ "$DEPLOY_MODE" = "ubuntu-server" ]; then
-        critical_files+=(
-            "src/NewsPortal.Client/Dockerfile"
-            "src/NewsPortal.Client/nginx.conf"
-            "src/NewsPortal.Api/Dockerfile"
-            "src/NewsPortal.McpServer/Dockerfile"
-        )
-    fi
-
-    for file in "${critical_files[@]}"; do
-        if [ -f "$file" ]; then
-            print_success "Found: $file"
+ensure_env() {
+    if [ ! -f .env ]; then
+        print_warning "No .env file found. Creating from .env.example..."
+        if [ -f .env.example ]; then
+            cp .env.example .env
+            print_success "Created .env file"
+            print_warning "Please edit .env and update passwords/secrets."
         else
-            print_error "Missing critical file: $file"
-            ((errors++))
-        fi
-    done
-
-    if [ -f ".env" ]; then
-        print_success ".env file exists"
-        if grep -q "YourSecurePassword123" .env; then
-            print_warning "Using default PostgreSQL password in .env"
-            ((warnings++))
+            print_error ".env.example not found"
+            exit 1
         fi
     else
-        print_warning ".env file missing (will be created from example)"
-        ((warnings++))
+        print_success ".env file exists"
     fi
-
-    if [ "$errors" -gt 0 ]; then
-        print_error "Validation failed with $errors error(s) and $warnings warning(s)."
-        return 1
-    fi
-
-    print_success "Validation passed with $warnings warning(s)."
-    return 0
 }
 
 health_check() {
-    print_section "System Health Check"
-
+    print_section "Health Check"
+    
     if ! dc ps >/dev/null 2>&1; then
-        print_error "Docker Compose services are not running for ${COMPOSE_FILE}"
+        print_error "Docker Compose services are not running"
         return 1
     fi
 
@@ -154,98 +104,95 @@ health_check() {
 
     for service in "${services[@]}"; do
         if dc ps "$service" | grep -q "Up"; then
-            print_success "Service $service is running"
+            print_success "$service is running"
         else
-            print_error "Service $service is NOT running"
+            print_error "$service is NOT running"
             all_healthy=false
         fi
     done
 
     echo ""
     echo "Resource Usage:"
-    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" | grep newsportal || echo "No newsportal containers are currently running."
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | grep newsportal || echo "No containers found"
 
     if [ "$all_healthy" = true ]; then
-        print_success "All services are healthy"
+        print_success "All services healthy"
+        print_services_info
         return 0
     fi
 
-    print_error "Some services are unhealthy or not started"
+    print_error "Some services unhealthy"
     return 1
 }
 
-print_section "News Portal - Deployment Script"
-print_info "Project root: $ROOT_DIR"
-
-select_deployment_mode
-
-if [ ! -f .env ]; then
-    print_warning "No .env file found. Creating from .env.example..."
-
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        print_success "Created .env file"
-        print_warning "Please edit .env file and update passwords/secrets."
-        read -r -p "Do you want to edit .env now? (y/n) " edit_now
-        if [[ "${edit_now:-n}" =~ ^[Yy]$ ]]; then
-            ${EDITOR:-nano} .env
+print_services_info() {
+    print_section "Services Information"
+    
+    echo -e "${CYAN}Main Services:${NC}"
+    echo "  - Web UI:       http://localhost:5000"
+    echo "  - API:          http://localhost:8080"
+    echo "  - PostgreSQL:   localhost:5432"
+    echo "  - MongoDB:      localhost:27017"
+    echo "  - Redis:        localhost:6379"
+    echo "  - Seq Logging:  http://localhost:8081"
+    
+    if [ -n "$MONITORING_FILE" ]; then
+        echo ""
+        echo -e "${CYAN}Monitoring Stack:${NC}"
+        echo "  - Grafana:    http://localhost:3001 (admin/admin123)"
+        echo "  - Prometheus: http://localhost:9090"
+        echo "  - Loki:       http://localhost:3100"
+        if [ "$PLATFORM" = "ubuntu" ]; then
+            echo "  - Node Exp:   http://localhost:9100"
+            echo "  - Promtail:   (log collector)"
         fi
-    else
-        print_error ".env.example not found"
-        exit 1
+        echo "  - cAdvisor:   http://localhost:8088"
     fi
-else
-    print_success ".env file exists"
-fi
+}
+
+# Main execution
+print_section "NewsPortal Deployment"
+print_info "Project: $ROOT_DIR"
+
+select_platform
+ensure_env
 
 mkdir -p logs/web logs/mcp
 chmod -R 755 logs 2>/dev/null || true
 
 echo ""
 echo "Select option:"
-echo "1) Validate Configuration"
-echo "2) Fresh deployment (pull, build, start)"
-echo "3) Update deployment (rebuild, restart)"
-echo "4) Start existing containers"
-echo "5) Stop all containers"
-echo "6) Stop and remove all (including volumes)"
-echo "7) Health Check"
+echo "1) Start all services"
+echo "2) Start with monitoring (Grafana, Prometheus, Loki)"
+echo "3) Stop all services"
+echo "4) Stop and remove all (including volumes)"
+echo "5) View logs"
+echo "6) Health check"
 echo ""
-read -r -p "Enter option (1-7): " option
+read -r -p "Enter option (1-6): " option
 
 case "$option" in
     1)
-        validate_deployment
+        MONITORING_FILE=""
+        print_info "Starting all services..."
+        dc pull 2>/dev/null || print_warning "Some images failed to pull"
+        dc up -d --build
+        health_check
         ;;
     2)
-        if validate_deployment; then
-            print_info "Starting fresh deployment (${DEPLOY_MODE})..."
-            if [ "$DEPLOY_MODE" = "ubuntu-server" ]; then
-                dc pull postgres mongodb redis seq
-            fi
-            dc up -d --build
-            health_check
-        fi
+        print_info "Starting all services with monitoring stack..."
+        dc pull 2>/dev/null || print_warning "Some images failed to pull"
+        dc up -d --build
+        health_check
         ;;
     3)
-        print_info "Updating deployment (${DEPLOY_MODE})..."
-        dc build
-        dc up -d
-        health_check
-        ;;
-    4)
-        print_info "Starting containers..."
-        dc up -d
-        health_check
-        ;;
-    5)
-        print_info "Stopping containers..."
+        print_info "Stopping all services..."
         dc down
         print_success "All containers stopped"
         ;;
-    6)
-        print_warning "This will remove all data including databases."
-        read -r -p "Are you sure? Type 'yes' to continue: " confirm
+    4)
+        print_warning "This will remove ALL data including databases!"
+        read -r -p "Type 'yes' to confirm: " confirm
         if [ "$confirm" = "yes" ]; then
             dc down -v
             print_success "All containers and volumes removed"
@@ -253,7 +200,11 @@ case "$option" in
             print_info "Cancelled"
         fi
         ;;
-    7)
+    5)
+        print_info "Showing logs (Ctrl+C to exit)..."
+        dc logs -f
+        ;;
+    6)
         health_check
         ;;
     *)
