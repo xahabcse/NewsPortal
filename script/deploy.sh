@@ -91,6 +91,24 @@ ensure_env() {
     fi
 }
 
+smart_pull() {
+    print_info "[Step 1/3] Pulling external images..."
+    # Filter services that don't have a 'build' section to avoid access denied errors
+    local pullable_services=""
+    for service in $(dc config --services); do
+        if ! dc config "$service" | grep -q "build:"; then
+            pullable_services="$pullable_services $service"
+        fi
+    done
+    
+    if [ -n "$pullable_services" ]; then
+        # shellcheck disable=SC2086
+        dc pull $pullable_services
+    else
+        print_info "No external images to pull."
+    fi
+}
+
 health_check() {
     print_section "Detailed Health Check"
     
@@ -180,16 +198,14 @@ read -r -p "Enter option (1-6): " option
 case "$option" in
     1)
         MONITORING_FILE=""
-        print_info "[Step 1/3] Pulling external images..."
-        dc pull || print_warning "Some images are local-only and will be built in the next step."
+        smart_pull
         print_info "[Step 2/3] Building and starting containers..."
         dc up -d --build
         print_info "[Step 3/3] Verifying health..."
         health_check
         ;;
     2)
-        print_info "[Step 1/3] Pulling external images..."
-        dc pull || print_warning "Some images are local-only and will be built in the next step."
+        smart_pull
         print_info "[Step 2/3] Building and starting monitoring stack..."
         dc up -d --build
         print_info "[Step 3/3] Verifying health..."
