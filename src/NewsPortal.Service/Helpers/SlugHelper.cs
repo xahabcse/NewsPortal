@@ -13,8 +13,12 @@ public static class SlugHelper
 
         var slug = title.ToLowerInvariant();
 
-        // Remove diacritics
-        slug = RemoveDiacritics(slug);
+        // Remove diacritics for Latin characters only, skipping Bengali characters
+        // Bengali Unicode range is U+0980 to U+09FF
+        if (!slug.Any(c => c >= '\u0980' && c <= '\u09FF'))
+        {
+            slug = RemoveDiacritics(slug);
+        }
 
         // Replace spaces with hyphens
         slug = Regex.Replace(slug, @"\s+", "-");

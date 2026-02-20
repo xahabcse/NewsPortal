@@ -110,30 +110,45 @@ public class NewsService : INewsService
 
     public async Task<NewsArticleDto?> GetNewsDetailAsync(string slug)
     {
-        var cacheKey = CacheKeys.NewsArticleBySlug(slug);
-
-        var article = await _cache.GetOrSetAsync(cacheKey, async () =>
+        try
         {
-            return await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
-        }, CacheDurations.Medium);
+            if (string.IsNullOrWhiteSpace(slug))
+                return null;
 
-        if (article == null)
-            return null;
+            var cacheKey = CacheKeys.NewsArticleBySlug(slug);
 
-        // Increment view count asynchronously with proper error handling
-        _ = Task.Run(async () =>
+            var article = await _cache.GetOrSetAsync(cacheKey, async () =>
+            {
+                _logger.LogDebug("Fetching news article detail from DB for slug: {Slug}", slug);
+                return await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+            }, CacheDurations.Medium);
+
+            if (article == null)
+            {
+                _logger.LogInformation("News article not found for slug: {Slug}", slug);
+                return null;
+            }
+
+            // Increment view count asynchronously with proper error handling
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", article.Id);
+                }
+            });
+
+            return MapToDetailDto(article);
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                await _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", article.Id);
-            }
-        });
-
-        return MapToDetailDto(article);
+            _logger.LogError(ex, "Error occurred while getting news detail for slug: {Slug}", slug);
+            throw; // Re-throw to let the global error handler handle it, but now we have the log with the slug
+        }
     }
 
     public async Task<IEnumerable<NewsArticleListDto>> GetFeaturedNewsAsync(int count)
