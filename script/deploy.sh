@@ -151,7 +151,7 @@ health_check() {
 
 print_services_info() {
     print_section "Services Information"
-    
+
     echo -e "${CYAN}Main Services:${NC}"
     echo "  - Web UI:       http://localhost:5000"
     echo "  - API:          http://localhost:8080"
@@ -159,7 +159,7 @@ print_services_info() {
     echo "  - MongoDB:      localhost:27017"
     echo "  - Redis:        localhost:6379"
     echo "  - Seq Logging:  http://localhost:8081"
-    
+
     if [ -n "$MONITORING_FILE" ]; then
         echo ""
         echo -e "${CYAN}Monitoring Stack:${NC}"
@@ -172,6 +172,45 @@ print_services_info() {
         fi
         echo "  - cAdvisor:   http://localhost:8088"
     fi
+}
+
+clean_and_rebuild() {
+    print_section "Clean Build - Rebuild API and Web Client"
+    
+    print_warning "This will stop services, remove old images, and rebuild from scratch"
+    read -r -p "Continue? (y/n, default n): " confirm
+    if [ "${confirm:-n}" != "y" ] && [ "${confirm:-n}" != "Y" ]; then
+        print_info "Cancelled"
+        return
+    fi
+
+    # Stop services
+    print_info "[Step 1/4] Stopping services..."
+    dc down 2>/dev/null || true
+    print_success "Services stopped"
+
+    # Remove old images for api and web
+    print_info "[Step 2/4] Removing old API and Web Client images..."
+    docker rmi newsportal-api:latest 2>/dev/null || true
+    docker rmi newsportal-web-client:latest 2>/dev/null || true
+    docker rmi newsportal-mcp:latest 2>/dev/null || true
+    print_success "Old images removed"
+
+    # Pull external images
+    smart_pull
+
+    # Rebuild and start
+    print_info "[Step 3/4] Building fresh images (this may take a while)..."
+    dc build --no-cache api web mcpserver
+    print_success "Build complete"
+
+    print_info "[Step 4/4] Starting services..."
+    dc up -d
+    print_success "Services started"
+
+    print_info "Verifying health..."
+    sleep 5
+    health_check
 }
 
 # Main execution
@@ -192,8 +231,9 @@ echo "3) Stop all services"
 echo "4) Stop and remove all (including volumes)"
 echo "5) View logs"
 echo "6) Health check"
+echo "7) Clean build (rebuild API, Web Client from scratch)"
 echo ""
-read -r -p "Enter option (1-6): " option
+read -r -p "Enter option (1-7): " option
 
 case "$option" in
     1)
@@ -232,6 +272,9 @@ case "$option" in
         ;;
     6)
         health_check
+        ;;
+    7)
+        clean_and_rebuild
         ;;
     *)
         print_error "Invalid option"

@@ -27,7 +27,17 @@ export const axiosInstance: AxiosInstance = axios.create({
 // Request interceptor to add auth header
 axiosInstance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('authToken');
+        // Get token from auth storage
+        const authRaw = localStorage.getItem('newsportal_auth');
+        let token: string | null = null;
+        if (authRaw) {
+            try {
+                const auth = JSON.parse(authRaw);
+                token = auth.token || null;
+            } catch {
+                token = null;
+            }
+        }
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }

@@ -34,7 +34,11 @@ body {
 .glass-morphism {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Fix for DevTools blur issue */
+  transform: translateZ(0);
+  will-change: auto;
 }
 
 .huly-sidebar-item {

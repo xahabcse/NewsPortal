@@ -109,7 +109,7 @@ function Health-Check {
 
 function Print-Services-Info {
     Print-Section "Services Information"
-    
+
     Write-Host "Main Services:" -ForegroundColor Cyan
     Write-Host "  - Web UI:       http://localhost:5000"
     Write-Host "  - API:          http://localhost:8080"
@@ -117,7 +117,7 @@ function Print-Services-Info {
     Write-Host "  - MongoDB:      localhost:27017"
     Write-Host "  - Redis:        localhost:6379"
     Write-Host "  - Seq Logging:  http://localhost:8081"
-    
+
     if ($MonitoringFile) {
         Write-Host "`nMonitoring Stack:" -ForegroundColor Cyan
         Write-Host "  - Grafana:    http://localhost:3001 (admin/admin123)"
@@ -126,6 +126,46 @@ function Print-Services-Info {
         Write-Host "  - cAdvisor:   http://localhost:8088"
         Write-Host "  - Note: node-exporter and promtail are Linux-only" -ForegroundColor Gray
     }
+}
+
+function Clean-Build {
+    Print-Section "Clean Build - Rebuild API and Web Client"
+    
+    Print-Warning "This will stop services, remove old images, and rebuild from scratch"
+    $confirm = Read-Host "Continue? (y/n, default n)"
+    if ($confirm -ne "y" -and $confirm -ne "Y") {
+        Print-Info "Cancelled"
+        return
+    }
+
+    # Stop services
+    Print-Info "[Step 1/4] Stopping services..."
+    Invoke-DockerCompose down 2>$null
+    Print-Success "Services stopped"
+
+    # Remove old images
+    Print-Info "[Step 2/4] Removing old API and Web Client images..."
+    docker rmi newsportal-api:latest 2>$null
+    docker rmi newsportal-web-client:latest 2>$null
+    docker rmi newsportal-mcp:latest 2>$null
+    Print-Success "Old images removed"
+
+    # Pull external images
+    Smart-Pull
+
+    # Rebuild
+    Print-Info "[Step 3/4] Building fresh images (this may take a while)..."
+    Invoke-DockerCompose build --no-cache api web mcpserver
+    Print-Success "Build complete"
+
+    # Start
+    Print-Info "[Step 4/4] Starting services..."
+    Invoke-DockerCompose up -d
+    Print-Success "Services started"
+
+    Print-Info "Verifying health..."
+    Start-Sleep -Seconds 5
+    Health-Check
 }
 
 # Main execution
@@ -185,8 +225,9 @@ Write-Host "3) Stop all services"
 Write-Host "4) Stop and remove all (including volumes)"
 Write-Host "5) View logs"
 Write-Host "6) Health check"
+Write-Host "7) Clean build (rebuild API, Web Client from scratch)"
 Write-Host ""
-$option = Read-Host "Enter option (1-6)"
+$option = Read-Host "Enter option (1-7)"
 
 switch ($option) {
     "1" {
@@ -229,6 +270,9 @@ switch ($option) {
     }
     "6" {
         Health-Check
+    }
+    "7" {
+        Clean-Build
     }
     default {
         Print-Error "Invalid option"

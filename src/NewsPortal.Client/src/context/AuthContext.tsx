@@ -27,7 +27,7 @@ const isExpired = (session: AuthSession): boolean => {
 
 const hasManageRole = (session: AuthSession | null): boolean => {
     const role = session?.role;
-    return role === 'Admin' || role === 'Editor';
+    return role === 'Admin' || role === 'Editor' || role === 'SuperAdmin';
 };
 
 const getRole = (session: AuthSession | null): string => {
@@ -101,17 +101,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!session,
         role: getRole(session),
         canManageSources: hasManageRole(session),
-        canCreateSources: session?.role === 'Admin',
-        canEditSources: session?.role === 'Admin' || session?.role === 'Editor',
-        canDeleteSources: session?.role === 'Admin',
-        canFetchSources: session?.role === 'Admin' || session?.role === 'Editor',
+        canCreateSources: session?.role === 'Admin' || session?.role === 'SuperAdmin',
+        canEditSources: session?.role === 'Admin' || session?.role === 'Editor' || session?.role === 'SuperAdmin',
+        canDeleteSources: session?.role === 'Admin' || session?.role === 'SuperAdmin',
+        canFetchSources: session?.role === 'Admin' || session?.role === 'Editor' || session?.role === 'SuperAdmin',
         sourcePermissionMessage: !session
             ? 'Read-only mode. Login as Admin or Editor to test, edit, or fetch channels.'
-            : session.role === 'Editor'
-                ? 'Editor mode. You can test, edit, and fetch channels. Create/Delete requires Admin.'
+            : session.role === 'SuperAdmin'
+                ? 'SuperAdmin mode. Full system access including user management.'
                 : session.role === 'Admin'
                     ? 'Admin mode. Full channel management access enabled.'
-                    : 'Read-only mode. Your role does not have channel management permissions.',
+                    : session.role === 'Editor'
+                        ? 'Editor mode. You can test, edit, and fetch channels. Create/Delete requires Admin.'
+                        : 'Read-only mode. Your role does not have channel management permissions.',
         login,
         logout
     }), [session, login, logout]);

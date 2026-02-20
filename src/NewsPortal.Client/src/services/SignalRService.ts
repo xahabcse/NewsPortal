@@ -14,11 +14,21 @@ class SignalRService {
     }
 
     public start(): void {
-        const token = localStorage.getItem('authToken');
-        
+        // Get token from auth storage
+        const authRaw = localStorage.getItem('newsportal_auth');
+        let token = '';
+        if (authRaw) {
+            try {
+                const auth = JSON.parse(authRaw);
+                token = auth.token || '';
+            } catch {
+                token = '';
+            }
+        }
+
         this.connection = new signalR.HubConnectionBuilder()
             .withUrl('/newsHub', {
-                accessTokenFactory: () => token || ''
+                accessTokenFactory: () => token
             })
             .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
             .configureLogging(signalR.LogLevel.Information)

@@ -29,8 +29,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const notificationRef = useRef<HTMLDivElement>(null);
+    const userMenuRef = useRef<HTMLDivElement>(null);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -57,12 +59,16 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
                 setShowNotifications(false);
             }
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setShowUserMenu(false);
+            }
         };
 
         // Handle Escape key to close dropdown
         const handleEscapeKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setShowNotifications(false);
+                setShowUserMenu(false);
             }
         };
 
@@ -264,26 +270,123 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-3 pl-6 border-l border-glass-border">
-                        <div className="text-right">
-                            <div className="text-sm font-medium text-white">{displayName}</div>
-                            <div className="text-xs text-secondary">{displayRole}</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 border border-glass-border flex items-center justify-center text-white font-bold">
-                            {avatarLetter}
-                        </div>
+                    {/* User Menu */}
+                    <div className="relative" ref={userMenuRef}>
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            className="flex items-center gap-3 pl-6 border-l border-glass-border hover:bg-white/5 rounded-lg px-3 py-1.5 transition-colors"
+                            aria-label="User menu"
+                        >
+                            <div className="text-right hidden sm:block">
+                                <div className="text-sm font-medium text-white">{displayName}</div>
+                                <div className="text-xs text-secondary">{displayRole}</div>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 border border-glass-border flex items-center justify-center text-white font-bold shadow-lg">
+                                {avatarLetter}
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+
+                        {/* User Dropdown Menu */}
+                        {showUserMenu && isAuthenticated && (
+                            <div
+                                className="absolute right-0 mt-2 w-56 bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
+                                role="menu"
+                                aria-label="User menu"
+                            >
+                                <div className="p-4 border-b border-glass-border bg-white/5">
+                                    <p className="text-sm font-semibold text-white">{session?.username}</p>
+                                    <p className="text-xs text-secondary truncate">{session?.email}</p>
+                                </div>
+                                <div className="py-2">
+                                    <button
+                                        onClick={() => {
+                                            navigate('/profile');
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="w-full px-4 py-2.5 text-left text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors flex items-center gap-3"
+                                        role="menuitem"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                        My Profile
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            navigate('/bookmarks');
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="w-full px-4 py-2.5 text-left text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors flex items-center gap-3"
+                                        role="menuitem"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                                        </svg>
+                                        Bookmarks
+                                    </button>
+                                    {session?.role === 'Admin' && (
+                                        <button
+                                            onClick={() => {
+                                                navigate('/admin/dashboard');
+                                                setShowUserMenu(false);
+                                            }}
+                                            className="w-full px-4 py-2.5 text-left text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors flex items-center gap-3"
+                                            role="menuitem"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+                                                <line x1="2" x2="22" y1="10" y2="10"></line>
+                                            </svg>
+                                            Admin Dashboard
+                                        </button>
+                                    )}
+                                    {session?.role === 'SuperAdmin' && (
+                                        <button
+                                            onClick={() => {
+                                                navigate('/admin/users');
+                                                setShowUserMenu(false);
+                                            }}
+                                            className="w-full px-4 py-2.5 text-left text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors flex items-center gap-3"
+                                            role="menuitem"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                                <circle cx="9" cy="7" r="4"></circle>
+                                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                            </svg>
+                                            User Management
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="border-t border-glass-border py-2">
+                                    <button
+                                        onClick={() => {
+                                            logout();
+                                            navigate('/');
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-3"
+                                        role="menuitem"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                            <polyline points="16 17 21 12 16 7"></polyline>
+                                            <line x1="21" x2="9" y1="12" y2="12"></line>
+                                        </svg>
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {isAuthenticated ? (
-                        <>
-                            <LanguageToggle />
-                            <button
-                                onClick={logout}
-                                className="px-3 py-1.5 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                            >
-                                Logout
-                            </button>
-                        </>
+                        <LanguageToggle />
                     ) : (
                         <>
                             <LanguageToggle />

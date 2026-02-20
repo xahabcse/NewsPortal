@@ -11,8 +11,6 @@ const RegisterPage = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        firstName: '',
-        lastName: '',
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -76,8 +74,7 @@ const RegisterPage = () => {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
+                confirmPassword: formData.confirmPassword,
             });
 
             // Registration successful, redirect to login
@@ -129,31 +126,6 @@ const RegisterPage = () => {
                     {/* Form */}
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm text-secondary mb-1">First Name</label>
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        value={formData.firstName}
-                                        onChange={handleChange}
-                                        className="form-input"
-                                        placeholder="Optional"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-secondary mb-1">Last Name</label>
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={handleChange}
-                                        className="form-input"
-                                        placeholder="Optional"
-                                    />
-                                </div>
-                            </div>
-
                             <div>
                                 <label className="block text-sm text-secondary mb-1">Username</label>
                                 <input

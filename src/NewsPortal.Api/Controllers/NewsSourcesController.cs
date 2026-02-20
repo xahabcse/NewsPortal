@@ -73,7 +73,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateNewsSourceDto dto)
     {
@@ -107,7 +107,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPost("test")]
     public async Task<IActionResult> TestSource([FromBody] CreateNewsSourceDto dto)
     {
@@ -208,7 +208,7 @@ public class NewsSourcesController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPost("bulk-action")]
     public async Task<IActionResult> BulkAction([FromBody] BulkNewsSourceActionDto dto)
     {
@@ -306,7 +306,7 @@ public class NewsSourcesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPost("{id}/resume")]
     public async Task<IActionResult> Resume(int id)
     {
@@ -327,7 +327,7 @@ public class NewsSourcesController : ControllerBase
         return Ok(new { message = "Source resumed successfully", sourceId = id });
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPost("{id}/pause")]
     public async Task<IActionResult> Pause(int id)
     {
@@ -366,7 +366,7 @@ public class NewsSourcesController : ControllerBase
         return Ok(new { message = "Source disabled successfully", sourceId = id });
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
     [HttpPost("{id}/fetch")]
     public async Task<IActionResult> FetchNews(int id)
     {
