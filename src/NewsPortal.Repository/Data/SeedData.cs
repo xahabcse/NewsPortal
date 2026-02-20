@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
+using NewsPortal.Core.Helpers;
 
 namespace NewsPortal.Repository.Data;
 
@@ -92,8 +93,8 @@ public static class SeedData
                 {
                     Name = "The Dhaka Post",
                     Slug = "the-dhaka-post",
-                    BaseUrl = "https://www.dhakapost.com",
-                    RssFeedUrl = "https://www.dhakapost.com/rss",
+                    BaseUrl = "https://www.thedhakapost.com",
+                    RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -109,6 +110,24 @@ public static class SeedData
             };
 
             await context.NewsSources.AddRangeAsync(sources);
+            await context.SaveChangesAsync();
+        }
+
+        // Seed Admin User
+        if (!await context.Users.AnyAsync())
+        {
+            var adminUser = new User
+            {
+                Username = "admin",
+                Email = "admin@newsportal.com",
+                PasswordHash = PasswordHelper.HashPassword("Admin@123"),
+                FirstName = "System",
+                LastName = "Admin",
+                Role = UserRole.Admin,
+                IsActive = true
+            };
+
+            await context.Users.AddAsync(adminUser);
             await context.SaveChangesAsync();
         }
     }
