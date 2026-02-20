@@ -316,7 +316,7 @@ If you follow the **Quick Start** steps and the validation passes, the system is
 *   **Redis:** Distributed caching.
 
 ### Frontend
-*   **React 19:** Modern component-based UI.
+*   **React 18:** Modern component-based UI.
 *   **TypeScript:** Type-safe development.
 *   **Vite 7:** Fast build tool and dev server.
 *   **React Router:** Client-side routing.

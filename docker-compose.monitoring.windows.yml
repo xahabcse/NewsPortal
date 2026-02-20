@@ -1,8 +1,11 @@
 # ============================================================================
-# Monitoring Stack - Linux Version
+# Monitoring Stack - Windows Version (Docker Desktop)
 # ============================================================================
-# For Ubuntu/Linux servers with Docker
-# Run with: docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# For Windows with Docker Desktop
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.monitoring.windows.yml up -d
+#
+# Note: Some exporters (node-exporter, promtail) are Linux-only and are disabled.
+# cAdvisor works on Windows but with limited metrics.
 
 services:
   prometheus:
@@ -57,43 +60,19 @@ services:
     networks:
       - newsportal-network
 
-  promtail:
-    image: grafana/promtail:3.1.1
-    container_name: newsportal-promtail
-    restart: always
-    command: -config.file=/etc/promtail/config.yml
-    volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
-    networks:
-      - newsportal-network
+  # Promtail is disabled on Windows - use Docker's built-in logging instead
+  # Logs will still be available in Grafana/Loki from Docker's json-file driver
 
-  node-exporter:
-    image: prom/node-exporter:v1.8.2
-    container_name: newsportal-node-exporter
-    restart: always
-    command:
-      - --path.rootfs=/host
-      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
-    volumes:
-      - /:/host:ro
-    ports:
-      - "9100:9100"
-    networks:
-      - newsportal-network
+  # Node Exporter is disabled on Windows (Linux-only)
 
+  # cAdvisor for Windows - limited metrics but functional
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: newsportal-cadvisor
     restart: always
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+      # Windows Docker Desktop compatible paths
+      - //./pipe/docker_engine://./pipe/docker_engine:ro
     ports:
       - "8088:8080"
     networks:
