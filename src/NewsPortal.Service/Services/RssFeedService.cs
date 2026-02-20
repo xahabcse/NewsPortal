@@ -18,7 +18,13 @@ public class RssFeedService : IRssFeedService
     {
         try
         {
-            var feed = await FeedReader.ReadAsync(feedUrl);
+            // Use HttpClient with a realistic User-Agent to bypass potential blocking
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+
+            var feedContent = await httpClient.GetStringAsync(feedUrl);
+            var feed = FeedReader.ReadFromString(feedContent);
             var results = new List<SearchResultDto>();
             var totalItems = 0;
             var successfulItems = 0;

@@ -91,8 +91,26 @@ ensure_env() {
     fi
 }
 
+smart_pull() {
+    print_info "[Step 1/3] Pulling external images..."
+    # Filter services that don't have a 'build' section to avoid access denied errors
+    local pullable_services=""
+    for service in $(dc config --services); do
+        if ! dc config "$service" | grep -q "build:"; then
+            pullable_services="$pullable_services $service"
+        fi
+    done
+    
+    if [ -n "$pullable_services" ]; then
+        # shellcheck disable=SC2086
+        dc pull $pullable_services
+    else
+        print_info "No external images to pull."
+    fi
+}
+
 health_check() {
-    print_section "Health Check"
+    print_section "Detailed Health Check"
     
     if ! dc ps >/dev/null 2>&1; then
         print_error "Docker Compose services are not running"
@@ -102,26 +120,32 @@ health_check() {
     local all_healthy=true
     mapfile -t services < <(dc config --services)
 
+    echo -e "${CYAN}%-25s %-15s %-30s${NC}" "SERVICE" "STATUS" "IMAGE"
+    echo -e "${CYAN}--------------------------------------------------------------------------${NC}"
+
     for service in "${services[@]}"; do
-        if dc ps "$service" | grep -q "Up"; then
-            print_success "$service is running"
+        status=$(dc ps "$service" --format "{{.Status}}" 2>/dev/null || echo "Not found")
+        image=$(dc ps "$service" --format "{{.Image}}" 2>/dev/null || echo "-")
+        
+        if echo "$status" | grep -q "Up"; then
+            printf "%-25s %b%-15s%b %-30s\n" "$service" "${GREEN}" "Running" "${NC}" "$image"
         else
-            print_error "$service is NOT running"
+            printf "%-25s %b%-15s%b %-30s\n" "$service" "${RED}" "Stopped" "${NC}" "$image"
             all_healthy=false
         fi
     done
 
     echo ""
-    echo "Resource Usage:"
-    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | grep newsportal || echo "No containers found"
+    print_info "Real-Time Resource Usage:"
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}" | grep newsportal || echo "No containers found"
 
     if [ "$all_healthy" = true ]; then
-        print_success "All services healthy"
+        print_success "All services are running as expected."
         print_services_info
         return 0
     fi
 
-    print_error "Some services unhealthy"
+    print_error "Some services are not running properly."
     return 1
 }
 
@@ -174,15 +198,17 @@ read -r -p "Enter option (1-6): " option
 case "$option" in
     1)
         MONITORING_FILE=""
-        print_info "Starting all services..."
-        dc pull 2>/dev/null || print_warning "Some images failed to pull"
+        smart_pull
+        print_info "[Step 2/3] Building and starting containers..."
         dc up -d --build
+        print_info "[Step 3/3] Verifying health..."
         health_check
         ;;
     2)
-        print_info "Starting all services with monitoring stack..."
-        dc pull 2>/dev/null || print_warning "Some images failed to pull"
+        smart_pull
+        print_info "[Step 2/3] Building and starting monitoring stack..."
         dc up -d --build
+        print_info "[Step 3/3] Verifying health..."
         health_check
         ;;
     3)

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Entities;
+using NewsPortal.Core.Helpers;
 using NewsPortal.Core.Interfaces;
 
 namespace NewsPortal.Service.Services;
@@ -39,7 +40,7 @@ public class AuthService : IAuthService
                 return null;
             }
 
-            if (!VerifyPasswordHash(loginDto.Password, user.PasswordHash))
+            if (!PasswordHelper.VerifyPasswordHash(loginDto.Password, user.PasswordHash))
             {
                 _logger.LogWarning("Invalid password for username: {Username}", loginDto.Username);
                 return null;
@@ -86,7 +87,7 @@ public class AuthService : IAuthService
             {
                 Username = registerDto.Username,
                 Email = registerDto.Email,
-                PasswordHash = HashPassword(registerDto.Password),
+                PasswordHash = PasswordHelper.HashPassword(registerDto.Password),
                 FirstName = registerDto.FirstName,
                 LastName = registerDto.LastName,
                 Role = UserRole.Viewer, // Default role
@@ -151,13 +152,13 @@ public class AuthService : IAuthService
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null) return false;
 
-            if (!VerifyPasswordHash(changePasswordDto.CurrentPassword, user.PasswordHash))
+            if (!PasswordHelper.VerifyPasswordHash(changePasswordDto.CurrentPassword, user.PasswordHash))
             {
                 _logger.LogWarning("Password change failed - incorrect current password for user: {UserId}", userId);
                 return false;
             }
 
-            user.PasswordHash = HashPassword(changePasswordDto.NewPassword);
+            user.PasswordHash = PasswordHelper.HashPassword(changePasswordDto.NewPassword);
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Password changed successfully for user: {UserId}", userId);
@@ -213,61 +214,6 @@ public class AuthService : IAuthService
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
         return int.TryParse(jwtSettings["ExpirationHours"], out var hours) ? hours : 24;
-    }
-
-    private static string HashPassword(string password)
-    {
-        // Using PBKDF2 (Password-Based Key Derivation Function 2)
-        const int iterations = 10000;
-        const int hashSize = 32; // 256 bits
-        const int saltSize = 16; // 128 bits
-
-        using var rng = RandomNumberGenerator.Create();
-        var salt = new byte[saltSize];
-        rng.GetBytes(salt);
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-        var hash = pbkdf2.GetBytes(hashSize);
-
-        // Combine salt and hash
-        var hashBytes = new byte[saltSize + hashSize];
-        Array.Copy(salt, 0, hashBytes, 0, saltSize);
-        Array.Copy(hash, 0, hashBytes, saltSize, hashSize);
-
-        return Convert.ToBase64String(hashBytes);
-    }
-
-    private static bool VerifyPasswordHash(string password, string storedHash)
-    {
-        try
-        {
-            const int iterations = 10000;
-            const int hashSize = 32;
-            const int saltSize = 16;
-
-            var hashBytes = Convert.FromBase64String(storedHash);
-
-            if (hashBytes.Length != saltSize + hashSize)
-                return false;
-
-            var salt = new byte[saltSize];
-            Array.Copy(hashBytes, 0, salt, 0, saltSize);
-
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-            var hash = pbkdf2.GetBytes(hashSize);
-
-            for (int i = 0; i < hashSize; i++)
-            {
-                if (hashBytes[i + saltSize] != hash[i])
-                    return false;
-            }
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     #endregion

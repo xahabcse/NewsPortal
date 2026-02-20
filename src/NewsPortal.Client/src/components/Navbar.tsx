@@ -358,6 +358,22 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                                     {isSubmitting ? 'Logging in...' : 'Login'}
                                 </button>
                             </div>
+
+                            <div className="mt-6 pt-6 border-t border-glass-border text-center">
+                                <p className="text-sm text-secondary">
+                                    Don't have an account?{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            closeLoginModal();
+                                            navigate('/register');
+                                        }}
+                                        className="text-accent hover:text-accent/80 font-medium transition-colors"
+                                    >
+                                        Register here
+                                    </button>
+                                </p>
+                            </div>
                         </form>
                     </div>
                 </div>

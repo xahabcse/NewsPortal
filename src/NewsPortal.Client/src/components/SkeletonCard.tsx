@@ -2,7 +2,9 @@ const SkeletonCard = () => {
     return (
         <div className="glass-morphism border border-glass-border rounded-2xl overflow-hidden animate-pulse">
             {/* Image Placeholder */}
-            <div className="h-48 bg-white/10"></div>
+            <div className="h-48 bg-white/10 relative">
+                <div className="absolute top-4 left-4 h-4 w-16 bg-white/20 rounded"></div>
+            </div>
 
             {/* Content */}
             <div className="p-6 space-y-4">
