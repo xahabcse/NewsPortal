@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-newsadmin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DevPassword_ChangeMe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
       POSTGRES_DB: ${POSTGRES_DB:-newsportal}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
     volumes:
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongouser}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-DevPassword_ChangeMe}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
