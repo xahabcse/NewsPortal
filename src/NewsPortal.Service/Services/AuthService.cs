@@ -88,8 +88,6 @@ public class AuthService : IAuthService
                 Username = registerDto.Username,
                 Email = registerDto.Email,
                 PasswordHash = PasswordHelper.HashPassword(registerDto.Password),
-                FirstName = registerDto.FirstName,
-                LastName = registerDto.LastName,
                 Role = UserRole.Viewer, // Default role
                 IsActive = true
             };

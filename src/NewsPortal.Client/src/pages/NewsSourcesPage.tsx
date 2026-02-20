@@ -3,6 +3,7 @@ import { NewsSourceService } from '../services/NewsSourceService';
 import { useAuth } from '../context/AuthContext';
 import FetchJobStatusModal from '../components/FetchJobStatusModal';
 import TestSourceResultsModal from '../components/TestSourceResultsModal';
+import toast from 'react-hot-toast';
 import type {
     NewsSource,
     CreateNewsSourceDto,
@@ -418,8 +419,9 @@ export default function NewsSourcesPage() {
             setFetchingJobs(prev => ({ ...prev, [source.id]: resp.jobId }));
             setSelectedJobId(resp.jobId);
             setSelectedJobSourceName(source.name);
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Fetch failed');
+            toast.success(`Fetch job started for "${source.name}"`);
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || err.message || 'Fetch failed');
         }
     };
 
@@ -470,8 +472,9 @@ export default function NewsSourcesPage() {
             await NewsSourceService.bulkAction({ sourceIds: Array.from(selectedIds), action });
             setSelectedIds(new Set());
             await loadSources();
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Bulk action failed');
+            toast.success(`${selectedIds.size} sources ${action}d successfully`);
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || err.message || 'Bulk action failed');
         } finally {
             setBulkLoading(false);
         }

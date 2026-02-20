@@ -5,10 +5,24 @@ import { useAuth } from '../context/AuthContext';
 import { axiosInstance } from '../services/axiosInstance';
 import toast from 'react-hot-toast';
 
+interface UserProfile {
+    id: number;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    isActive: boolean;
+    lastLoginAt: string | null;
+    createdAt: string;
+}
+
 const ProfilePage = () => {
     const { isAuthenticated, session, logout } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [profileLoading, setProfileLoading] = useState(true);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
     const [formData, setFormData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -22,6 +36,26 @@ const ProfilePage = () => {
             navigate('/login');
         }
     }, [isAuthenticated, navigate]);
+
+    // Fetch user profile from backend
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (!isAuthenticated) return;
+            
+            try {
+                setProfileLoading(true);
+                const response = await axiosInstance.get<UserProfile>('/auth/me');
+                setProfile(response.data);
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+                toast.error('Failed to load profile information');
+            } finally {
+                setProfileLoading(false);
+            }
+        };
+
+        fetchProfile();
+    }, [isAuthenticated]);
 
     const validate = () => {
         const newErrors: Record<string, string> = {};
@@ -112,21 +146,88 @@ const ProfilePage = () => {
                     {/* Profile Info Card */}
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-accent to-purple-500 border-2 border-glass-border flex items-center justify-center text-white text-2xl font-bold">
-                                {session.username.charAt(0).toUpperCase()}
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent to-purple-500 border-2 border-glass-border flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                                {profile?.username.charAt(0).toUpperCase() || session?.username.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">{session.username}</h2>
-                                <p className="text-sm text-secondary">{session.role}</p>
+                                <h2 className="text-xl font-bold text-white">{profile?.username || session?.username}</h2>
+                                <p className="text-sm text-secondary">{profile?.role || session?.role}</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 text-sm">
-                            <div>
-                                <span className="text-secondary">Email:</span>
-                                <p className="text-white font-medium">{session.email || 'Not set'}</p>
+                        {profileLoading ? (
+                            <div className="space-y-3">
+                                <div className="h-4 bg-white/5 rounded animate-pulse"></div>
+                                <div className="h-4 bg-white/5 rounded animate-pulse"></div>
+                                <div className="h-4 bg-white/5 rounded animate-pulse"></div>
                             </div>
-                        </div>
+                        ) : profile ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="text-secondary">Username:</span>
+                                    <p className="text-white font-medium">{profile.username}</p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">Email:</span>
+                                    <p className="text-white font-medium">{profile.email}</p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">Role:</span>
+                                    <p className="text-white font-medium">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                            profile.role === 'Admin' ? 'bg-red-500/20 text-red-400' :
+                                            profile.role === 'Editor' ? 'bg-blue-500/20 text-blue-400' :
+                                            'bg-green-500/20 text-green-400'
+                                        }`}>
+                                            {profile.role}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">Account Status:</span>
+                                    <p className="text-white font-medium">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                            profile.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                        }`}>
+                                            {profile.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">Registered:</span>
+                                    <p className="text-white font-medium">
+                                        {new Date(profile.createdAt).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">Last Login:</span>
+                                    <p className="text-white font-medium">
+                                        {profile.lastLoginAt
+                                            ? new Date(profile.lastLoginAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })
+                                            : 'Never'
+                                        }
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-secondary">User ID:</span>
+                                    <p className="text-white font-medium">#{profile.id}</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-secondary text-sm">Failed to load profile information</p>
+                        )}
                     </div>
 
                     {/* Change Password Card */}

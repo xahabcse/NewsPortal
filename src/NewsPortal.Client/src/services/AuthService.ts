@@ -8,7 +8,8 @@ const getApiUrl = () => {
     }
 
     if (import.meta.env.DEV) return 'http://localhost:5000/api/v1';
-    return `${window.location.protocol}//${window.location.hostname}:5000/api/v1`;
+    // Production: nginx on port 5000 proxies to API on 8080
+    return '/api/v1';
 };
 
 const API_URL = getApiUrl();

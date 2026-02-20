@@ -141,6 +141,18 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                         </Link>
                     </nav>
                 )}
+
+                {role === 'SuperAdmin' && (
+                    <nav className="flex flex-col gap-2 mt-4 pt-4 border-t border-glass-border">
+                        <div className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4">Super Admin</div>
+                        <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')}`}>
+                            <div className="flex flex-col">
+                                <span>User Management</span>
+                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage users & roles</span>
+                            </div>
+                        </Link>
+                    </nav>
+                )}
             </aside>
         </>
     );

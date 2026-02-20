@@ -113,9 +113,22 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // Seed Admin User
+        // Seed Super Admin User (created on first application run)
         if (!await context.Users.AnyAsync())
         {
+            // Create Super Admin
+            var superAdminUser = new User
+            {
+                Username = "superadmin",
+                Email = "superadmin@newsportal.com",
+                PasswordHash = PasswordHelper.HashPassword("superadmin"),
+                FirstName = "Super",
+                LastName = "Admin",
+                Role = UserRole.SuperAdmin,
+                IsActive = true
+            };
+
+            // Create default Admin
             var adminUser = new User
             {
                 Username = "admin",
@@ -127,8 +140,13 @@ public static class SeedData
                 IsActive = true
             };
 
+            await context.Users.AddAsync(superAdminUser);
             await context.Users.AddAsync(adminUser);
             await context.SaveChangesAsync();
+            
+            Console.WriteLine("=== Default users created ===");
+            Console.WriteLine("Super Admin: username=superadmin, password=superadmin");
+            Console.WriteLine("Admin: username=admin, password=Admin@123");
         }
     }
 }

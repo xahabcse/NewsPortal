@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
 import SkeletonCard from '../components/SkeletonCard'
-import { newsApi, type NewsArticle, type Category } from '../services/api'
+import { newsApi, type NewsArticle } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
 import toast from 'react-hot-toast'
@@ -11,9 +11,7 @@ const PAGE_SIZE = 9
 
 const HomePage = () => {
   const [news, setNews] = useState<NewsArticle[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [sources, setSources] = useState<NewsSource[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedSource, setSelectedSource] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -37,16 +35,6 @@ const HomePage = () => {
       }
     );
   };
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const result = await newsApi.getCategories()
-      setCategories(result)
-    } catch (err) {
-      console.error('Error fetching categories:', err)
-      // Non-critical error, don't show to user
-    }
-  }, [])
 
   const fetchSources = useCallback(async () => {
     try {
@@ -74,8 +62,6 @@ const HomePage = () => {
         } else {
           result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
         }
-      } else if (selectedCategory) {
-        result = await newsApi.getNewsByCategory(selectedCategory, pageNum, PAGE_SIZE)
       } else {
         result = await newsApi.getLatestNews(pageNum, PAGE_SIZE)
       }
@@ -96,17 +82,16 @@ const HomePage = () => {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [selectedCategory])
+  }, [selectedSource])
 
   useEffect(() => {
-    fetchCategories()
     fetchSources()
-  }, [fetchCategories, fetchSources])
+  }, [fetchSources])
 
   useEffect(() => {
     setPage(1)
     fetchNews(1, false)
-  }, [selectedCategory, selectedSource, fetchNews])
+  }, [selectedSource, fetchNews])
 
   // Infinite Scroll with Intersection Observer
   useEffect(() => {
@@ -151,47 +136,6 @@ const HomePage = () => {
             </div>
           </div>
 
-          {/* Category Filter Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide mb-3">
-            {!loading && (
-              <button
-                onClick={() => { setSelectedCategory(null); setSelectedSource(null); }}
-                className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${selectedCategory === null && selectedSource === null
-                    ? 'bg-accent text-white shadow-lg shadow-accent/20'
-                    : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
-                  }`}
-              >
-                All News
-              </button>
-            )}
-
-            {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-8 w-24 bg-white/5 border border-glass-border rounded-lg animate-pulse"></div>
-              ))
-            ) : (
-              categories.map(category => (
-                <button
-                  key={category.id}
-                  onClick={() => { setSelectedCategory(category.slug); setSelectedSource(null); }}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${selectedCategory === category.slug
-                      ? 'bg-accent text-white shadow-lg shadow-accent/20'
-                      : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
-                    }`}
-                  style={selectedCategory === category.slug && category.color ? { backgroundColor: category.color } : {}}
-                >
-                  {category.icon && (
-                    <span className="mr-1.5">{category.icon}</span>
-                  )}
-                  {category.name}
-                  {category.articleCount !== undefined && (
-                    <span className="ml-1.5 text-[10px] opacity-70">({category.articleCount})</span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-
           {/* Source Filter Chips */}
           {(loading || sources.length > 0) && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -215,7 +159,7 @@ const HomePage = () => {
                 sources.map(source => (
                   <button
                     key={source.id}
-                    onClick={() => { setSelectedSource(source.id); setSelectedCategory(null); }}
+                    onClick={() => setSelectedSource(source.id)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${selectedSource === source.id
                         ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                         : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
