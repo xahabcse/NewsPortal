@@ -48,7 +48,7 @@ public static class SeedData
                     Name = "bdnews24",
                     Slug = "bdnews24",
                     BaseUrl = "https://bdnews24.com",
-                    RssFeedUrl = "https://bdnews24.com/topic/rss",
+                    RssFeedUrl = "https://bdnews24.com/?widgetName=rssfeed&widgetId=1150&getXmlFeed=true",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -57,7 +57,7 @@ public static class SeedData
                     Name = "Bangla Tribune",
                     Slug = "bangla-tribune",
                     BaseUrl = "https://www.banglatribune.com",
-                    RssFeedUrl = "https://www.banglatribune.com/feed",
+                    RssFeedUrl = "https://www.banglatribune.com/feed/", // Standard WordPress feed
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -66,7 +66,7 @@ public static class SeedData
                     Name = "Jagonews24",
                     Slug = "jagonews24",
                     BaseUrl = "https://www.jagonews24.com",
-                    RssFeedUrl = "https://www.jagonews24.com/rss",
+                    RssFeedUrl = "https://www.jagonews24.com/rss/rss.xml",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -84,7 +84,7 @@ public static class SeedData
                     Name = "Bangladesh Sangbad Sangstha (BSS)",
                     Slug = "bss",
                     BaseUrl = "https://www.bssnews.net",
-                    RssFeedUrl = "https://www.bssnews.net/rss",
+                    RssFeedUrl = "https://www.bssnews.net/rss/rss.xml",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -92,8 +92,8 @@ public static class SeedData
                 {
                     Name = "The Dhaka Post",
                     Slug = "the-dhaka-post",
-                    BaseUrl = "https://www.thedhakapost.com",
-                    RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
+                    BaseUrl = "https://www.dhakapost.com",
+                    RssFeedUrl = "https://www.dhakapost.com/rss",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 },
@@ -102,7 +102,7 @@ public static class SeedData
                     Name = "Daily Star (English)",
                     Slug = "daily-star",
                     BaseUrl = "https://www.thedailystar.net",
-                    RssFeedUrl = "https://www.thedailystar.net/rss",
+                    RssFeedUrl = "https://www.thedailystar.net/rss.xml",
                     FetchMethod = FetchMethod.Rss,
                     FetchIntervalMinutes = 30
                 }
