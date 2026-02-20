@@ -53,22 +53,38 @@ function Check-Env {
 }
 
 function Health-Check {
-    Print-Section "Health Check"
+    Print-Section "Detailed Health Check"
     
-    $psOutput = Invoke-DockerCompose ps 2>&1
+    $psOutput = Invoke-DockerCompose ps 2>$null
     if ($LASTEXITCODE -ne 0) {
         Print-Error "Docker Compose services are not running"
         return
     }
 
-    Write-Host "`nService Status:"
-    Invoke-DockerCompose ps
+    $services = Invoke-DockerCompose ps --format json | ConvertFrom-Json
+    
+    Write-Host ("{0,-25} {1,-15} {2,-30}" -f "SERVICE", "STATUS", "IMAGE") -ForegroundColor Cyan
+    Write-Host ("-" * 70) -ForegroundColor Cyan
 
-    Write-Host "`nResource Usage:"
-    docker stats --no-stream --format "table {{.Name}}`t{{.CPUPerc}}`t{{.MemUsage}}" | Select-String "newsportal"
+    $allHealthy = $true
+    foreach ($svc in $services) {
+        $status = if ($svc.State -eq "running") { "Running" } else { "Stopped" }
+        $color = if ($svc.State -eq "running") { "Green" } else { "Red"; $allHealthy = $false }
+        
+        Write-Host ("{0,-25} " -f $svc.Service) -NoNewline
+        Write-Host ("{0,-15}" -f $status) -ForegroundColor $color -NoNewline
+        Write-Host (" {0,-30}" -f $svc.Image)
+    }
 
-    Print-Success "All services healthy"
-    Print-Services-Info
+    Print-Section "Resource Usage"
+    docker stats --no-stream --format "table {{.Name}}`t{{.CPUPerc}}`t{{.MemUsage}}`t{{.NetIO}}" | Select-String "newsportal"
+
+    if ($allHealthy) {
+        Print-Success "All services are running as expected."
+        Print-Services-Info
+    } else {
+        Print-Error "Some services are not running properly."
+    }
 }
 
 function Print-Services-Info {
@@ -155,17 +171,20 @@ $option = Read-Host "Enter option (1-6)"
 switch ($option) {
     "1" {
         $MonitoringFile = $null
-        Print-Info "Starting all services..."
-        Invoke-DockerCompose pull 2>$null
+        Print-Info "[Step 1/3] Pulling images (showing progress)..."
+        Invoke-DockerCompose pull
+        Print-Info "[Step 2/3] Building and starting containers..."
         Invoke-DockerCompose up -d --build
+        Print-Info "[Step 3/3] Verifying health..."
         Health-Check
     }
     "2" {
         $MonitoringFile = "docker-compose.monitoring.windows.yml"
-        Print-Info "Starting all services with monitoring stack..."
-        Print-Info "Using: $MonitoringFile"
-        Invoke-DockerCompose pull 2>$null
+        Print-Info "[Step 1/3] Pulling images (showing progress)..."
+        Invoke-DockerCompose pull
+        Print-Info "[Step 2/3] Building and starting monitoring stack..."
         Invoke-DockerCompose up -d --build
+        Print-Info "[Step 3/3] Verifying health..."
         Health-Check
     }
     "3" {
