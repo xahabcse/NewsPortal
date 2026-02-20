@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Entities;
+using NewsPortal.Core.Helpers;
 using NewsPortal.Core.Interfaces;
 
 namespace NewsPortal.Service.Services;
