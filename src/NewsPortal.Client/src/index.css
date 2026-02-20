@@ -11,6 +11,24 @@
 body {
   margin: 0;
   min-height: 100vh;
+  @apply overflow-x-hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .glass-morphism {

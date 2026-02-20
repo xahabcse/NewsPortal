@@ -34,13 +34,13 @@ function App() {
       <HelmetProvider>
         <ErrorBoundary>
           <Router>
-            <div className="min-h-screen bg-background text-foreground flex">
+            <div className="min-h-screen bg-background text-foreground flex overflow-x-hidden">
               <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-              <div className="flex-1 lg:ml-64 flex flex-col">
+              <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
                 <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-                <div className="mt-16 flex-1">
+                <div className="mt-16 flex-1 flex flex-col">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/search" element={<SearchResultsPage />} />
