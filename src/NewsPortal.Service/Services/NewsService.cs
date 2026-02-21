@@ -4,6 +4,7 @@ using NewsPortal.Core.Constants;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Entities;
 using NewsPortal.Core.Interfaces;
+using NewsPortal.Core.Monitoring;
 
 namespace NewsPortal.Service.Services;
 
@@ -274,6 +275,8 @@ public class NewsService : INewsService
         await _cache.RemoveByPatternAsync("news:*");
         await _cache.RemoveByPatternAsync("search:*");
 
+        AppMetrics.TotalNewsArticles.Inc();
+
         return article;
     }
 
@@ -436,6 +439,8 @@ public class NewsService : INewsService
             {
                 await _cache.RemoveByPatternAsync("news:*");
                 await _cache.RemoveByPatternAsync("search:*");
+                
+                AppMetrics.TotalNewsArticles.Inc(result.ImportedCount);
             }
 
             return result;

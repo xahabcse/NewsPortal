@@ -5,6 +5,7 @@ using MongoDB.Driver.GridFS;
 using NewsPortal.Core.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using NewsPortal.Core.Monitoring;
 
 namespace NewsPortal.Repository.MongoDB;
 
@@ -34,6 +35,9 @@ public class MongoImageStorageService : IImageStorageService
         };
 
         var id = await _gridFsBucket.UploadFromBytesAsync(fileName, imageData, options);
+
+        AppMetrics.TotalImagesSaved.Inc();
+
         return id.ToString();
     }
 
@@ -99,6 +103,8 @@ public class MongoImageStorageService : IImageStorageService
             };
 
             var id = await _gridFsBucket.UploadFromBytesAsync(fileName, imageData, options);
+            
+            AppMetrics.TotalImagesSaved.Inc();
 
             // Generate thumbnail
             await GenerateThumbnailAsync(id.ToString(), 400, 300);
@@ -258,6 +264,8 @@ public class MongoImageStorageService : IImageStorageService
 
         var thumbFileName = $"thumb_{imageId}_{width}x{height}.jpg";
         var id = await _gridFsBucket.UploadFromBytesAsync(thumbFileName, thumbData, options);
+
+        AppMetrics.TotalImagesSaved.Inc();
 
         return id.ToString();
     }

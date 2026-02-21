@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using NewsPortal.Core.Monitoring;
 
 namespace NewsPortal.Api.Middleware;
 
@@ -27,6 +28,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            AppMetrics.AppErrorsTotal.Inc();
             _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }

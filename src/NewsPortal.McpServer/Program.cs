@@ -10,6 +10,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using NewsPortal.Scheduler;
 using NewsPortal.Scheduler.Jobs;
+using Prometheus;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -86,6 +87,11 @@ try
     });
 
     var host = builder.Build();
+
+    // Start Prometheus MetricServer
+    var metricServer = new MetricServer(port: 8080);
+    metricServer.Start();
+    Log.Information("Prometheus metric server started on port 8080");
 
     // Schedule Recurring Jobs - AddOrUpdate is synchronous and only registers jobs
     // Actual job execution happens later in Hangfire's background threads with their own scopes

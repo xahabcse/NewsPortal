@@ -5,6 +5,7 @@ using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
 using System.Diagnostics;
 using System.Text.Json;
+using NewsPortal.Core.Monitoring;
 
 namespace NewsPortal.Scheduler.Jobs;
 
@@ -186,6 +187,8 @@ public class NewsFetchJob : INewsFetchJob
 
                 await _unitOfWork.NewsSources.UpdateAsync(source);
                 await _unitOfWork.SaveChangesAsync();
+                
+                AppMetrics.McpFetchesTotal.Inc();
 
                 _logger.LogInformation(
                     "Imported {Count} articles from {SourceName}. Duplicate={Duplicate}, Invalid={Invalid}, FallbackUsed={FallbackUsed}",
