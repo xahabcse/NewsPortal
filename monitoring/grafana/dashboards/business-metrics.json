@@ -29,6 +29,277 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "percent"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 0
+            },
+            "id": 14,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                    "legendFormat": "CPU %",
+                    "refId": "A"
+                }
+            ],
+            "title": "Overall CPU Usage",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "bytes"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 0
+            },
+            "id": 15,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+                    "legendFormat": "Used",
+                    "refId": "A"
+                },
+                {
+                    "expr": "node_memory_MemAvailable_bytes",
+                    "legendFormat": "Left",
+                    "refId": "B"
+                }
+            ],
+            "title": "RAM Used vs Left",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "bytes"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 0
+            },
+            "id": 16,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "node_filesystem_size_bytes{mountpoint=\"/host\"} - node_filesystem_avail_bytes{mountpoint=\"/host\"}",
+                    "legendFormat": "Used",
+                    "refId": "A"
+                },
+                {
+                    "expr": "node_filesystem_avail_bytes{mountpoint=\"/host\"}",
+                    "legendFormat": "Left",
+                    "refId": "B"
+                }
+            ],
+            "title": "Storage Used vs Left",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
                         "mode": "thresholds"
                     },
                     "mappings": [],
@@ -48,7 +319,7 @@
                 "h": 8,
                 "w": 6,
                 "x": 0,
-                "y": 0
+                "y": 8
             },
             "id": 1,
             "options": {
@@ -103,7 +374,7 @@
                 "h": 8,
                 "w": 6,
                 "x": 6,
-                "y": 0
+                "y": 8
             },
             "id": 2,
             "options": {
@@ -194,7 +465,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 0
+                "y": 8
             },
             "id": 3,
             "options": {
@@ -279,7 +550,7 @@
                 "h": 8,
                 "w": 24,
                 "x": 0,
-                "y": 8
+                "y": 16
             },
             "id": 4,
             "options": {
@@ -333,7 +604,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 16
+                "y": 24
             },
             "id": 5,
             "options": {
@@ -421,7 +692,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 8,
-                "y": 16
+                "y": 24
             },
             "id": 6,
             "options": {
@@ -516,7 +787,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
-                "y": 16
+                "y": 24
             },
             "id": 7,
             "options": {
@@ -574,7 +845,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 24
+                "y": 32
             },
             "id": 8,
             "options": {
@@ -662,7 +933,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 8,
-                "y": 24
+                "y": 32
             },
             "id": 9,
             "options": {
@@ -752,7 +1023,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
-                "y": 24
+                "y": 32
             },
             "id": 10,
             "options": {
@@ -805,7 +1076,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 0,
-                "y": 32
+                "y": 40
             },
             "id": 11,
             "options": {
@@ -893,7 +1164,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 8,
-                "y": 32
+                "y": 40
             },
             "id": 12,
             "options": {
@@ -983,7 +1254,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
-                "y": 32
+                "y": 40
             },
             "id": 13,
             "options": {
