@@ -207,11 +207,12 @@
                 "tooltip": {
                     "mode": "single",
                     "sort": "none"
-                }
+                },
+                "insertNulls": true
             },
             "targets": [
                 {
-                    "expr": "rate(newsportal_app_errors_total[5m])",
+                    "expr": "rate(newsportal_app_errors_total[5m]) or vector(0)",
                     "legendFormat": "App Errors (5m rate)",
                     "refId": "A"
                 }
@@ -291,11 +292,12 @@
                 "tooltip": {
                     "mode": "single",
                     "sort": "none"
-                }
+                },
+                "insertNulls": true
             },
             "targets": [
                 {
-                    "expr": "increase(newsportal_mcp_fetches_total[1h])",
+                    "expr": "increase(newsportal_mcp_fetches_total[1h]) or vector(0)",
                     "legendFormat": "Fetches",
                     "refId": "A"
                 }
@@ -411,7 +413,7 @@
                             }
                         ]
                     },
-                    "unit": "Bps"
+                    "unit": "ops"
                 },
                 "overrides": []
             },
@@ -436,17 +438,22 @@
             },
             "targets": [
                 {
-                    "expr": "rate(container_network_receive_bytes_total{name=\"newsportal-db\"}[5m])",
-                    "legendFormat": "Receive",
+                    "expr": "rate(pg_stat_database_tup_fetched{datname=\"newsportal\"}[5m])",
+                    "legendFormat": "Fetched",
                     "refId": "A"
                 },
                 {
-                    "expr": "rate(container_network_transmit_bytes_total{name=\"newsportal-db\"}[5m])",
-                    "legendFormat": "Transmit",
+                    "expr": "rate(pg_stat_database_tup_inserted{datname=\"newsportal\"}[5m])",
+                    "legendFormat": "Inserted",
                     "refId": "B"
+                },
+                {
+                    "expr": "rate(pg_stat_database_tup_updated{datname=\"newsportal\"}[5m])",
+                    "legendFormat": "Updated",
+                    "refId": "C"
                 }
             ],
-            "title": "PostgreSQL Network Consumed",
+            "title": "PostgreSQL Row Activity",
             "type": "timeseries"
         },
         {
@@ -672,12 +679,12 @@
             },
             "targets": [
                 {
-                    "expr": "rate(mongodb_network_bytes_in_total[5m])",
+                    "expr": "rate(mongodb_ss_network_bytesIn[5m])",
                     "legendFormat": "In",
                     "refId": "A"
                 },
                 {
-                    "expr": "rate(mongodb_network_bytes_out_total[5m])",
+                    "expr": "rate(mongodb_ss_network_bytesOut[5m])",
                     "legendFormat": "Out",
                     "refId": "B"
                 }
@@ -762,7 +769,7 @@
             },
             "targets": [
                 {
-                    "expr": "rate(mongodb_op_counters_total[5m])",
+                    "expr": "rate(mongodb_ss_opcounters[5m])",
                     "legendFormat": "{{type}}",
                     "refId": "A"
                 }
