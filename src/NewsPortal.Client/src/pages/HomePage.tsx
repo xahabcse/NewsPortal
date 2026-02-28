@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
+import ArticlePopup from '../components/ArticlePopup'
 import SkeletonCard from '../components/SkeletonCard'
 import { newsApi, type NewsArticle } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
@@ -20,6 +21,7 @@ const HomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const observerTarget = useRef<HTMLDivElement>(null)
+  const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null)
 
   const handlePremiumClick = () => {
     toast(
@@ -219,6 +221,8 @@ const HomePage = () => {
                   publishedAt={item.publishedAt}
                   thumbnailUrl={item.thumbnailUrl}
                   slug={item.slug}
+                  sourceUrl={item.sourceUrl}
+                  onCardClick={() => setPopupArticle(item)}
                 />
               ))}
             </div>
@@ -265,6 +269,23 @@ const HomePage = () => {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
         </div>
       </main>
+
+      {/* Article Popup */}
+      {popupArticle && (
+        <ArticlePopup
+          isOpen={!!popupArticle}
+          onClose={() => setPopupArticle(null)}
+          title={popupArticle.title}
+          summary={popupArticle.summary}
+          categoryName={popupArticle.categoryName}
+          sourceName={popupArticle.sourceName}
+          publishedAt={popupArticle.publishedAt}
+          thumbnailUrl={popupArticle.thumbnailUrl}
+          sourceUrl={popupArticle.sourceUrl}
+          slug={popupArticle.slug}
+          articleId={popupArticle.id}
+        />
+      )}
     </>
   )
 }

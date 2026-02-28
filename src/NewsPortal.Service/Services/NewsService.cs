@@ -118,13 +118,18 @@ public class NewsService : INewsService
 
             var cacheKey = CacheKeys.NewsArticleBySlug(slug);
 
-            var article = await _cache.GetOrSetAsync(cacheKey, async () =>
+            // Cache the DTO (not the entity) to avoid circular reference serialization issues
+            var dto = await _cache.GetOrSetAsync(cacheKey, async () =>
             {
                 _logger.LogDebug("Fetching news article detail from DB for slug: {Slug}", slug);
-                return await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                var article = await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                if (article == null)
+                    return null;
+
+                return MapToDetailDto(article);
             }, CacheDurations.Medium);
 
-            if (article == null)
+            if (dto == null)
             {
                 _logger.LogInformation("News article not found for slug: {Slug}", slug);
                 return null;
@@ -135,20 +140,20 @@ public class NewsService : INewsService
             {
                 try
                 {
-                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id);
+                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", article.Id);
+                    _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", dto.Id);
                 }
             });
 
-            return MapToDetailDto(article);
+            return dto;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while getting news detail for slug: {Slug}", slug);
-            throw; // Re-throw to let the global error handler handle it, but now we have the log with the slug
+            throw;
         }
     }
 
@@ -502,6 +507,7 @@ public class NewsService : INewsService
             Slug = article.Slug,
             Summary = article.Summary ?? "No summary available",
             ThumbnailUrl = thumbnailUrl,
+            SourceUrl = article.SourceUrl,
             PublishedAt = article.PublishedAt,
             SourceName = article.Source?.Name ?? "Unknown Source",
             CategoryName = article.Category?.Name

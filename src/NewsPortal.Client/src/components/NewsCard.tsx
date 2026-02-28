@@ -10,10 +10,12 @@ interface NewsCardProps {
     publishedAt: string;
     thumbnailUrl: string | null;
     slug: string;
+    sourceUrl?: string | null;
     articleId?: number;
     isBookmarked?: boolean;
     onBookmarkToggle?: (articleId: number, isBookmarked: boolean) => void;
     showBookmark?: boolean;
+    onCardClick?: () => void;
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
@@ -31,6 +33,7 @@ const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
     </div>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const NewsCard: FC<NewsCardProps> = ({
     title,
     summary,
@@ -42,7 +45,8 @@ const NewsCard: FC<NewsCardProps> = ({
     articleId,
     isBookmarked = false,
     onBookmarkToggle,
-    showBookmark = false
+    showBookmark = false,
+    onCardClick
 }) => {
     const [imgFailed, setImgFailed] = useState(false);
     const [bookmarked, setBookmarked] = useState(isBookmarked);
@@ -120,13 +124,23 @@ const NewsCard: FC<NewsCardProps> = ({
                     {summary || 'No summary available'}
                 </p>
 
-                <Link
-                    to={`/news/${slug}`}
-                    className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
-                >
-                    READ MORE
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </Link>
+                {onCardClick ? (
+                    <button
+                        onClick={(e) => { e.preventDefault(); onCardClick(); }}
+                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all cursor-pointer bg-transparent border-none p-0"
+                    >
+                        READ MORE
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                ) : (
+                    <Link
+                        to={`/news/${slug}`}
+                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
+                    >
+                        READ MORE
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </Link>
+                )}
             </div>
         </div>
     );

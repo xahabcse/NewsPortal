@@ -26,6 +26,7 @@ public class NewsArticleListDto
     public string Slug { get; set; } = string.Empty;
     public string? Summary { get; set; }
     public string? ThumbnailUrl { get; set; }
+    public string? SourceUrl { get; set; }
     public DateTime? PublishedAt { get; set; }
     public string SourceName { get; set; } = string.Empty;
     public string? CategoryName { get; set; }

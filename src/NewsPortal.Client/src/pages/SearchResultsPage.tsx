@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import NewsCard from '../components/NewsCard';
+import ArticlePopup from '../components/ArticlePopup';
 
 interface NewsArticle {
     id: number;
@@ -10,6 +11,7 @@ interface NewsArticle {
     slug: string;
     summary: string | null;
     thumbnailUrl: string | null;
+    sourceUrl: string | null;
     publishedAt: string;
     sourceName: string;
     categoryName: string | null;
@@ -35,6 +37,7 @@ const SearchResultsPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
+    const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null);
 
     // Save to recent searches
     useEffect(() => {
@@ -270,6 +273,8 @@ const SearchResultsPage = () => {
                                 publishedAt={article.publishedAt}
                                 thumbnailUrl={article.thumbnailUrl}
                                 slug={article.slug}
+                                sourceUrl={article.sourceUrl}
+                                onCardClick={() => setPopupArticle(article)}
                             />
                         ))}
                     </div>
@@ -300,6 +305,22 @@ const SearchResultsPage = () => {
                     )}
                 </>
             )}
+        {/* Article Popup */}
+        {popupArticle && (
+            <ArticlePopup
+                isOpen={!!popupArticle}
+                onClose={() => setPopupArticle(null)}
+                title={popupArticle.title}
+                summary={popupArticle.summary}
+                categoryName={popupArticle.categoryName}
+                sourceName={popupArticle.sourceName}
+                publishedAt={popupArticle.publishedAt}
+                thumbnailUrl={popupArticle.thumbnailUrl}
+                sourceUrl={popupArticle.sourceUrl}
+                slug={popupArticle.slug}
+                articleId={popupArticle.id}
+            />
+        )}
         </div>
     );
 };

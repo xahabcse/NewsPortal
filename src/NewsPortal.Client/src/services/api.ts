@@ -20,6 +20,7 @@ export interface NewsArticle {
     slug: string;
     summary: string | null;
     thumbnailUrl: string | null;
+    sourceUrl: string | null;
     publishedAt: string;
     sourceName: string;
     categoryName: string | null;
