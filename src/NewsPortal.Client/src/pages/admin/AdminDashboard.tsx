@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../../components/SEO';
 import { axiosInstance } from '../../services/axiosInstance';
+import { useTheme } from '../../context/ThemeContext';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+    PieChart, Pie, Cell,
+    BarChart, Bar,
+    ResponsiveContainer,
+    Legend,
+} from 'recharts';
 
 interface DashboardStats {
     totalSources: number;
@@ -18,16 +26,44 @@ interface DashboardStats {
     failedSources: number;
 }
 
+interface ChartStats {
+    dailyArticles: { date: string; count: number }[];
+    topArticles: { title: string; viewCount: number; slug: string }[];
+}
+
+interface CategoryStat {
+    name: string;
+    articleCount: number;
+    color?: string;
+}
+
+const HEALTH_COLORS = ['#34d399', '#fbbf24', '#38bdf8', '#f87171'];
+
 const AdminDashboard = () => {
+    const { theme } = useTheme();
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [chartStats, setChartStats] = useState<ChartStats | null>(null);
+    const [categories, setCategories] = useState<CategoryStat[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const chartText = theme === 'dark' ? '#94a3b8' : '#64748b';
+    const chartGrid = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+    const tooltipBg = theme === 'dark' ? '#161718' : '#ffffff';
+    const tooltipBorder = theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
+    const tooltipText = theme === 'dark' ? '#fff' : '#0f172a';
+
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchAll = async () => {
             try {
-                const response = await axiosInstance.get<DashboardStats>('/admin/stats');
-                setStats(response.data);
+                const [statsRes, chartRes, catRes] = await Promise.all([
+                    axiosInstance.get<DashboardStats>('/admin/stats'),
+                    axiosInstance.get<ChartStats>('/admin/stats/charts').catch(() => null),
+                    axiosInstance.get<CategoryStat[]>('/news/categories').catch(() => null),
+                ]);
+                setStats(statsRes.data);
+                if (chartRes) setChartStats(chartRes.data);
+                if (catRes) setCategories(catRes.data.filter(c => c.articleCount > 0));
             } catch (err: unknown) {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
@@ -44,7 +80,7 @@ const AdminDashboard = () => {
             }
         };
 
-        fetchStats();
+        fetchAll();
     }, []);
 
     if (loading) {
@@ -76,24 +112,23 @@ const AdminDashboard = () => {
                     <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
                     <p className="text-secondary text-sm mb-6">{error}</p>
                     <Link to="/" className="text-accent hover:text-accent/80 transition-colors">
-                        Go Home →
+                        Go Home
                     </Link>
                 </div>
             </div>
         );
     }
 
-    if (!stats) {
-        return null;
-    }
+    if (!stats) return null;
 
-    const StatCard = ({ title, value, subtitle, color = 'accent' }: { title: string; value: string | number; subtitle?: string; color?: string }) => (
-        <div className="glass-morphism border border-glass-border rounded-2xl p-6">
-            <div className="text-sm text-secondary mb-2">{title}</div>
-            <div className={`text-3xl font-bold text-${color}-400 mb-1`}>{value}</div>
-            {subtitle && <div className="text-xs text-secondary/70">{subtitle}</div>}
-        </div>
-    );
+    const healthData = [
+        { name: 'Active', value: stats.sourceHealth.active },
+        { name: 'Degraded', value: stats.sourceHealth.degraded },
+        { name: 'Paused', value: stats.sourceHealth.paused },
+        { name: 'Disabled', value: stats.sourceHealth.disabled },
+    ].filter(d => d.value > 0);
+
+    const categoryColors = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'];
 
     return (
         <>
@@ -110,68 +145,198 @@ const AdminDashboard = () => {
 
                 {/* Overview Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard
-                        title="Total Sources"
-                        value={stats.totalSources}
-                        subtitle="News sources configured"
-                        color="blue"
-                    />
-                    <StatCard
-                        title="Total Articles"
-                        value={stats.totalArticles.toLocaleString()}
-                        subtitle="Articles in database"
-                        color="green"
-                    />
-                    <StatCard
-                        title="Articles Today"
-                        value={stats.articlesToday.toLocaleString()}
-                        subtitle="Fetched in last 24h"
-                        color="purple"
-                    />
-                    <StatCard
-                        title="Total Users"
-                        value={stats.totalUsers.toLocaleString()}
-                        subtitle="Registered users"
-                        color="orange"
-                    />
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <div className="text-sm text-secondary mb-2">Total Sources</div>
+                        <div className="text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
+                        <div className="text-xs text-secondary/70">News sources configured</div>
+                    </div>
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <div className="text-sm text-secondary mb-2">Total Articles</div>
+                        <div className="text-3xl font-bold text-emerald-400 mb-1">{stats.totalArticles.toLocaleString()}</div>
+                        <div className="text-xs text-secondary/70">Articles in database</div>
+                    </div>
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <div className="text-sm text-secondary mb-2">Articles Today</div>
+                        <div className="text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
+                        <div className="text-xs text-secondary/70">Fetched in last 24h</div>
+                    </div>
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <div className="text-sm text-secondary mb-2">Total Users</div>
+                        <div className="text-3xl font-bold text-orange-400 mb-1">{stats.totalUsers.toLocaleString()}</div>
+                        <div className="text-xs text-secondary/70">Registered users</div>
+                    </div>
                 </div>
 
-                {/* Source Health */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
-                        <h2 className="text-lg font-bold text-white mb-4">Source Health Status</h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-                                    <span className="text-sm text-white">Active</span>
-                                </div>
-                                <span className="text-lg font-bold text-emerald-400">{stats.sourceHealth.active}</span>
+                {/* Charts Row 1: Daily Articles + Source Health */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Daily Articles Trend */}
+                    <div className="lg:col-span-2 glass-morphism border border-glass-border rounded-2xl p-6">
+                        <h2 className="text-lg font-bold text-white mb-4">Articles Published (Last 7 Days)</h2>
+                        {chartStats?.dailyArticles && chartStats.dailyArticles.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={250}>
+                                <AreaChart data={chartStats.dailyArticles}>
+                                    <defs>
+                                        <linearGradient id="colorArticles" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                                    <XAxis
+                                        dataKey="date"
+                                        stroke={chartText}
+                                        fontSize={11}
+                                        tickFormatter={(d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    />
+                                    <YAxis stroke={chartText} fontSize={11} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: tooltipBg,
+                                            border: `1px solid ${tooltipBorder}`,
+                                            borderRadius: '8px',
+                                            color: tooltipText,
+                                            fontSize: '12px',
+                                        }}
+                                        labelFormatter={(d) => new Date(String(d) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="count"
+                                        stroke="#6366f1"
+                                        strokeWidth={2}
+                                        fillOpacity={1}
+                                        fill="url(#colorArticles)"
+                                        name="Articles"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-[250px] flex items-center justify-center text-secondary text-sm">
+                                No data available for the past 7 days
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                                    <span className="text-sm text-white">Degraded</span>
-                                </div>
-                                <span className="text-lg font-bold text-amber-400">{stats.sourceHealth.degraded}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-3 h-3 rounded-full bg-sky-400"></div>
-                                    <span className="text-sm text-white">Paused</span>
-                                </div>
-                                <span className="text-lg font-bold text-sky-400">{stats.sourceHealth.paused}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                                    <span className="text-sm text-white">Disabled</span>
-                                </div>
-                                <span className="text-lg font-bold text-red-400">{stats.sourceHealth.disabled}</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
+                    {/* Source Health Pie Chart */}
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <h2 className="text-lg font-bold text-white mb-4">Source Health</h2>
+                        {healthData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={250}>
+                                <PieChart>
+                                    <Pie
+                                        data={healthData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={50}
+                                        outerRadius={80}
+                                        paddingAngle={4}
+                                        dataKey="value"
+                                    >
+                                        {healthData.map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={HEALTH_COLORS[index % HEALTH_COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: tooltipBg,
+                                            border: `1px solid ${tooltipBorder}`,
+                                            borderRadius: '8px',
+                                            color: tooltipText,
+                                            fontSize: '12px',
+                                        }}
+                                    />
+                                    <Legend
+                                        iconType="circle"
+                                        iconSize={8}
+                                        formatter={(value: string) => <span style={{ color: chartText, fontSize: '12px' }}>{value}</span>}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-[250px] flex items-center justify-center text-secondary text-sm">
+                                No sources configured
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Charts Row 2: Category Distribution + Top Articles */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Category Distribution */}
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <h2 className="text-lg font-bold text-white mb-4">Category Distribution</h2>
+                        {categories.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={categories} layout="vertical" margin={{ left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} horizontal={false} />
+                                    <XAxis type="number" stroke={chartText} fontSize={11} />
+                                    <YAxis
+                                        type="category"
+                                        dataKey="name"
+                                        stroke={chartText}
+                                        fontSize={11}
+                                        width={90}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: tooltipBg,
+                                            border: `1px solid ${tooltipBorder}`,
+                                            borderRadius: '8px',
+                                            color: tooltipText,
+                                            fontSize: '12px',
+                                        }}
+                                    />
+                                    <Bar dataKey="articleCount" name="Articles" radius={[0, 4, 4, 0]}>
+                                        {categories.map((_, index) => (
+                                            <Cell key={`cat-${index}`} fill={categoryColors[index % categoryColors.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-[300px] flex items-center justify-center text-secondary text-sm">
+                                No categories available
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Top Articles by Views */}
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <h2 className="text-lg font-bold text-white mb-4">Top Articles by Views</h2>
+                        {chartStats?.topArticles && chartStats.topArticles.length > 0 ? (
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                {chartStats.topArticles.map((article, idx) => (
+                                    <div key={idx} className="flex items-center gap-3">
+                                        <span className="text-xs font-bold text-accent w-6 text-center">{idx + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-white truncate" title={article.title}>
+                                                {article.title}
+                                            </p>
+                                            <div className="w-full bg-white/5 rounded-full h-1.5 mt-1">
+                                                <div
+                                                    className="bg-accent h-1.5 rounded-full"
+                                                    style={{
+                                                        width: `${Math.min(100, (article.viewCount / (chartStats.topArticles[0]?.viewCount || 1)) * 100)}%`
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-mono text-secondary whitespace-nowrap">
+                                            {article.viewCount} views
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="h-[300px] flex items-center justify-center text-secondary text-sm">
+                                No view data available
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* System Alerts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6">
                         <h2 className="text-lg font-bold text-white mb-4">System Alerts</h2>
                         <div className="space-y-4">
@@ -199,39 +364,32 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Quick Actions */}
-                <div className="glass-morphism border border-glass-border rounded-2xl p-6">
-                    <h2 className="text-lg font-bold text-white mb-4">Quick Actions</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Link
-                            to="/news-sources"
-                            className="p-4 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+                    {/* Quick Actions */}
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                        <h2 className="text-lg font-bold text-white mb-4">Quick Actions</h2>
+                        <div className="grid grid-cols-1 gap-3">
+                            <Link
+                                to="/news-sources"
+                                className="p-3 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                            >
+                                <div className="w-9 h-9 bg-accent/10 rounded-lg flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
-                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                        <polyline points="10 9 9 9 8 9"></polyline>
                                     </svg>
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium text-white">Manage Sources</div>
                                     <div className="text-xs text-secondary">Add, edit, or remove sources</div>
                                 </div>
-                            </div>
-                        </Link>
-                        <Link
-                            to="/admin/fetch-logs"
-                            className="p-4 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500">
+                            </Link>
+                            <Link
+                                to="/admin/fetch-logs"
+                                className="p-3 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                            >
+                                <div className="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500">
                                         <line x1="12" y1="20" x2="12" y2="10"></line>
                                         <line x1="18" y1="20" x2="18" y2="4"></line>
                                         <line x1="6" y1="20" x2="6" y2="16"></line>
@@ -241,30 +399,25 @@ const AdminDashboard = () => {
                                     <div className="text-sm font-medium text-white">Fetch Logs</div>
                                     <div className="text-xs text-secondary">View import history</div>
                                 </div>
-                            </div>
-                        </Link>
-                        <a
-                            href="/monitoring"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-4 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
-                                        <path d="M2 12h5"></path>
-                                        <path d="M17 12h5"></path>
-                                        <path d="M7 12v5"></path>
-                                        <path d="M17 12v-5"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
+                            </Link>
+                            <Link
+                                to="/admin/categories"
+                                className="p-3 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                            >
+                                <div className="w-9 h-9 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                                        <rect x="3" y="3" width="7" height="7"></rect>
+                                        <rect x="14" y="3" width="7" height="7"></rect>
+                                        <rect x="14" y="14" width="7" height="7"></rect>
+                                        <rect x="3" y="14" width="7" height="7"></rect>
                                     </svg>
                                 </div>
                                 <div>
-                                    <div className="text-sm font-medium text-white">Grafana</div>
-                                    <div className="text-xs text-secondary">System monitoring</div>
+                                    <div className="text-sm font-medium text-white">Categories</div>
+                                    <div className="text-xs text-secondary">Manage categories</div>
                                 </div>
-                            </div>
-                        </a>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import * as signalR from '@microsoft/signalr';
 import toast from 'react-hot-toast';
+import { shouldShowNotification } from '../components/NotificationPreferences';
 
 type NotificationCallback = (type: 'article' | 'breaking', title: string, category?: string) => void;
 
@@ -82,6 +83,8 @@ class SignalRService {
     }
 
     private handleNewArticle(title: string, categoryName: string): void {
+        if (!shouldShowNotification('article', categoryName)) return;
+
         // Call notification callbacks
         this.notificationCallbacks.forEach(cb => cb('article', title, categoryName));
 
@@ -96,6 +99,8 @@ class SignalRService {
     }
 
     private handleBreakingNews(title: string): void {
+        if (!shouldShowNotification('breaking')) return;
+
         // Call notification callbacks
         this.notificationCallbacks.forEach(cb => cb('breaking', title));
 

@@ -5,6 +5,8 @@ import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
+import ShareButton from '../components/ShareButton';
+import TextToSpeech from '../components/TextToSpeech';
 import CommentsSection from '../components/CommentsSection';
 
 interface NewsArticleDetail {
@@ -288,6 +290,19 @@ const ArticleDetailPage = () => {
                         </svg>
                         {readingTime} min read
                     </span>
+                </div>
+
+                {/* Action Buttons: Share + Listen */}
+                <div className="flex items-center gap-3 mt-4">
+                    <ShareButton
+                        title={article.title}
+                        url={`${window.location.origin}/news/${article.slug}`}
+                        summary={article.summary || undefined}
+                    />
+                    <TextToSpeech
+                        text={article.content || article.summary || article.title}
+                        title={article.title}
+                    />
                 </div>
             </div>
 

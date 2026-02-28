@@ -8,6 +8,7 @@ import ToastProvider from './components/ToastProvider'
 import HomePage from './pages/HomePage'
 import NewsSourcesPage from './pages/NewsSourcesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
+import CategoryPage from './pages/CategoryPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import TrendingPage from './pages/TrendingPage'
@@ -19,6 +20,7 @@ import FetchLogPage from './pages/admin/FetchLogPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { signalRService } from './services/SignalRService'
 
 function App() {
@@ -31,6 +33,7 @@ function App() {
   }, [])
 
   return (
+    <ThemeProvider>
     <AuthProvider>
       <HelmetProvider>
         <ErrorBoundary>
@@ -49,6 +52,7 @@ function App() {
                     <Route path="/bookmarks" element={<BookmarksPage />} />
                     <Route path="/news-sources" element={<NewsSourcesPage />} />
                     <Route path="/news/:slug" element={<ArticleDetailPage />} />
+                    <Route path="/category/:slug" element={<CategoryPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -65,6 +69,7 @@ function App() {
         </ErrorBoundary>
       </HelmetProvider>
     </AuthProvider>
+    </ThemeProvider>
   )
 }
 

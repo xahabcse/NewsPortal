@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
+import { newsApi, type Category } from '../services/api'
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -13,9 +14,15 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     const location = useLocation()
     const { role } = useAuth()
     const [todayCount, setTodayCount] = useState<number>(0)
+    const [categories, setCategories] = useState<Category[]>([])
+    const [showAllCategories, setShowAllCategories] = useState(false)
 
     const isActive = (path: string) => {
         return location.pathname === path ? 'active' : ''
+    }
+
+    const isCategoryActive = (slug: string) => {
+        return location.pathname === `/category/${slug}` ? 'active' : ''
     }
 
     const isAdmin = role === 'Admin' || role === 'SuperAdmin'
@@ -31,13 +38,26 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
         }
 
         fetchTodayCount()
-        // Refresh every 5 minutes
         const interval = setInterval(fetchTodayCount, 5 * 60 * 1000)
         return () => clearInterval(interval)
     }, [])
 
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const cats = await newsApi.getCategories()
+                setCategories(cats.filter(c => (c.articleCount ?? 0) > 0))
+            } catch (error) {
+                console.error('Failed to fetch categories:', error)
+            }
+        }
+        fetchCategories()
+    }, [])
+
+    const visibleCategories = showAllCategories ? categories : categories.slice(0, 6)
+
     const sidebarClasses = `
-        fixed left-0 top-0 h-screen w-64 glass-morphism border-r border-glass-border p-6 flex flex-col gap-8
+        fixed left-0 top-0 h-screen w-64 glass-morphism border-r border-glass-border p-6 flex flex-col gap-6 overflow-y-auto
         transition-transform duration-300 z-50
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
@@ -114,12 +134,44 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     </Link>
                 </nav>
 
-                <nav className="flex flex-col gap-2 mt-4">
+                {/* Categories Section */}
+                {categories.length > 0 && (
+                    <nav className="flex flex-col gap-1">
+                        <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Categories</div>
+                        {visibleCategories.map(cat => (
+                            <Link
+                                key={cat.id}
+                                to={`/category/${cat.slug}`}
+                                className={`huly-sidebar-item ${isCategoryActive(cat.slug)}`}
+                            >
+                                <div className="flex items-center justify-between w-full">
+                                    <span className="flex items-center gap-2">
+                                        {cat.icon && <span className="text-sm">{cat.icon}</span>}
+                                        <span className="text-sm">{cat.name}</span>
+                                    </span>
+                                    <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full text-secondary">
+                                        {cat.articleCount}
+                                    </span>
+                                </div>
+                            </Link>
+                        ))}
+                        {categories.length > 6 && (
+                            <button
+                                onClick={() => setShowAllCategories(!showAllCategories)}
+                                className="text-xs text-accent hover:text-accent/80 ml-4 mt-1 text-left transition-colors"
+                            >
+                                {showAllCategories ? 'Show less' : `Show all (${categories.length})`}
+                            </button>
+                        )}
+                    </nav>
+                )}
+
+                <nav className="flex flex-col gap-2">
                     <ReadingHistory />
                 </nav>
 
                 {isAdmin && (
-                    <nav className="flex flex-col gap-2 mt-4 pt-4 border-t border-glass-border">
+                    <nav className="flex flex-col gap-2 pt-4 border-t border-glass-border">
                         <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Admin</div>
                         <Link to="/admin/dashboard" className={`huly-sidebar-item ${isActive('/admin/dashboard')}`}>
                             <div className="flex flex-col">
@@ -143,7 +195,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                 )}
 
                 {role === 'SuperAdmin' && (
-                    <nav className="flex flex-col gap-2 mt-4 pt-4 border-t border-glass-border">
+                    <nav className="flex flex-col gap-2 pt-4 border-t border-glass-border">
                         <div className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4">Super Admin</div>
                         <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')}`}>
                             <div className="flex flex-col">
