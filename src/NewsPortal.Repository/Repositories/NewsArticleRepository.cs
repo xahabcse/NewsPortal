@@ -95,6 +95,16 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
+    public async Task<int> SearchCountAsync(string query)
+    {
+        var searchPattern = $"%{query}%";
+        return await _dbSet
+            .CountAsync(x => x.IsActive &&
+                (EF.Functions.ILike(x.Title, searchPattern) ||
+                 (x.Summary != null && EF.Functions.ILike(x.Summary, searchPattern)) ||
+                 (x.PlainText != null && EF.Functions.ILike(x.PlainText, searchPattern))));
+    }
+
     public async Task IncrementViewCountAsync(int id)
     {
         // Use ExecuteUpdateAsync for efficient bulk update without loading entity

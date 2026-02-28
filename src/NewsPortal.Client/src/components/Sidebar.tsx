@@ -18,7 +18,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
         return location.pathname === path ? 'active' : ''
     }
 
-    const isAdmin = role === 'Admin'
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin'
 
     useEffect(() => {
         const fetchTodayCount = async () => {

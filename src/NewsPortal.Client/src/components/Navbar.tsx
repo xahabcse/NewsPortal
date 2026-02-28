@@ -328,7 +328,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                                         </svg>
                                         Bookmarks
                                     </button>
-                                    {session?.role === 'Admin' && (
+                                    {(session?.role === 'Admin' || session?.role === 'SuperAdmin') && (
                                         <button
                                             onClick={() => {
                                                 navigate('/admin/dashboard');

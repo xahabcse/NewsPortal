@@ -184,10 +184,12 @@ public class NewsService : INewsService
             return new PagedResultDto<NewsArticleListDto> { Items = new List<NewsArticleListDto>() };
 
         var articles = await _unitOfWork.NewsArticles.SearchAsync(query.Query, query.Page, query.PageSize);
+        var totalCount = await _unitOfWork.NewsArticles.SearchCountAsync(query.Query);
 
         return new PagedResultDto<NewsArticleListDto>
         {
             Items = articles.Select(MapToListDto).ToList(),
+            TotalCount = totalCount,
             Page = query.Page,
             PageSize = query.PageSize
         };
@@ -253,7 +255,7 @@ public class NewsService : INewsService
             Author = normalizedDto.Author,
             PublishedAt = normalizedDto.PublishedAt,
             SourceId = normalizedDto.SourceId,
-            CategoryId = normalizedDto.CategoryId
+            CategoryId = normalizedDto.CategoryId ?? ArticleCategorizer.Categorize(normalizedDto.Title, normalizedDto.Summary, normalizedDto.SourceUrl)
         };
 
         // Download and store image
@@ -404,7 +406,7 @@ public class NewsService : INewsService
                     Author = dto.Author,
                     PublishedAt = dto.PublishedAt,
                     SourceId = dto.SourceId,
-                    CategoryId = dto.CategoryId
+                    CategoryId = dto.CategoryId ?? ArticleCategorizer.Categorize(dto.Title, dto.Summary, dto.SourceUrl)
                 };
 
                 if (!string.IsNullOrEmpty(dto.OriginalImageUrl))

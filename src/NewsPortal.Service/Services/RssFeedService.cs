@@ -53,11 +53,32 @@ public class RssFeedService : IRssFeedService
                         continue;
                     }
 
-                    // Extract image with error handling
+                    // Extract image with error handling (check multiple sources)
                     string? imageUrl = null;
                     try
                     {
-                        imageUrl = ExtractImageFromContent(item.Content) ?? ExtractImageFromDescription(item.Description);
+                        // 1. Try enclosure (standard RSS image attachment)
+                        imageUrl = item.SpecificItem switch
+                        {
+                            CodeHollow.FeedReader.Feeds.Rss20FeedItem rss20 =>
+                                rss20.Enclosure?.Url is { } url && rss20.Enclosure.MediaType?.StartsWith("image") == true ? url : null,
+                            _ => null
+                        };
+
+                        // 2. Try media:content or media:thumbnail from specific item elements
+                        if (string.IsNullOrEmpty(imageUrl) && item.SpecificItem?.Element != null)
+                        {
+                            var ns = System.Xml.Linq.XNamespace.Get("http://search.yahoo.com/mrss/");
+                            var mediaContent = item.SpecificItem.Element.Element(ns + "content");
+                            var mediaThumbnail = item.SpecificItem.Element.Element(ns + "thumbnail");
+                            imageUrl = mediaContent?.Attribute("url")?.Value ?? mediaThumbnail?.Attribute("url")?.Value;
+                        }
+
+                        // 3. Try extracting from content/description HTML
+                        if (string.IsNullOrEmpty(imageUrl))
+                        {
+                            imageUrl = ExtractImageFromContent(item.Content) ?? ExtractImageFromDescription(item.Description);
+                        }
                     }
                     catch (Exception imgEx)
                     {
