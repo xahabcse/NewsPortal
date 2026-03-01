@@ -1,6 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
+import NewsletterSignup from './NewsletterSignup'
+import WeatherWidget from './WeatherWidget'
+import StockTicker from './StockTicker'
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
 import { newsApi, type Category } from '../services/api'
@@ -170,6 +173,12 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     <ReadingHistory />
                 </nav>
 
+                <NewsletterSignup />
+
+                <WeatherWidget />
+
+                <StockTicker />
+
                 {isAdmin && (
                     <nav className="flex flex-col gap-2 pt-4 border-t border-glass-border">
                         <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Admin</div>
@@ -189,6 +198,18 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                             <div className="flex flex-col">
                                 <span>Categories</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage categories</span>
+                            </div>
+                        </Link>
+                        <Link to="/admin/articles" className={`huly-sidebar-item ${isActive('/admin/articles')}`}>
+                            <div className="flex flex-col">
+                                <span>Articles</span>
+                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage articles</span>
+                            </div>
+                        </Link>
+                        <Link to="/admin/analytics" className={`huly-sidebar-item ${isActive('/admin/analytics')}`}>
+                            <div className="flex flex-col">
+                                <span>Analytics</span>
+                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Content analytics</span>
                             </div>
                         </Link>
                     </nav>
