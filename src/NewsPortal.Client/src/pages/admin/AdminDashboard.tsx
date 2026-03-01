@@ -417,6 +417,74 @@ const AdminDashboard = () => {
                                     <div className="text-xs text-secondary">Manage categories</div>
                                 </div>
                             </Link>
+
+                            {/* System Tool Links */}
+                            <div className="border-t border-glass-border my-2 pt-2">
+                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-2">System Tools (IP: 192.168.0.109)</p>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <a
+                                        href="http://192.168.0.109:8080/swagger"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                                    >
+                                        <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+                                                <polyline points="16 18 22 12 16 6"></polyline>
+                                                <polyline points="8 6 2 12 8 18"></polyline>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-medium text-white">API Swagger</div>
+                                        </div>
+                                    </a>
+                                    <a
+                                        href="http://192.168.0.109:8081"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                                    >
+                                        <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500">
+                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-medium text-white">Seq Logs</div>
+                                        </div>
+                                    </a>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <a
+                                            href="http://192.168.0.109:3001"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                                        >
+                                            <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/20 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500">
+                                                    <path d="M12 20v-6M6 20V10M18 20V4"></path>
+                                                </svg>
+                                            </div>
+                                            <div className="text-xs font-medium text-white">Grafana</div>
+                                        </a>
+                                        <a
+                                            href="http://192.168.0.109:9090"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
+                                        >
+                                            <div className="w-8 h-8 bg-red-500/10 rounded-lg flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                                </svg>
+                                            </div>
+                                            <div className="text-xs font-medium text-white">Prometheus</div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
