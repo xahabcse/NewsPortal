@@ -11,9 +11,52 @@ import { newsApi, type Category } from '../services/api'
 interface SidebarProps {
     isOpen?: boolean;
     onClose?: () => void;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
-const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
+// Reusable inline SVG icon components (20x20, stroke-based, Lucide-style)
+const IconHome = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+)
+const IconTimeline = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+)
+const IconTrending = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+)
+const IconBookmark = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+)
+const IconRss = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+)
+const IconDashboard = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+)
+const IconDownload = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+)
+const IconTag = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"></path><path d="M7 7h.01"></path></svg>
+)
+const IconFileText = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+)
+const IconBarChart = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+)
+const IconUsers = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+)
+const IconChevronLeft = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+)
+const IconChevronRight = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+)
+
+const Sidebar = ({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) => {
     const location = useLocation()
     const { role } = useAuth()
     const [todayCount, setTodayCount] = useState<number>(0)
@@ -68,12 +111,17 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     const visibleCategories = showAllCategories ? categories : categories.slice(0, 6)
 
     const sidebarClasses = `
-        fixed left-0 top-0 h-screen w-64 glass-morphism border-r border-glass-border p-6 flex flex-col gap-6 overflow-y-auto
-        transition-transform duration-300 z-50
+        fixed left-0 top-0 h-screen glass-morphism border-r border-glass-border flex flex-col overflow-y-auto
+        transition-all duration-300 z-50
+        ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
+        ${isCollapsed ? 'lg:p-2 p-6' : 'p-6'}
+        ${isCollapsed ? 'lg:gap-2 gap-6' : 'gap-6'}
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
     `.trim()
 
+    // Helper: on desktop collapsed, hide text. On mobile, always show.
+    const textClass = isCollapsed ? 'lg:hidden' : ''
     return (
         <>
             {/* Mobile overlay */}
@@ -84,10 +132,11 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                 />
             )}
             <aside className={sidebarClasses}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white">N</div>
-                        <span className="text-xl font-bold tracking-tight text-white">NewsPortal</span>
+                {/* Logo + Close */}
+                <div className={`flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
+                    <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:gap-0' : ''}`}>
+                        <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white shrink-0">N</div>
+                        <span className={`text-xl font-bold tracking-tight text-white ${textClass}`}>NewsPortal</span>
                     </div>
                     <button
                         onClick={onClose}
@@ -102,49 +151,77 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                 </div>
 
                 {/* Today's Articles Badge */}
-                <div className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/30 rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
-                            <div className="text-2xl font-bold text-white">{todayCount}</div>
-                        </div>
-                        <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
+                {/* Expanded: full badge on all screens */}
+                {!isCollapsed ? (
+                    <div className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/30 rounded-xl p-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
+                                <div className="text-2xl font-bold text-white">{todayCount}</div>
+                            </div>
+                            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-accent">
+                                <IconFileText />
+                            </div>
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Mobile: full badge (sidebar always expanded on mobile) */}
+                        <div className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/30 rounded-xl p-3 lg:hidden">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
+                                    <div className="text-2xl font-bold text-white">{todayCount}</div>
+                                </div>
+                                <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-accent">
+                                    <IconFileText />
+                                </div>
+                            </div>
+                        </div>
+                        {/* Desktop collapsed: compact count */}
+                        <div className="hidden lg:flex flex-col items-center bg-gradient-to-b from-accent/20 to-purple-500/20 border border-accent/30 rounded-lg py-2" title={`${todayCount} articles today`}>
+                            <div className="text-[8px] text-secondary uppercase">Today</div>
+                            <div className="text-lg font-bold text-white">{todayCount}</div>
+                        </div>
+                    </>
+                )}
 
-                <nav className="flex flex-col gap-2">
-                    <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Main Menu</div>
-                    <Link to="/" className={`huly-sidebar-item ${isActive('/')}`}>
-                        <span>Home</span>
+                {/* Main Menu */}
+                <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'}`}>
+                    <div className={`text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Main Menu</div>
+
+                    <Link to="/" className={`huly-sidebar-item ${isActive('/')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Home">
+                        <span className="shrink-0"><IconHome /></span>
+                        <span className={textClass}>Home</span>
                     </Link>
-                    <Link to="/timeline" className={`huly-sidebar-item ${isActive('/timeline')}`}>
-                        <div className="flex flex-col">
+
+                    <Link to="/timeline" className={`huly-sidebar-item ${isActive('/timeline')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Daily Timeline">
+                        <span className="shrink-0"><IconTimeline /></span>
+                        <div className={`flex flex-col ${textClass}`}>
                             <span>Daily Timeline</span>
                             <span className="text-[10px] text-secondary/50 font-normal leading-tight">Day-wise highlights</span>
                         </div>
                     </Link>
-                    <Link to="/trending" className={`huly-sidebar-item ${isActive('/trending')}`}>
-                        <div className="flex flex-col">
+
+                    <Link to="/trending" className={`huly-sidebar-item ${isActive('/trending')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Trending">
+                        <span className="shrink-0"><IconTrending /></span>
+                        <div className={`flex flex-col ${textClass}`}>
                             <span>Trending</span>
                             <span className="text-[10px] text-secondary/50 font-normal leading-tight">Most popular stories</span>
                         </div>
                     </Link>
-                    <Link to="/bookmarks" className={`huly-sidebar-item ${isActive('/bookmarks')}`}>
-                        <div className="flex flex-col">
+
+                    <Link to="/bookmarks" className={`huly-sidebar-item ${isActive('/bookmarks')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Saved">
+                        <span className="shrink-0"><IconBookmark /></span>
+                        <div className={`flex flex-col ${textClass}`}>
                             <span>Saved</span>
                             <span className="text-[10px] text-secondary/50 font-normal leading-tight">Your bookmarks</span>
                         </div>
                     </Link>
-                    <Link to="/news-sources" className={`huly-sidebar-item ${isActive('/news-sources')}`}>
-                        <div className="flex flex-col">
+
+                    <Link to="/news-sources" className={`huly-sidebar-item ${isActive('/news-sources')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="News Channels">
+                        <span className="shrink-0"><IconRss /></span>
+                        <div className={`flex flex-col ${textClass}`}>
                             <span>News Channels</span>
                             <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage sources</span>
                         </div>
@@ -153,7 +230,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
 
                 {/* Categories Section */}
                 {categories.length > 0 && (
-                    <nav className="flex flex-col gap-1">
+                    <nav className={`flex flex-col gap-1 ${isCollapsed ? 'lg:hidden' : ''}`}>
                         <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Categories</div>
                         {visibleCategories.map(cat => (
                             <Link
@@ -183,45 +260,59 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     </nav>
                 )}
 
-                <nav className="flex flex-col gap-2">
-                    <ReadingHistory />
-                </nav>
+                {/* Widgets — hidden when collapsed on desktop */}
+                <div className={isCollapsed ? 'lg:hidden' : ''}>
+                    <nav className="flex flex-col gap-2">
+                        <ReadingHistory />
+                    </nav>
 
-                <NewsletterSignup />
+                    <NewsletterSignup />
 
-                <WeatherWidget />
+                    <WeatherWidget />
 
-                <StockTicker />
+                    <StockTicker />
+                </div>
 
+                {/* Admin Section */}
                 {isAdmin && (
-                    <nav className="flex flex-col gap-2 pt-4 border-t border-glass-border">
-                        <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Admin</div>
-                        <Link to="/admin/dashboard" className={`huly-sidebar-item ${isActive('/admin/dashboard')}`}>
-                            <div className="flex flex-col">
+                    <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
+                        <div className={`text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Admin</div>
+
+                        <Link to="/admin/dashboard" className={`huly-sidebar-item ${isActive('/admin/dashboard')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Dashboard">
+                            <span className="shrink-0"><IconDashboard /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>Dashboard</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">System overview</span>
                             </div>
                         </Link>
-                        <Link to="/admin/fetch-logs" className={`huly-sidebar-item ${isActive('/admin/fetch-logs')}`}>
-                            <div className="flex flex-col">
+
+                        <Link to="/admin/fetch-logs" className={`huly-sidebar-item ${isActive('/admin/fetch-logs')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Fetch Logs">
+                            <span className="shrink-0"><IconDownload /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>Fetch Logs</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Import history</span>
                             </div>
                         </Link>
-                        <Link to="/admin/categories" className={`huly-sidebar-item ${isActive('/admin/categories')}`}>
-                            <div className="flex flex-col">
+
+                        <Link to="/admin/categories" className={`huly-sidebar-item ${isActive('/admin/categories')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Categories">
+                            <span className="shrink-0"><IconTag /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>Categories</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage categories</span>
                             </div>
                         </Link>
-                        <Link to="/admin/articles" className={`huly-sidebar-item ${isActive('/admin/articles')}`}>
-                            <div className="flex flex-col">
+
+                        <Link to="/admin/articles" className={`huly-sidebar-item ${isActive('/admin/articles')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Articles">
+                            <span className="shrink-0"><IconFileText /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>Articles</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage articles</span>
                             </div>
                         </Link>
-                        <Link to="/admin/analytics" className={`huly-sidebar-item ${isActive('/admin/analytics')}`}>
-                            <div className="flex flex-col">
+
+                        <Link to="/admin/analytics" className={`huly-sidebar-item ${isActive('/admin/analytics')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Analytics">
+                            <span className="shrink-0"><IconBarChart /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>Analytics</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Content analytics</span>
                             </div>
@@ -229,17 +320,36 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     </nav>
                 )}
 
+                {/* Super Admin Section */}
                 {role === 'SuperAdmin' && (
-                    <nav className="flex flex-col gap-2 pt-4 border-t border-glass-border">
-                        <div className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4">Super Admin</div>
-                        <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')}`}>
-                            <div className="flex flex-col">
+                    <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
+                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Super Admin</div>
+
+                        <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="User Management">
+                            <span className="shrink-0"><IconUsers /></span>
+                            <div className={`flex flex-col ${textClass}`}>
                                 <span>User Management</span>
                                 <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage users & roles</span>
                             </div>
                         </Link>
                     </nav>
                 )}
+
+                {/* Spacer to push toggle to bottom */}
+                <div className="flex-1" />
+
+                {/* Collapse/Expand Toggle — desktop only */}
+                <button
+                    onClick={onToggleCollapse}
+                    className={`hidden lg:flex items-center gap-3 px-4 py-2 rounded-lg text-secondary hover:text-white hover:bg-white/5 transition-all duration-200 ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
+                    title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                    <span className="shrink-0">
+                        {isCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
+                    </span>
+                    <span className={`text-sm ${textClass}`}>Collapse</span>
+                </button>
             </aside>
         </>
     );

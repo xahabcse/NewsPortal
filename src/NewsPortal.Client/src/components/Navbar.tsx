@@ -19,9 +19,10 @@ interface Notification {
 
 interface NavbarProps {
     onMenuClick?: () => void;
+    isSidebarCollapsed?: boolean;
 }
 
-const Navbar = ({ onMenuClick }: NavbarProps) => {
+const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
     const navigate = useNavigate();
     const { session, isAuthenticated, login, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
@@ -153,7 +154,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
     return (
         <>
-            <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 glass-morphism border-b border-glass-border z-10 flex items-center justify-between px-4 lg:px-8">
+            <header className={`fixed top-0 right-0 left-0 ${isSidebarCollapsed ? 'lg:left-16' : 'lg:left-64'} h-16 glass-morphism border-b border-glass-border z-10 flex items-center justify-between px-4 lg:px-8 transition-[left] duration-300`}>
                 <div className="flex items-center gap-4 flex-1 max-w-xl">
                     {/* Hamburger Menu Button - Mobile Only */}
                     <button
