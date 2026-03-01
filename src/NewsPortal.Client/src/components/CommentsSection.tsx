@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { axiosInstance } from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,8 @@ interface Comment {
     replies: Comment[];
 }
 
+type SortMode = 'newest' | 'oldest' | 'top';
+
 const CommentsSection = () => {
     const { slug } = useParams<{ slug: string }>();
     const { isAuthenticated } = useAuth();
@@ -22,6 +24,9 @@ const CommentsSection = () => {
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [sortMode, setSortMode] = useState<SortMode>('newest');
+    const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; score: number }>>({});
+    const [userVotes, setUserVotes] = useState<Record<number, string | null>>({});
 
     useEffect(() => {
         if (slug) {
@@ -29,14 +34,36 @@ const CommentsSection = () => {
         }
     }, [slug]);
 
+    const fetchVoteCounts = useCallback(async (commentList: Comment[]) => {
+        const allIds = getAllCommentIds(commentList);
+        if (allIds.length === 0) return;
+        try {
+            const res = await axiosInstance.get(`/reactions/comments/batch?commentIds=${allIds.join(',')}`);
+            setVoteCounts(res.data);
+        } catch {
+            // votes are optional
+        }
+    }, []);
+
+    const getAllCommentIds = (commentList: Comment[]): number[] => {
+        const ids: number[] = [];
+        const collect = (list: Comment[]) => {
+            for (const c of list) {
+                ids.push(c.id);
+                if (c.replies?.length) collect(c.replies);
+            }
+        };
+        collect(commentList);
+        return ids;
+    };
+
     const fetchComments = async (articleSlug: string) => {
         try {
-            // First get article ID from slug
             const articleResp = await axiosInstance.get(`/news/${articleSlug}`);
             const articleId = articleResp.data.id;
-            
             const resp = await axiosInstance.get<Comment[]>(`/comments/article/${articleId}`);
             setComments(resp.data);
+            fetchVoteCounts(resp.data);
         } catch (error) {
             console.error('Failed to fetch comments:', error);
         } finally {
@@ -69,30 +96,109 @@ const CommentsSection = () => {
         }
     };
 
-    const CommentItem = ({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) => (
-        <div className={`${isReply ? 'ml-8 mt-4' : ''}`}>
-            <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-white">{comment.username}</span>
-                    <span className="text-xs text-secondary">
-                        {new Date(comment.createdAt).toLocaleDateString()}
-                    </span>
+    const handleVote = async (commentId: number, isUpvote: boolean) => {
+        if (!isAuthenticated) {
+            toast.error('Please login to vote');
+            return;
+        }
+        try {
+            const res = await axiosInstance.post(`/reactions/comments/${commentId}/vote`, { isUpvote });
+            setVoteCounts(prev => ({ ...prev, [commentId]: { upvotes: res.data.upvotes, downvotes: res.data.downvotes, score: res.data.score } }));
+            setUserVotes(prev => ({ ...prev, [commentId]: res.data.userVote }));
+        } catch {
+            toast.error('Failed to vote');
+        }
+    };
+
+    const sortedComments = [...comments].sort((a, b) => {
+        if (sortMode === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (sortMode === 'top') {
+            const scoreA = voteCounts[a.id]?.score || 0;
+            const scoreB = voteCounts[b.id]?.score || 0;
+            return scoreB - scoreA;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const CommentItem = ({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) => {
+        const votes = voteCounts[comment.id] || { upvotes: 0, downvotes: 0, score: 0 };
+        const userVote = userVotes[comment.id] ?? null;
+
+        return (
+            <div className={`${isReply ? 'ml-8 mt-3' : ''}`}>
+                <div className="bg-white/5 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-white">{comment.username}</span>
+                        <span className="text-xs text-secondary">
+                            {new Date(comment.createdAt).toLocaleDateString()}
+                        </span>
+                    </div>
+                    <p className="text-sm text-white/80 mb-3">{comment.content}</p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => handleVote(comment.id, true)}
+                            className={`flex items-center gap-1 text-xs transition-colors ${
+                                userVote === 'up' ? 'text-green-400' : 'text-secondary hover:text-green-400'
+                            }`}
+                            title="Upvote"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={userVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                            </svg>
+                            {votes.upvotes > 0 && <span>{votes.upvotes}</span>}
+                        </button>
+                        <button
+                            onClick={() => handleVote(comment.id, false)}
+                            className={`flex items-center gap-1 text-xs transition-colors ${
+                                userVote === 'down' ? 'text-red-400' : 'text-secondary hover:text-red-400'
+                            }`}
+                            title="Downvote"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={userVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                            </svg>
+                            {votes.downvotes > 0 && <span>{votes.downvotes}</span>}
+                        </button>
+                        {votes.score !== 0 && (
+                            <span className={`text-xs font-medium ${votes.score > 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                                {votes.score > 0 ? '+' : ''}{votes.score}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <p className="text-sm text-white/80">{comment.content}</p>
+                {comment.replies?.length > 0 && (
+                    <div className="mt-2">
+                        {comment.replies.map(reply => (
+                            <CommentItem key={reply.id} comment={reply} isReply />
+                        ))}
+                    </div>
+                )}
             </div>
-            {comment.replies.length > 0 && (
-                <div className="mt-2">
-                    {comment.replies.map(reply => (
-                        <CommentItem key={reply.id} comment={reply} isReply />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="mt-12 pt-8 border-t border-glass-border">
-            <h2 className="text-2xl font-bold text-white mb-6">Comments</h2>
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                    Comments {comments.length > 0 && <span className="text-base font-normal text-secondary">({comments.length})</span>}
+                </h2>
+                {comments.length > 1 && (
+                    <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-glass-border">
+                        {(['newest', 'oldest', 'top'] as SortMode[]).map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => setSortMode(mode)}
+                                className={`px-3 py-1 text-xs rounded-md transition-colors capitalize ${
+                                    sortMode === mode ? 'bg-accent text-white' : 'text-secondary hover:text-white'
+                                }`}
+                            >
+                                {mode === 'top' ? 'Most Voted' : mode}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* Comment Form */}
             {isAuthenticated ? (
@@ -118,7 +224,7 @@ const CommentsSection = () => {
                 </form>
             ) : (
                 <div className="mb-8 p-4 bg-white/5 rounded-lg text-center text-sm text-secondary">
-                    Please <a href="/login" className="text-accent hover:underline">login</a> to comment
+                    Please login to comment
                 </div>
             )}
 
@@ -133,7 +239,7 @@ const CommentsSection = () => {
                 <p className="text-secondary text-sm">No comments yet. Be the first to comment!</p>
             ) : (
                 <div className="space-y-4">
-                    {comments.map(comment => (
+                    {sortedComments.map(comment => (
                         <CommentItem key={comment.id} comment={comment} />
                     ))}
                 </div>

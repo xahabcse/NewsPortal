@@ -8,6 +8,12 @@ import NewsCard from '../components/NewsCard';
 import ShareButton from '../components/ShareButton';
 import TextToSpeech from '../components/TextToSpeech';
 import CommentsSection from '../components/CommentsSection';
+import ArticleReactions from '../components/ArticleReactions';
+import ReportButton from '../components/ReportButton';
+import SaveOfflineButton from '../components/SaveOfflineButton';
+import SummarizeButton from '../components/SummarizeButton';
+import TranslateButton from '../components/TranslateButton';
+import SentimentBadge from '../components/SentimentBadge';
 
 interface NewsArticleDetail {
     id: number;
@@ -68,6 +74,9 @@ const ArticleDetailPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [imgFailed, setImgFailed] = useState(false);
+    const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>(() => {
+        return (localStorage.getItem('newsportal-fontsize') as 'small' | 'medium' | 'large') || 'medium';
+    });
 
     useEffect(() => {
         const fetchArticle = async () => {
@@ -292,8 +301,9 @@ const ArticleDetailPage = () => {
                     </span>
                 </div>
 
-                {/* Action Buttons: Share + Listen */}
-                <div className="flex items-center gap-3 mt-4">
+                {/* Action Buttons: Reactions + Share + Listen */}
+                <div className="flex items-center gap-3 mt-4 flex-wrap">
+                    <ArticleReactions articleId={article.id} />
                     <ShareButton
                         title={article.title}
                         url={`${window.location.origin}/news/${article.slug}`}
@@ -303,6 +313,25 @@ const ArticleDetailPage = () => {
                         text={article.content || article.summary || article.title}
                         title={article.title}
                     />
+                    <ReportButton articleId={article.id} />
+                    <SaveOfflineButton
+                        slug={article.slug}
+                        title={article.title}
+                        content={article.content}
+                        summary={article.summary}
+                        imageUrl={article.imageUrl}
+                        sourceName={article.sourceName}
+                        categoryName={article.categoryName}
+                        publishedAt={article.publishedAt}
+                    />
+                </div>
+
+                {/* AI Features: Summarize + Translate */}
+                <div className="flex flex-col gap-2 mt-3">
+                    <div className="flex items-start gap-3 flex-wrap">
+                        <SummarizeButton articleId={article.id} />
+                        <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
+                    </div>
                 </div>
             </div>
 
@@ -331,11 +360,31 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
+            {/* Font Size Control */}
+            {article.content && (
+                <div className="flex items-center gap-2 mb-4" data-testid="font-size-control">
+                    <span className="text-xs text-secondary mr-1">Font:</span>
+                    {(['small', 'medium', 'large'] as const).map(size => (
+                        <button
+                            key={size}
+                            onClick={() => { setFontSize(size); localStorage.setItem('newsportal-fontsize', size); }}
+                            className={`px-2 py-1 rounded text-xs border transition-colors ${
+                                fontSize === size ? 'bg-accent/20 border-accent/40 text-white' : 'bg-white/5 border-glass-border text-secondary hover:text-white'
+                            }`}
+                        >
+                            {size === 'small' ? 'A' : size === 'medium' ? 'A+' : 'A++'}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Article Content */}
             {article.content ? (
                 <article className="prose prose-invert prose-lg max-w-none">
-                    <div 
-                        className="text-white/90 leading-relaxed space-y-4"
+                    <div
+                        className={`text-white/90 leading-relaxed space-y-4 transition-all ${
+                            fontSize === 'small' ? 'text-sm' : fontSize === 'large' ? 'text-xl' : 'text-base'
+                        }`}
                         dangerouslySetInnerHTML={{ __html: article.content.replace(/\n\n/g, '</p><p class="mb-4">').replace(/\n/g, '<br />') }}
                     />
                 </article>
@@ -384,6 +433,11 @@ const ArticleDetailPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Comment Sentiment Analysis */}
+            <div className="mt-8">
+                <SentimentBadge articleId={article.id} />
+            </div>
 
             {/* Comments Section */}
             <CommentsSection />

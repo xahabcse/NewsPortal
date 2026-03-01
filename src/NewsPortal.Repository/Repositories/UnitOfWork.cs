@@ -17,6 +17,9 @@ public class UnitOfWork : IUnitOfWork
     private IBookmarkRepository? _bookmarks;
     private IReadHistoryRepository? _readHistory;
     private ICommentRepository? _comments;
+    private IArticleReactionRepository? _articleReactions;
+    private ICommentVoteRepository? _commentVotes;
+    private IArticleReportRepository? _articleReports;
 
     public UnitOfWork(NewsPortalDbContext context)
     {
@@ -46,6 +49,15 @@ public class UnitOfWork : IUnitOfWork
 
     public ICommentRepository Comments =>
         _comments ??= new CommentRepository(_context);
+
+    public IArticleReactionRepository ArticleReactions =>
+        _articleReactions ??= new ArticleReactionRepository(_context);
+
+    public ICommentVoteRepository CommentVotes =>
+        _commentVotes ??= new CommentVoteRepository(_context);
+
+    public IArticleReportRepository ArticleReports =>
+        _articleReports ??= new ArticleReportRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {

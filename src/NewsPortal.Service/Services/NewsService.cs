@@ -186,9 +186,20 @@ public class NewsService : INewsService
         var articles = await _unitOfWork.NewsArticles.SearchAsync(query.Query, query.Page, query.PageSize);
         var totalCount = await _unitOfWork.NewsArticles.SearchCountAsync(query.Query);
 
+        // Apply optional filters
+        var filtered = articles.AsEnumerable();
+        if (query.CategoryId.HasValue)
+            filtered = filtered.Where(a => a.CategoryId == query.CategoryId.Value);
+        if (query.SourceId.HasValue)
+            filtered = filtered.Where(a => a.SourceId == query.SourceId.Value);
+        if (query.FromDate.HasValue)
+            filtered = filtered.Where(a => (a.PublishedAt ?? a.FetchedAt) >= query.FromDate.Value);
+        if (query.ToDate.HasValue)
+            filtered = filtered.Where(a => (a.PublishedAt ?? a.FetchedAt) <= query.ToDate.Value);
+
         return new PagedResultDto<NewsArticleListDto>
         {
-            Items = articles.Select(MapToListDto).ToList(),
+            Items = filtered.Select(MapToListDto).ToList(),
             TotalCount = totalCount,
             Page = query.Page,
             PageSize = query.PageSize

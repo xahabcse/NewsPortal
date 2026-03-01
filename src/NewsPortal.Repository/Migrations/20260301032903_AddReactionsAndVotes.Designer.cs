@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NewsPortal.Repository.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NewsPortal.Repository.Migrations
 {
     [DbContext(typeof(NewsPortalDbContext))]
-    partial class NewsPortalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260301032903_AddReactionsAndVotes")]
+    partial class AddReactionsAndVotes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,57 +61,6 @@ namespace NewsPortal.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("article_reactions", (string)null);
-                });
-
-            modelBuilder.Entity("NewsPortal.Core.Entities.ArticleReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ArticleId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("pending");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ArticleId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("UserId", "ArticleId")
-                        .IsUnique();
-
-                    b.ToTable("article_reports", (string)null);
                 });
 
             modelBuilder.Entity("NewsPortal.Core.Entities.Category", b =>
@@ -808,25 +760,6 @@ namespace NewsPortal.Repository.Migrations
                 });
 
             modelBuilder.Entity("NewsPortal.Core.Entities.ArticleReaction", b =>
-                {
-                    b.HasOne("NewsPortal.Core.Entities.NewsArticle", "Article")
-                        .WithMany()
-                        .HasForeignKey("ArticleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NewsPortal.Core.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Article");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NewsPortal.Core.Entities.ArticleReport", b =>
                 {
                     b.HasOne("NewsPortal.Core.Entities.NewsArticle", "Article")
                         .WithMany()

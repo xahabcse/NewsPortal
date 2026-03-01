@@ -69,6 +69,8 @@ const NewsCard: FC<NewsCardProps> = ({
         year: 'numeric'
     });
 
+    const readingTime = summary ? Math.max(1, Math.ceil(summary.split(/\s+/).length / 200)) : 1;
+
     return (
         <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
             <div className="relative h-48 overflow-hidden">
@@ -114,6 +116,8 @@ const NewsCard: FC<NewsCardProps> = ({
                     <span>{sourceName}</span>
                     <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
                     <span>{formattedDate}</span>
+                    <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
+                    <span>{readingTime} min read</span>
                 </div>
 
                 <h3 className="text-lg font-bold text-white mb-3 group-hover:text-accent transition-colors line-clamp-2">

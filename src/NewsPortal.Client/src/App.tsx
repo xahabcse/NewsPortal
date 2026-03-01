@@ -19,8 +19,13 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
+import ArticleManagementPage from './pages/admin/ArticleManagementPage'
+import ContentAnalyticsPage from './pages/admin/ContentAnalyticsPage'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import BackToTop from './components/BackToTop'
+import KeyboardShortcuts from './components/KeyboardShortcuts'
+import NewsTicker from './components/NewsTicker'
 import { signalRService } from './services/SignalRService'
 
 function App() {
@@ -44,6 +49,7 @@ function App() {
               <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
                 <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
+                <NewsTicker />
                 <div className="mt-16 flex-1 flex flex-col">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -58,12 +64,16 @@ function App() {
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/fetch-logs" element={<FetchLogPage />} />
                     <Route path="/admin/categories" element={<CategoriesPage />} />
+                    <Route path="/admin/articles" element={<ArticleManagementPage />} />
                     <Route path="/admin/users" element={<UserManagementPage />} />
+                    <Route path="/admin/analytics" element={<ContentAnalyticsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
                 </div>
               </div>
             </div>
+            <BackToTop />
+            <KeyboardShortcuts />
             <ToastProvider />
           </Router>
         </ErrorBoundary>

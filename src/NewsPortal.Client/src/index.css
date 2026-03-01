@@ -159,6 +159,15 @@ body {
   animation: fade-in 0.2s ease-out;
 }
 
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 30s linear infinite;
+}
+
 /* ─── Light Mode Overrides ─── */
 /* Override text-white to use theme-aware primary text color */
 [data-theme="light"] .text-white {
