@@ -53,6 +53,7 @@ public interface ISourceFetchJobRepository : IRepository<SourceFetchJob>
 {
     Task<SourceFetchJob?> GetByExternalIdAsync(Guid externalId);
     Task<IEnumerable<SourceFetchJob>> GetRecentBySourceIdAsync(int sourceId, int count);
+    Task<(IEnumerable<SourceFetchJob> Items, int TotalCount)> GetPagedLogsAsync(int page, int pageSize, string? statusFilter = null);
 }
 
 public interface INewsFetchLogRepository
