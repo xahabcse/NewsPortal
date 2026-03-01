@@ -1,9 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
-import NewsletterSignup from './NewsletterSignup'
+
 import WeatherWidget from './WeatherWidget'
-import StockTicker from './StockTicker'
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
 import { newsApi, type Category } from '../services/api'
@@ -70,7 +69,7 @@ const categoryIconMap: Record<string, JSX.Element> = {
     'bi-chat-quote': <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 8h2v4H8z"></path><path d="M14 8h2v4h-2z"></path></svg>,
 };
 
-const Sidebar = ({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) => {
+const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) => {
     const location = useLocation()
     const { role } = useAuth()
     const [todayCount, setTodayCount] = useState<number>(0)
@@ -82,7 +81,7 @@ const Sidebar = ({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse
         if (isOpen && onClose) {
             onClose();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
 
     const isActive = (path: string) => {
@@ -124,17 +123,22 @@ const Sidebar = ({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse
 
     const visibleCategories = showAllCategories ? categories : categories.slice(0, 6)
 
-    const sidebarClasses = `
-        fixed left-0 top-0 h-screen glass-morphism border-r border-glass-border flex flex-col overflow-y-auto
-        transition-all duration-300 z-50
-        ${isCollapsed ? 'lg:w-16 w-64' : 'w-64'}
-        ${isCollapsed ? 'lg:p-2 p-6' : 'p-6'}
-        ${isCollapsed ? 'lg:gap-2 gap-6' : 'gap-6'}
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0
-    `.trim()
+    const sidebarClasses = [
+        'fixed left-0 top-0 h-screen glass-morphism border-r border-glass-border flex flex-col overflow-y-auto',
+        'transition-all duration-300 z-50',
+        // Width: icon-only on desktop when collapsed, full-width otherwise
+        isCollapsed ? 'w-64 lg:w-16' : 'w-64',
+        // Padding: compact on desktop when collapsed, normal otherwise
+        isCollapsed ? 'p-6 lg:p-2' : 'p-6',
+        // Gap: compact on desktop when collapsed, normal otherwise
+        isCollapsed ? 'gap-6 lg:gap-2' : 'gap-6',
+        // Visibility: on mobile hide off-screen by default, show when isOpen.
+        // On desktop (lg+) always visible regardless of isOpen.
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+        'lg:translate-x-0'
+    ].join(' ')
 
-    // Helper: on desktop collapsed, hide text. On mobile, always show.
+    // Hide text labels when collapsed on desktop only; always show on mobile.
     const textClass = isCollapsed ? 'lg:hidden' : ''
     return (
         <>
@@ -297,11 +301,9 @@ const Sidebar = ({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse
                         <ReadingHistory />
                     </nav>
 
-                    <NewsletterSignup />
+
 
                     <WeatherWidget />
-
-                    <StockTicker />
                 </div>
 
                 {/* Admin Section */}

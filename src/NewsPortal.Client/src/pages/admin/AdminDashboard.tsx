@@ -177,8 +177,8 @@ const AdminDashboard = () => {
                                 <AreaChart data={chartStats.dailyArticles}>
                                     <defs>
                                         <linearGradient id="colorArticles" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
@@ -186,7 +186,7 @@ const AdminDashboard = () => {
                                         dataKey="date"
                                         stroke={chartText}
                                         fontSize={11}
-                                        tickFormatter={(d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        tickFormatter={(d: string | number) => new Date(String(d) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     />
                                     <YAxis stroke={chartText} fontSize={11} />
                                     <Tooltip
@@ -197,7 +197,7 @@ const AdminDashboard = () => {
                                             color: tooltipText,
                                             fontSize: '12px',
                                         }}
-                                        labelFormatter={(d) => new Date(String(d) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        labelFormatter={(d: any) => new Date(String(d) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                     />
                                     <Area
                                         type="monotone"
