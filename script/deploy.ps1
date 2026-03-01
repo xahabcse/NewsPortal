@@ -1,283 +1,263 @@
-# News Portal - Deployment Script for Windows PowerShell
-# Simple deployment for Docker Desktop on Windows
+# NewsPortal – Windows Deployment Script (PowerShell)
+# Mirrors deploy.sh for Windows / Docker Desktop
+# Run from repo root OR script\ directory:
+#   .\script\deploy.ps1
 
-param(
-    [switch]$Monitoring,
-    [switch]$Stop,
-    [switch]$Remove,
-    [switch]$Logs,
-    [switch]$Health
-)
+$ErrorActionPreference = "Stop"
 
-$RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent
-Push-Location $RootDir
+# Resolve root dir regardless of working directory
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$RootDir   = (Resolve-Path (Join-Path $ScriptDir "..")).Path
+Set-Location $RootDir
 
-$MonitoringFile = $null
-
-function Print-Section {
-    param([string]$Title)
+# ---------- Colour helpers ----------
+function Print-Section($msg) {
     Write-Host ""
-    Write-Host "==============================" -ForegroundColor Blue
-    Write-Host $Title -ForegroundColor Blue
-    Write-Host "==============================" -ForegroundColor Blue
-    Write-Host ""
+    Write-Host ("=" * 42) -ForegroundColor Blue
+    Write-Host "  $msg"
+    Write-Host ("=" * 42) -ForegroundColor Blue
 }
+function Print-Success($msg) { Write-Host "[OK]    $msg" -ForegroundColor Green  }
+function Print-Error($msg)   { Write-Host "[ERROR] $msg" -ForegroundColor Red    }
+function Print-Warning($msg) { Write-Host "[WARN]  $msg" -ForegroundColor Yellow }
+function Print-Info($msg)    { Write-Host "[INFO]  $msg" -ForegroundColor Cyan   }
 
-function Print-Success { Write-Host "[OK] $args" -ForegroundColor Green }
-function Print-Error { Write-Host "[ERROR] $args" -ForegroundColor Red }
-function Print-Warning { Write-Host "[WARN] $args" -ForegroundColor Yellow }
-function Print-Info { Write-Host "[INFO] $args" -ForegroundColor Cyan }
+# ---------- State ----------
+$global:Platform       = "windows"
+$global:MonitoringFile = ""
 
-function Invoke-DockerCompose {
-    $composeFiles = @("-f", "docker-compose.yml")
-    if ($MonitoringFile) {
-        $composeFiles += @("-f", $MonitoringFile)
+# ---------- docker compose wrapper ----------
+function dc([string[]]$CmdArgs) {
+    $base = @("compose", "-f", "docker-compose.yml")
+    if ($global:MonitoringFile -ne "") {
+        $base += @("-f", $global:MonitoringFile)
     }
-    docker compose $composeFiles $args
+    & docker @($base + $CmdArgs)
 }
 
-function Check-Env {
+# ---------- Platform selection ----------
+function Select-Platform {
+    Print-Section "Select Platform"
+    Write-Host "  1) Windows (Docker Desktop)"
+    Write-Host "  2) Ubuntu Server (Linux)"
+    Write-Host ""
+    $choice = Read-Host "Enter platform (1-2, default 1)"
+    if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "1" }
+
+    switch ($choice) {
+        "1" {
+            $global:Platform       = "windows"
+            $global:MonitoringFile = "docker-compose.monitoring.windows.yml"
+            Print-Success "Windows mode selected"
+        }
+        "2" {
+            $global:Platform       = "ubuntu"
+            $global:MonitoringFile = "docker-compose.monitoring.yml"
+            Print-Success "Ubuntu Server mode selected"
+        }
+        default { Print-Error "Invalid selection"; exit 1 }
+    }
+}
+
+# ---------- Ensure .env ----------
+function Ensure-Env {
     if (-not (Test-Path ".env")) {
         Print-Warning "No .env file found. Creating from .env.example..."
         if (Test-Path ".env.example") {
-            Copy-Item .env.example .env
-            Print-Success "Created .env file"
-            Print-Warning "Please edit .env and update passwords/secrets."
+            Copy-Item ".env.example" ".env"
+            Print-Success "Created .env - please update passwords/secrets before deploying."
         } else {
-            Print-Error ".env.example not found"
-            exit 1
+            Print-Error ".env.example not found"; exit 1
         }
     } else {
         Print-Success ".env file exists"
     }
 }
 
+# ---------- Smart pull (skip build-only services) ----------
 function Smart-Pull {
     Print-Info "[Step 1/3] Pulling external images..."
-    # Filter services that don't have a 'build' section to avoid access denied errors
-    $config = Invoke-DockerCompose config --format json | ConvertFrom-Json
-    $pullable = @()
-    
-    foreach ($svcName in $config.services.psobject.properties.Name) {
-        $svc = $config.services.$svcName
-        if (-not $svc.build) {
-            $pullable += $svcName
+
+    # Get all service names
+    $services = (dc @("config", "--services")) -split "`n" |
+                ForEach-Object { $_.Trim() } |
+                Where-Object   { $_ -ne "" }
+
+    # Get full config as text and find services that have a build: key
+    $fullConfig  = (dc @("config")) -join "`n"
+    $pullable    = @()
+
+    foreach ($svc in $services) {
+        # A service with a build section appears as "<svc>:\n    build:"
+        if ($fullConfig -notmatch "(?m)^\s{2}$([regex]::Escape($svc)):\s*\n(?:.*\n)*?\s{4}build:") {
+            $pullable += $svc
         }
     }
-    
+
     if ($pullable.Count -gt 0) {
-        Invoke-DockerCompose pull $pullable
+        Print-Info "Pulling: $($pullable -join ', ')"
+        dc (@("pull") + $pullable)
     } else {
         Print-Info "No external images to pull."
     }
 }
 
+# ---------- Health check ----------
 function Health-Check {
     Print-Section "Detailed Health Check"
-    
-    $psOutput = Invoke-DockerCompose ps 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        Print-Error "Docker Compose services are not running"
-        return
-    }
 
-    $services = Invoke-DockerCompose ps --format json | ConvertFrom-Json
-    
-    Write-Host ("{0,-25} {1,-15} {2,-30}" -f "SERVICE", "STATUS", "IMAGE") -ForegroundColor Cyan
-    Write-Host ("-" * 70) -ForegroundColor Cyan
+    $services = (dc @("config", "--services")) -split "`n" |
+                ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
 
     $allHealthy = $true
+    Write-Host ("{0,-28} {1,-12} {2}" -f "SERVICE", "STATUS", "IMAGE") -ForegroundColor Cyan
+    Write-Host ("-" * 72) -ForegroundColor DarkGray
+
     foreach ($svc in $services) {
-        $status = if ($svc.State -eq "running") { "Running" } else { "Stopped" }
-        $color = if ($svc.State -eq "running") { "Green" } else { "Red"; $allHealthy = $false }
-        
-        Write-Host ("{0,-25} " -f $svc.Service) -NoNewline
-        Write-Host ("{0,-15}" -f $status) -ForegroundColor $color -NoNewline
-        Write-Host (" {0,-30}" -f $svc.Image)
+        $state = (dc @("ps", $svc, "--format", "{{.State}}") 2>$null) -join "" | ForEach-Object { $_.Trim() }
+        $image = (dc @("ps", $svc, "--format", "{{.Image}}")  2>$null) -join "" | ForEach-Object { $_.Trim() }
+
+        if ($state -match "running") {
+            Write-Host ("{0,-28}" -f $svc)     -NoNewline
+            Write-Host ("{0,-12}" -f "Running") -ForegroundColor Green -NoNewline
+            Write-Host $image
+        } else {
+            Write-Host ("{0,-28}" -f $svc)     -NoNewline
+            Write-Host ("{0,-12}" -f $(if ($state) { $state } else { "Stopped" })) -ForegroundColor Red -NoNewline
+            Write-Host $image
+            $allHealthy = $false
+        }
     }
 
-    Print-Section "Resource Usage"
-    docker stats --no-stream --format "table {{.Name}}`t{{.CPUPerc}}`t{{.MemUsage}}`t{{.NetIO}}" | Select-String "newsportal"
+    Write-Host ""
+    Print-Info "Real-Time Resource Usage:"
+    docker stats --no-stream --format "table {{.Name}}`t{{.CPUPerc}}`t{{.MemUsage}}`t{{.NetIO}}" |
+        Where-Object { $_ -match "newsportal|NAME" }
 
     if ($allHealthy) {
-        Print-Success "All services are running as expected."
-        Print-Services-Info
+        Print-Success "All services are running."
+        Print-ServicesInfo
     } else {
-        Print-Error "Some services are not running properly."
+        Print-Error "Some services are not running properly. Check logs with option 5."
     }
 }
 
-function Print-Services-Info {
+# ---------- Service URLs ----------
+function Print-ServicesInfo {
     Print-Section "Services Information"
+    Write-Host "  Main Services:" -ForegroundColor Cyan
+    Write-Host "    Web UI:       http://localhost:5000"
+    Write-Host "    API:          http://localhost:8080"
+    Write-Host "    PostgreSQL:   localhost:5432"
+    Write-Host "    MongoDB:      localhost:27017"
+    Write-Host "    Redis:        localhost:6379"
+    Write-Host "    Seq Logging:  http://localhost:8081"
 
-    Write-Host "Main Services:" -ForegroundColor Cyan
-    Write-Host "  - Web UI:       http://localhost:5000"
-    Write-Host "  - API:          http://localhost:8080"
-    Write-Host "  - PostgreSQL:   localhost:5432"
-    Write-Host "  - MongoDB:      localhost:27017"
-    Write-Host "  - Redis:        localhost:6379"
-    Write-Host "  - Seq Logging:  http://localhost:8081"
-
-    if ($MonitoringFile) {
-        Write-Host "`nMonitoring Stack:" -ForegroundColor Cyan
-        Write-Host "  - Grafana:    http://localhost:3001 (admin/admin123)"
-        Write-Host "  - Prometheus: http://localhost:9090"
-        Write-Host "  - Loki:       http://localhost:3100"
-        Write-Host "  - cAdvisor:   http://localhost:8088"
-        Write-Host "  - Note: node-exporter and promtail are Linux-only" -ForegroundColor Gray
+    if ($global:MonitoringFile -ne "") {
+        Write-Host ""
+        Write-Host "  Monitoring Stack:" -ForegroundColor Cyan
+        Write-Host "    Grafana:      http://localhost:3001  (admin / admin123)"
+        Write-Host "    Prometheus:   http://localhost:9090"
+        Write-Host "    Loki:         http://localhost:3100"
+        Write-Host "    cAdvisor:     http://localhost:8088"
+        if ($global:Platform -eq "ubuntu") {
+            Write-Host "    Node Exp:     http://localhost:9100"
+        }
     }
 }
 
-function Clean-Build {
+# ---------- Clean rebuild ----------
+function Clean-And-Rebuild {
     Print-Section "Clean Build - Rebuild API and Web Client"
-    
-    Print-Warning "This will stop services, remove old images, and rebuild from scratch"
+    Print-Warning "This will stop services, remove old images, and rebuild from scratch."
     $confirm = Read-Host "Continue? (y/n, default n)"
-    if ($confirm -ne "y" -and $confirm -ne "Y") {
-        Print-Info "Cancelled"
-        return
-    }
+    if ($confirm -notmatch "^[yY]$") { Print-Info "Cancelled"; return }
 
-    # Stop services
     Print-Info "[Step 1/4] Stopping services..."
-    Invoke-DockerCompose down 2>$null
+    try { dc @("down") } catch {}
     Print-Success "Services stopped"
 
-    # Remove old images
-    Print-Info "[Step 2/4] Removing old API and Web Client images..."
-    docker rmi newsportal-api:latest 2>$null
-    docker rmi newsportal-web-client:latest 2>$null
-    docker rmi newsportal-mcp:latest 2>$null
+    Print-Info "[Step 2/4] Removing old images..."
+    "newsportal-api:latest", "newsportal-web-client:latest", "newsportal-mcp:latest" | ForEach-Object {
+        try { docker rmi $_ 2>$null } catch {}
+    }
     Print-Success "Old images removed"
 
-    # Pull external images
     Smart-Pull
 
-    # Rebuild
     Print-Info "[Step 3/4] Building fresh images (this may take a while)..."
-    Invoke-DockerCompose build --no-cache api web mcpserver
+    dc @("build", "--no-cache", "api", "web", "mcpserver")
     Print-Success "Build complete"
 
-    # Start
     Print-Info "[Step 4/4] Starting services..."
-    Invoke-DockerCompose up -d
+    dc @("up", "-d")
     Print-Success "Services started"
 
-    Print-Info "Verifying health..."
+    Print-Info "Waiting for containers to initialise..."
     Start-Sleep -Seconds 5
     Health-Check
 }
 
-# Main execution
-Print-Section "NewsPortal Deployment - Windows (PowerShell)"
-Print-Info "Project: $RootDir"
-Print-Info "Platform: Windows (Docker Desktop)"
+# =====================================================================
+# MAIN
+# =====================================================================
+Print-Section "NewsPortal Deployment"
+Print-Info "Project root: $RootDir"
 
-Check-Env
+Select-Platform
+Ensure-Env
 
-# Create logs directories
-$logsWeb = Join-Path $RootDir "logs\web"
-$logsMcp = Join-Path $RootDir "logs\mcp"
-if (-not (Test-Path $logsWeb)) { New-Item -ItemType Directory -Path $logsWeb | Out-Null }
-if (-not (Test-Path $logsMcp)) { New-Item -ItemType Directory -Path $logsMcp | Out-Null }
+# Ensure log directories exist
+New-Item -ItemType Directory -Force -Path "logs\web", "logs\mcp" | Out-Null
 
-# If parameters provided, run directly
-if ($Stop) {
-    Print-Info "Stopping all services..."
-    Invoke-DockerCompose down
-    Print-Success "All containers stopped"
-    Pop-Location
-    exit 0
-}
-
-if ($Remove) {
-    Print-Warning "This will remove ALL data including databases!"
-    $confirm = Read-Host "Type 'yes' to confirm"
-    if ($confirm -eq "yes") {
-        Invoke-DockerCompose down -v
-        Print-Success "All containers and volumes removed"
-    } else {
-        Print-Info "Cancelled"
-    }
-    Pop-Location
-    exit 0
-}
-
-if ($Logs) {
-    Print-Info "Showing logs (Ctrl+C to exit)..."
-    Invoke-DockerCompose logs -f
-    Pop-Location
-    exit 0
-}
-
-if ($Health) {
-    Health-Check
-    Pop-Location
-    exit 0
-}
-
-# Interactive mode
 Write-Host ""
-Write-Host "Select option:" -ForegroundColor Yellow
-Write-Host "1) Start all services"
-Write-Host "2) Start with monitoring (Grafana, Prometheus, Loki)"
-Write-Host "3) Stop all services"
-Write-Host "4) Stop and remove all (including volumes)"
-Write-Host "5) View logs"
-Write-Host "6) Health check"
-Write-Host "7) Clean build (rebuild API, Web Client from scratch)"
+Write-Host "Select option:" -ForegroundColor White
+Write-Host "  1) Start all services"
+Write-Host "  2) Start with monitoring (Grafana, Prometheus, Loki)"
+Write-Host "  3) Stop all services"
+Write-Host "  4) Stop and remove all (including volumes)"
+Write-Host "  5) View logs"
+Write-Host "  6) Health check"
+Write-Host "  7) Clean build (rebuild API, Web Client from scratch)"
 Write-Host ""
 $option = Read-Host "Enter option (1-7)"
 
 switch ($option) {
     "1" {
-        $MonitoringFile = $null
+        $global:MonitoringFile = ""
         Smart-Pull
         Print-Info "[Step 2/3] Building and starting containers..."
-        Invoke-DockerCompose up -d --build
+        dc @("up", "-d", "--build")
         Print-Info "[Step 3/3] Verifying health..."
         Health-Check
     }
     "2" {
-        $MonitoringFile = "docker-compose.monitoring.windows.yml"
         Smart-Pull
         Print-Info "[Step 2/3] Building and starting monitoring stack..."
-        Invoke-DockerCompose up -d --build
+        dc @("up", "-d", "--build")
         Print-Info "[Step 3/3] Verifying health..."
         Health-Check
     }
     "3" {
-        $MonitoringFile = $null
         Print-Info "Stopping all services..."
-        Invoke-DockerCompose down
+        dc @("down")
         Print-Success "All containers stopped"
     }
     "4" {
-        $MonitoringFile = $null
         Print-Warning "This will remove ALL data including databases!"
         $confirm = Read-Host "Type 'yes' to confirm"
         if ($confirm -eq "yes") {
-            Invoke-DockerCompose down -v
+            dc @("down", "-v")
             Print-Success "All containers and volumes removed"
         } else {
             Print-Info "Cancelled"
         }
     }
     "5" {
-        $MonitoringFile = $null
         Print-Info "Showing logs (Ctrl+C to exit)..."
-        Invoke-DockerCompose logs -f
+        dc @("logs", "-f")
     }
-    "6" {
-        Health-Check
-    }
-    "7" {
-        Clean-Build
-    }
-    default {
-        Print-Error "Invalid option"
-        exit 1
-    }
+    "6" { Health-Check }
+    "7" { Clean-And-Rebuild }
+    default { Print-Error "Invalid option. Enter 1-7."; exit 1 }
 }
-
-Pop-Location

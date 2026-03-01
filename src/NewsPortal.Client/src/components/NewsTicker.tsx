@@ -17,12 +17,12 @@ const NewsTicker = () => {
                     setHeadlines(items);
                 } else {
                     // Fallback to latest when no featured articles
-                    newsApi.getLatestNews(1, 8).then(r => setHeadlines(r.items)).catch(() => {});
+                    newsApi.getLatestNews(1, 8).then(r => setHeadlines(r.items)).catch(() => { });
                 }
             })
             .catch(() => {
                 // Fallback to latest on error
-                newsApi.getLatestNews(1, 8).then(r => setHeadlines(r.items)).catch(() => {});
+                newsApi.getLatestNews(1, 8).then(r => setHeadlines(r.items)).catch(() => { });
             });
 
         // Listen for breaking news via SignalR
@@ -52,9 +52,6 @@ const NewsTicker = () => {
     return (
         <div className="bg-gradient-to-r from-red-500/10 via-accent/5 to-red-500/10 border-b border-red-500/20 relative overflow-hidden">
             <div className="flex items-center h-8">
-                <div className="flex-shrink-0 bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 h-full flex items-center z-10">
-                    LIVE
-                </div>
                 <div
                     className="flex-1 overflow-hidden"
                     onMouseEnter={() => setIsPaused(true)}

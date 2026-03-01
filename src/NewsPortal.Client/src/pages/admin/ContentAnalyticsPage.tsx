@@ -108,7 +108,7 @@ const ContentAnalyticsPage = () => {
     }
 
     return (
-        <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-8 space-y-6">
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Content Analytics</h1>
@@ -249,12 +249,12 @@ const ContentAnalyticsPage = () => {
                             dataKey="hour"
                             stroke="#64748b"
                             tick={{ fontSize: 11 }}
-                            tickFormatter={(h) => `${h}:00`}
+                            tickFormatter={(h: any) => `${h}:00`}
                         />
                         <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
                         <Tooltip
                             contentStyle={{ background: 'rgba(22,23,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                            labelFormatter={(h) => `${h}:00 - ${h}:59`}
+                            labelFormatter={(h: any) => `${h}:00 - ${h}:59`}
                         />
                         <Bar dataKey="comments" fill="#34d399" name="Comments" radius={[4, 4, 0, 0]} />
                     </BarChart>
