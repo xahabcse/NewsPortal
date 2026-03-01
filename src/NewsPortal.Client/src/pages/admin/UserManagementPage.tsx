@@ -217,7 +217,7 @@ const UserManagementPage = () => {
                 description="Manage system users, roles, and permissions."
             />
             <div className="p-8">
-                <div className="max-w-7xl mx-auto">
+                <div>
                     {/* Header */}
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
@@ -311,16 +311,15 @@ const UserManagementPage = () => {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                        user.isActive 
-                                                            ? 'bg-green-500/20 text-green-400' 
+                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${user.isActive
+                                                            ? 'bg-green-500/20 text-green-400'
                                                             : 'bg-red-500/20 text-red-400'
-                                                    }`}>
+                                                        }`}>
                                                         {user.isActive ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-secondary">
-                                                    {user.lastLoginAt 
+                                                    {user.lastLoginAt
                                                         ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {
                                                             year: 'numeric',
                                                             month: 'short',
