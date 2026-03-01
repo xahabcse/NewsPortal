@@ -20,6 +20,7 @@ export interface NewsArticle {
     slug: string;
     summary: string | null;
     thumbnailUrl: string | null;
+    sourceUrl: string | null;
     publishedAt: string;
     sourceName: string;
     categoryName: string | null;
@@ -44,6 +45,27 @@ export interface Category {
     icon?: string;
     color?: string;
     articleCount?: number;
+}
+
+export interface CategoryHighlight {
+    categoryId: number;
+    categoryName: string;
+    categoryNameBn: string;
+    categorySlug: string;
+    categoryIcon: string | null;
+    categoryColor: string | null;
+    articleId: number;
+    title: string;
+    slug: string;
+    summary: string | null;
+    sourceName: string;
+    publishedAt: string | null;
+    viewCount: number;
+}
+
+export interface DailyHighlight {
+    date: string;
+    highlights: CategoryHighlight[];
 }
 
 export const newsApi = {
@@ -88,6 +110,15 @@ export const newsApi = {
         if (!response.ok) {
             const body = await response.text().catch(() => 'No body');
             throw new Error(`Failed to fetch categories. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
+        return response.json();
+    },
+
+    getDailyHighlights: async (days = 7): Promise<DailyHighlight[]> => {
+        const response = await fetch(`${API_BASE_URL}/news/daily-highlights?days=${days}`);
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch daily highlights. Status: ${response.status} ${response.statusText}. Body: ${body}`);
         }
         return response.json();
     }

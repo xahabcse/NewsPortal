@@ -10,10 +10,12 @@ interface NewsCardProps {
     publishedAt: string;
     thumbnailUrl: string | null;
     slug: string;
+    sourceUrl?: string | null;
     articleId?: number;
     isBookmarked?: boolean;
     onBookmarkToggle?: (articleId: number, isBookmarked: boolean) => void;
     showBookmark?: boolean;
+    onCardClick?: () => void;
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
@@ -31,6 +33,7 @@ const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
     </div>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const NewsCard: FC<NewsCardProps> = ({
     title,
     summary,
@@ -42,7 +45,8 @@ const NewsCard: FC<NewsCardProps> = ({
     articleId,
     isBookmarked = false,
     onBookmarkToggle,
-    showBookmark = false
+    showBookmark = false,
+    onCardClick
 }) => {
     const [imgFailed, setImgFailed] = useState(false);
     const [bookmarked, setBookmarked] = useState(isBookmarked);
@@ -64,6 +68,8 @@ const NewsCard: FC<NewsCardProps> = ({
         day: 'numeric',
         year: 'numeric'
     });
+
+    const readingTime = summary ? Math.max(1, Math.ceil(summary.split(/\s+/).length / 200)) : 1;
 
     return (
         <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
@@ -110,6 +116,8 @@ const NewsCard: FC<NewsCardProps> = ({
                     <span>{sourceName}</span>
                     <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
                     <span>{formattedDate}</span>
+                    <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
+                    <span>{readingTime} min read</span>
                 </div>
 
                 <h3 className="text-lg font-bold text-white mb-3 group-hover:text-accent transition-colors line-clamp-2">
@@ -120,13 +128,23 @@ const NewsCard: FC<NewsCardProps> = ({
                     {summary || 'No summary available'}
                 </p>
 
-                <Link
-                    to={`/news/${slug}`}
-                    className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
-                >
-                    READ MORE
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                </Link>
+                {onCardClick ? (
+                    <button
+                        onClick={(e) => { e.preventDefault(); onCardClick(); }}
+                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all cursor-pointer bg-transparent border-none p-0"
+                    >
+                        READ MORE
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                ) : (
+                    <Link
+                        to={`/news/${slug}`}
+                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
+                    >
+                        READ MORE
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </Link>
+                )}
             </div>
         </div>
     );

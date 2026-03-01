@@ -20,6 +20,9 @@ public class NewsPortalDbContext : DbContext
     public DbSet<UserBookmark> UserBookmarks => Set<UserBookmark>();
     public DbSet<UserReadHistory> UserReadHistory => Set<UserReadHistory>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<ArticleReaction> ArticleReactions => Set<ArticleReaction>();
+    public DbSet<CommentVote> CommentVotes => Set<CommentVote>();
+    public DbSet<ArticleReport> ArticleReports => Set<ArticleReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

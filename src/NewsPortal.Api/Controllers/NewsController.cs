@@ -104,7 +104,7 @@ public class NewsController : ControllerBase
     }
 
     [HttpPost("categories")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryDto dto)
     {
         var result = await _categoryService.CreateCategoryAsync(dto);
@@ -112,7 +112,7 @@ public class NewsController : ControllerBase
     }
 
     [HttpPut("categories/{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> UpdateCategory(int id, [FromBody] CreateCategoryDto dto)
     {
         await _categoryService.UpdateCategoryAsync(id, dto);
@@ -120,11 +120,19 @@ public class NewsController : ControllerBase
     }
 
     [HttpDelete("categories/{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
         await _categoryService.DeleteCategoryAsync(id);
         return NoContent();
+    }
+
+    [HttpGet("daily-highlights")]
+    public async Task<IActionResult> GetDailyHighlights(
+        [FromQuery][Range(1, 30)] int days = 7)
+    {
+        var result = await _newsService.GetDailyHighlightsAsync(days);
+        return Ok(result);
     }
 
     [HttpGet("stats/today")]

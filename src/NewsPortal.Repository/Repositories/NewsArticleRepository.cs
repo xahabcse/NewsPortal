@@ -95,6 +95,16 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
+    public async Task<int> SearchCountAsync(string query)
+    {
+        var searchPattern = $"%{query}%";
+        return await _dbSet
+            .CountAsync(x => x.IsActive &&
+                (EF.Functions.ILike(x.Title, searchPattern) ||
+                 (x.Summary != null && EF.Functions.ILike(x.Summary, searchPattern)) ||
+                 (x.PlainText != null && EF.Functions.ILike(x.PlainText, searchPattern))));
+    }
+
     public async Task IncrementViewCountAsync(int id)
     {
         // Use ExecuteUpdateAsync for efficient bulk update without loading entity
@@ -120,5 +130,23 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .Where(x => x.SourceId == sourceId && x.FetchedAt >= since)
             .Select(x => x.Title)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days)
+    {
+        var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
+
+        var candidates = await _dbSet
+            .Include(x => x.Source)
+            .Include(x => x.Category)
+            .Where(x => x.IsActive
+                && x.CategoryId.HasValue
+                && categoryIds.Contains(x.CategoryId.Value)
+                && (x.PublishedAt ?? x.FetchedAt) >= since)
+            .OrderByDescending(x => x.ViewCount)
+            .ThenByDescending(x => x.PublishedAt ?? x.FetchedAt)
+            .ToListAsync();
+
+        return candidates;
     }
 }

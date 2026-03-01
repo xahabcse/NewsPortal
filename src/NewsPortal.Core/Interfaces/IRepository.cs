@@ -26,10 +26,12 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<IEnumerable<NewsArticle>> GetFeaturedAsync(int count);
     Task<IEnumerable<NewsArticle>> GetTrendingAsync(int count, DateTime since);
     Task<IEnumerable<NewsArticle>> SearchAsync(string query, int page, int pageSize);
+    Task<int> SearchCountAsync(string query);
     Task IncrementViewCountAsync(int id);
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
     Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
+    Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days);
 }
 
 public interface ICategoryRepository : IRepository<Category>
@@ -51,6 +53,7 @@ public interface ISourceFetchJobRepository : IRepository<SourceFetchJob>
 {
     Task<SourceFetchJob?> GetByExternalIdAsync(Guid externalId);
     Task<IEnumerable<SourceFetchJob>> GetRecentBySourceIdAsync(int sourceId, int count);
+    Task<(IEnumerable<SourceFetchJob> Items, int TotalCount)> GetPagedLogsAsync(int page, int pageSize, string? statusFilter = null);
 }
 
 public interface INewsFetchLogRepository

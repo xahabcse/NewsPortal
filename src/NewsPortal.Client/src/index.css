@@ -2,10 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Theme CSS Variables ─── */
 :root {
-  background-color: #0c0d0e;
-  color: #e2e8f0;
+  /* Dark theme (default) */
+  --color-bg: 12 13 14;
+  --color-fg: 22 23 24;
+  --color-accent: 99 102 241;
+  --color-secondary: 148 163 184;
+  --color-glass: rgba(255, 255, 255, 0.03);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-surface: rgba(22, 23, 24, 0.95);
+  --text-primary: 255 255 255;
+
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--text-primary));
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --color-bg: 241 245 249;
+  --color-fg: 255 255 255;
+  --color-accent: 79 70 229;
+  --color-secondary: 100 116 139;
+  --color-glass: rgba(255, 255, 255, 0.7);
+  --color-glass-border: rgba(0, 0, 0, 0.1);
+  --color-glass-surface: rgba(255, 255, 255, 0.95);
+  --text-primary: 15 23 42;
+
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--text-primary));
+  color-scheme: light;
 }
 
 body {
@@ -14,6 +41,7 @@ body {
   @apply overflow-x-hidden;
 }
 
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -24,51 +52,104 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 
+/* ─── Glass Morphism ─── */
 .glass-morphism {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  /* Fix for DevTools blur issue */
+  border: 1px solid var(--color-glass-border);
   transform: translateZ(0);
   will-change: auto;
 }
 
+/* ─── Sidebar Items ─── */
 .huly-sidebar-item {
-  @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 text-secondary hover:text-white hover:bg-white/5;
+  @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200;
+  color: rgb(var(--color-secondary));
 }
-
+.huly-sidebar-item:hover {
+  color: rgb(var(--text-primary));
+  background: rgba(var(--color-secondary), 0.08);
+}
 .huly-sidebar-item.active {
-  @apply text-white bg-accent/10 border border-accent/20;
+  color: rgb(var(--text-primary));
+  background: rgb(var(--color-accent) / 0.1);
+  border: 1px solid rgb(var(--color-accent) / 0.2);
 }
 
+/* ─── Buttons ─── */
 .form-input {
-  @apply w-full px-3 py-2 rounded-lg bg-white/5 border border-glass-border text-white text-sm placeholder-secondary/50 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-colors;
+  @apply w-full px-3 py-2 rounded-lg text-sm transition-colors;
+  background: rgb(var(--color-fg) / 0.5);
+  border: 1px solid var(--color-glass-border);
+  color: rgb(var(--text-primary));
+}
+.form-input::placeholder {
+  color: rgb(var(--color-secondary) / 0.5);
+}
+.form-input:focus {
+  outline: none;
+  border-color: rgb(var(--color-accent) / 0.5);
+  box-shadow: 0 0 0 1px rgb(var(--color-accent) / 0.3);
 }
 
 .btn-primary {
-  @apply px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  background: rgb(var(--color-accent));
+}
+.btn-primary:hover {
+  background: rgb(var(--color-accent) / 0.8);
 }
 
 .btn-secondary {
-  @apply px-4 py-2 rounded-lg bg-white/5 border border-glass-border text-secondary text-sm font-medium hover:bg-white/10 hover:text-white transition-colors;
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+  background: rgb(var(--color-fg) / 0.3);
+  border: 1px solid var(--color-glass-border);
+  color: rgb(var(--color-secondary));
+}
+.btn-secondary:hover {
+  background: rgb(var(--color-fg) / 0.5);
+  color: rgb(var(--text-primary));
 }
 
 .btn-danger {
-  @apply px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors;
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.3);
 }
 
 .bulk-btn {
-  @apply px-3 py-1 rounded-lg bg-white/10 text-white text-xs font-medium hover:bg-white/15 transition-colors;
+  @apply px-3 py-1 rounded-lg text-xs font-medium transition-colors;
+  background: rgb(var(--color-fg) / 0.3);
+  color: rgb(var(--text-primary));
+}
+.bulk-btn:hover {
+  background: rgb(var(--color-fg) / 0.5);
 }
 
+/* ─── Animations ─── */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -77,3 +158,53 @@ body {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+/* ─── Light Mode Overrides ─── */
+/* Override text-white to use theme-aware primary text color */
+[data-theme="light"] .text-white {
+  color: rgb(var(--text-primary)) !important;
+}
+[data-theme="light"] .hover\:text-white:hover {
+  color: rgb(var(--text-primary)) !important;
+}
+
+/* Keep white text on accent/colored backgrounds */
+[data-theme="light"] [class*="bg-accent"].text-white,
+[data-theme="light"] [class*="bg-accent"] .text-white,
+[data-theme="light"] [class*="bg-gradient"].text-white,
+[data-theme="light"] [class*="bg-gradient"] .text-white,
+[data-theme="light"] .btn-primary {
+  color: #ffffff !important;
+}
+
+/* Override bg-white opacity variants */
+[data-theme="light"] .bg-white\/3 { background-color: rgba(0,0,0,0.02) !important; }
+[data-theme="light"] .bg-white\/5 { background-color: rgba(0,0,0,0.03) !important; }
+[data-theme="light"] .bg-white\/10 { background-color: rgba(0,0,0,0.05) !important; }
+[data-theme="light"] .bg-white\/15 { background-color: rgba(0,0,0,0.07) !important; }
+[data-theme="light"] .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.03) !important; }
+[data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(0,0,0,0.05) !important; }
+[data-theme="light"] .hover\:bg-white\/15:hover { background-color: rgba(0,0,0,0.07) !important; }
+
+/* Override bg-black opacity variants */
+[data-theme="light"] .bg-black\/20 { background-color: rgba(0,0,0,0.05) !important; }
+[data-theme="light"] .bg-black\/50 { background-color: rgba(0,0,0,0.25) !important; }
+[data-theme="light"] .bg-black\/60 { background-color: rgba(0,0,0,0.3) !important; }
+
+/* Override border-white variants */
+[data-theme="light"] .border-white\/10 { border-color: rgba(0,0,0,0.08) !important; }
+
+/* Light mode prose */
+[data-theme="light"] .prose-invert { --tw-prose-body: rgb(var(--text-primary)); }
+[data-theme="light"] .text-white\/90 { color: rgb(var(--text-primary) / 0.9) !important; }
+[data-theme="light"] .text-secondary\/50 { color: rgb(var(--color-secondary) / 0.5) !important; }
+[data-theme="light"] .text-secondary\/70 { color: rgb(var(--color-secondary) / 0.7) !important; }

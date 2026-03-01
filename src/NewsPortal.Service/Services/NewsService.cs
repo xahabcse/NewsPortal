@@ -22,6 +22,7 @@ public interface INewsService
     Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24);
     Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
     Task<int> GetArticlesCountTodayAsync();
+    Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7);
 }
 
 public class NewsService : INewsService
@@ -118,13 +119,18 @@ public class NewsService : INewsService
 
             var cacheKey = CacheKeys.NewsArticleBySlug(slug);
 
-            var article = await _cache.GetOrSetAsync(cacheKey, async () =>
+            // Cache the DTO (not the entity) to avoid circular reference serialization issues
+            var dto = await _cache.GetOrSetAsync(cacheKey, async () =>
             {
                 _logger.LogDebug("Fetching news article detail from DB for slug: {Slug}", slug);
-                return await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                var article = await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                if (article == null)
+                    return null;
+
+                return MapToDetailDto(article);
             }, CacheDurations.Medium);
 
-            if (article == null)
+            if (dto == null)
             {
                 _logger.LogInformation("News article not found for slug: {Slug}", slug);
                 return null;
@@ -135,20 +141,20 @@ public class NewsService : INewsService
             {
                 try
                 {
-                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(article.Id);
+                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", article.Id);
+                    _logger.LogError(ex, "Failed to increment view count for article {ArticleId}", dto.Id);
                 }
             });
 
-            return MapToDetailDto(article);
+            return dto;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while getting news detail for slug: {Slug}", slug);
-            throw; // Re-throw to let the global error handler handle it, but now we have the log with the slug
+            throw;
         }
     }
 
@@ -179,10 +185,23 @@ public class NewsService : INewsService
             return new PagedResultDto<NewsArticleListDto> { Items = new List<NewsArticleListDto>() };
 
         var articles = await _unitOfWork.NewsArticles.SearchAsync(query.Query, query.Page, query.PageSize);
+        var totalCount = await _unitOfWork.NewsArticles.SearchCountAsync(query.Query);
+
+        // Apply optional filters
+        var filtered = articles.AsEnumerable();
+        if (query.CategoryId.HasValue)
+            filtered = filtered.Where(a => a.CategoryId == query.CategoryId.Value);
+        if (query.SourceId.HasValue)
+            filtered = filtered.Where(a => a.SourceId == query.SourceId.Value);
+        if (query.FromDate.HasValue)
+            filtered = filtered.Where(a => (a.PublishedAt ?? a.FetchedAt) >= query.FromDate.Value);
+        if (query.ToDate.HasValue)
+            filtered = filtered.Where(a => (a.PublishedAt ?? a.FetchedAt) <= query.ToDate.Value);
 
         return new PagedResultDto<NewsArticleListDto>
         {
-            Items = articles.Select(MapToListDto).ToList(),
+            Items = filtered.Select(MapToListDto).ToList(),
+            TotalCount = totalCount,
             Page = query.Page,
             PageSize = query.PageSize
         };
@@ -248,7 +267,7 @@ public class NewsService : INewsService
             Author = normalizedDto.Author,
             PublishedAt = normalizedDto.PublishedAt,
             SourceId = normalizedDto.SourceId,
-            CategoryId = normalizedDto.CategoryId
+            CategoryId = normalizedDto.CategoryId ?? ArticleCategorizer.Categorize(normalizedDto.Title, normalizedDto.Summary, normalizedDto.SourceUrl)
         };
 
         // Download and store image
@@ -399,7 +418,7 @@ public class NewsService : INewsService
                     Author = dto.Author,
                     PublishedAt = dto.PublishedAt,
                     SourceId = dto.SourceId,
-                    CategoryId = dto.CategoryId
+                    CategoryId = dto.CategoryId ?? ArticleCategorizer.Categorize(dto.Title, dto.Summary, dto.SourceUrl)
                 };
 
                 if (!string.IsNullOrEmpty(dto.OriginalImageUrl))
@@ -453,6 +472,72 @@ public class NewsService : INewsService
         }
     }
 
+    public async Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7)
+    {
+        var cacheKey = $"{CacheKeys.DailyHighlights}:{days}";
+
+        return await _cache.GetOrSetAsync(cacheKey, async () =>
+        {
+            var categoryIds = new[] { 1, 2 }; // National, International
+            var allCandidates = await _unitOfWork.NewsArticles
+                .GetTopArticlePerCategoryPerDayAsync(categoryIds, days);
+
+            // Group candidates by date + category, sorted by rank (ViewCount desc, PublishedAt desc)
+            var grouped = allCandidates
+                .GroupBy(a => new
+                {
+                    Date = (a.PublishedAt ?? a.FetchedAt).Date,
+                    CategoryId = a.CategoryId!.Value
+                })
+                .OrderByDescending(g => g.Key.Date)
+                .ThenBy(g => g.Key.CategoryId);
+
+            // Track already-used titles for deduplication across all days
+            var usedTitles = new List<string>();
+            var selectedArticles = new List<(DateTime Date, NewsArticle Article)>();
+
+            foreach (var group in grouped)
+            {
+                // Pick the first article in this group that is NOT similar to any already-used title
+                var picked = group.FirstOrDefault(a =>
+                    !TitleSimilarityHelper.FindNearDuplicates(a.Title, usedTitles, 0.7).Any());
+
+                if (picked != null)
+                {
+                    usedTitles.Add(picked.Title);
+                    selectedArticles.Add((group.Key.Date, picked));
+                }
+            }
+
+            return selectedArticles
+                .GroupBy(x => x.Date)
+                .OrderByDescending(g => g.Key)
+                .Select(g => new DailyHighlightDto
+                {
+                    Date = g.Key,
+                    Highlights = g.Select(x => new CategoryHighlightDto
+                    {
+                        CategoryId = x.Article.CategoryId!.Value,
+                        CategoryName = x.Article.Category?.Name ?? "Unknown",
+                        CategoryNameBn = x.Article.Category?.NameBn ?? "",
+                        CategorySlug = x.Article.Category?.Slug ?? "",
+                        CategoryIcon = x.Article.Category?.Icon,
+                        CategoryColor = x.Article.Category?.Color,
+                        ArticleId = x.Article.Id,
+                        Title = x.Article.Title,
+                        Slug = x.Article.Slug,
+                        Summary = x.Article.Summary,
+                        SourceName = x.Article.Source?.Name ?? "Unknown Source",
+                        PublishedAt = x.Article.PublishedAt,
+                        ViewCount = x.Article.ViewCount
+                    })
+                    .OrderBy(h => h.CategoryId)
+                    .ToList()
+                })
+                .ToList();
+        }, CacheDurations.Medium);
+    }
+
     private async Task<string> GenerateUniqueSlugAsync(string title, HashSet<string>? reservedSlugs = null)
     {
         var baseSlug = SlugHelper.GenerateSlug(title);
@@ -502,6 +587,7 @@ public class NewsService : INewsService
             Slug = article.Slug,
             Summary = article.Summary ?? "No summary available",
             ThumbnailUrl = thumbnailUrl,
+            SourceUrl = article.SourceUrl,
             PublishedAt = article.PublishedAt,
             SourceName = article.Source?.Name ?? "Unknown Source",
             CategoryName = article.Category?.Name

@@ -95,7 +95,7 @@
     "profile": {
         "title": "আমার প্রোফাইল",
         "subtitle": "আপনার অ্যাকাউন্ট সেটিংস পরিচালনা করুন",
-        "memberSince": "সদস্য sejak",
+        "memberSince": "সদস্য হয়েছেন",
         "changePassword": "পাসওয়ার্ড পরিবর্তন করুন",
         "currentPassword": "বর্তমান পাসওয়ার্ড",
         "newPassword": "নতুন পাসওয়ার্ড",

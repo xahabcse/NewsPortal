@@ -21,7 +21,7 @@ const CategoriesPage = () => {
     });
     const [submitting, setSubmitting] = useState(false);
 
-    const isAdmin = role === 'Admin';
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
 
     useEffect(() => {
         if (isAdmin) {

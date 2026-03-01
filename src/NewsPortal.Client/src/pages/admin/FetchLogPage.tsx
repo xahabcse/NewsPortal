@@ -53,9 +53,11 @@ const FetchLogPage = () => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Completed': return 'text-green-400 bg-green-500/10 border-green-500/20';
+            case 'Succeeded': return 'text-green-400 bg-green-500/10 border-green-500/20';
             case 'Failed': return 'text-red-400 bg-red-500/10 border-red-500/20';
             case 'Running': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+            case 'Partial': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+            case 'Queued': return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
             default: return 'text-secondary bg-white/5 border-glass-border';
         }
     };
@@ -84,9 +86,11 @@ const FetchLogPage = () => {
                                 className="bg-white/5 border border-glass-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/50"
                             >
                                 <option value="all">All Status</option>
-                                <option value="Completed">Completed</option>
+                                <option value="Succeeded">Succeeded</option>
                                 <option value="Failed">Failed</option>
                                 <option value="Running">Running</option>
+                                <option value="Partial">Partial</option>
+                                <option value="Queued">Queued</option>
                             </select>
                         </div>
                     </div>

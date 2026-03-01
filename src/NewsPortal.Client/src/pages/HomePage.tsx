@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
+import ArticlePopup from '../components/ArticlePopup'
 import SkeletonCard from '../components/SkeletonCard'
 import { newsApi, type NewsArticle } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
+import { getNotificationPrefs } from '../components/NotificationPreferences'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
@@ -20,6 +22,11 @@ const HomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const observerTarget = useRef<HTMLDivElement>(null)
+  const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null)
+  const [feedMode, setFeedMode] = useState<'all' | 'foryou'>('all')
+
+  // Get user's preferred category slugs from notification preferences
+  const userCategorySlugs = getNotificationPrefs().categories
 
   const handlePremiumClick = () => {
     toast(
@@ -128,27 +135,43 @@ const HomePage = () => {
                 {loading ? (
                   'Loading latest headlines...'
                 ) : (
-                  <>
-                    Stay updated with <span className="text-accent font-semibold">{totalCount}</span> latest headlines.
-                  </>
+                  feedMode === 'foryou' ? (
+                    <>Your personalized feed from <span className="text-accent font-semibold">{userCategorySlugs.length}</span> preferred categories</>
+                  ) : (
+                    <>Stay updated with <span className="text-accent font-semibold">{totalCount}</span> latest headlines.</>
+                  )
                 )}
               </p>
             </div>
           </div>
 
-          {/* Source Filter Chips */}
+          {/* Feed Mode + Source Filter Chips */}
           {(loading || sources.length > 0) && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {!loading && (
-                <button
-                  onClick={() => setSelectedSource(null)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${selectedSource === null
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
-                    }`}
-                >
-                  All Sources
-                </button>
+                <>
+                  <button
+                    onClick={() => { setFeedMode('all'); setSelectedSource(null); }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${feedMode === 'all' && selectedSource === null
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                        : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+                      }`}
+                  >
+                    All News
+                  </button>
+                  {userCategorySlugs.length > 0 && (
+                    <button
+                      onClick={() => { setFeedMode('foryou'); setSelectedSource(null); }}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${feedMode === 'foryou'
+                          ? 'bg-accent/20 text-accent border border-accent/30'
+                          : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
+                        }`}
+                    >
+                      For You
+                    </button>
+                  )}
+                  <span className="w-px h-5 bg-glass-border mx-1"></span>
+                </>
               )}
 
               {loading ? (
@@ -159,7 +182,7 @@ const HomePage = () => {
                 sources.map(source => (
                   <button
                     key={source.id}
-                    onClick={() => setSelectedSource(source.id)}
+                    onClick={() => { setFeedMode('all'); setSelectedSource(source.id); }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${selectedSource === source.id
                         ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                         : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'
@@ -209,18 +232,33 @@ const HomePage = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {news.map(item => (
-                <NewsCard
-                  key={item.id}
-                  title={item.title}
-                  summary={item.summary}
-                  categoryName={item.categoryName}
-                  sourceName={item.sourceName}
-                  publishedAt={item.publishedAt}
-                  thumbnailUrl={item.thumbnailUrl}
-                  slug={item.slug}
-                />
-              ))}
+              {(() => {
+                const displayNews = feedMode === 'foryou' && userCategorySlugs.length > 0
+                  ? news.filter(item => {
+                      const slug = (item.categoryName || '').toLowerCase().replace(/\s+/g, '-');
+                      return userCategorySlugs.includes(slug);
+                    })
+                  : news;
+                return displayNews.length > 0 ? displayNews.map(item => (
+                  <NewsCard
+                    key={item.id}
+                    title={item.title}
+                    summary={item.summary}
+                    categoryName={item.categoryName}
+                    sourceName={item.sourceName}
+                    publishedAt={item.publishedAt}
+                    thumbnailUrl={item.thumbnailUrl}
+                    slug={item.slug}
+                    sourceUrl={item.sourceUrl}
+                    onCardClick={() => setPopupArticle(item)}
+                  />
+                )) : feedMode === 'foryou' ? (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-secondary text-sm">No articles match your preferred categories.</p>
+                    <p className="text-xs text-secondary/60 mt-1">Update your notification preferences to customize your feed.</p>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             {/* Infinite Scroll Trigger */}
@@ -265,6 +303,23 @@ const HomePage = () => {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
         </div>
       </main>
+
+      {/* Article Popup */}
+      {popupArticle && (
+        <ArticlePopup
+          isOpen={!!popupArticle}
+          onClose={() => setPopupArticle(null)}
+          title={popupArticle.title}
+          summary={popupArticle.summary}
+          categoryName={popupArticle.categoryName}
+          sourceName={popupArticle.sourceName}
+          publishedAt={popupArticle.publishedAt}
+          thumbnailUrl={popupArticle.thumbnailUrl}
+          sourceUrl={popupArticle.sourceUrl}
+          slug={popupArticle.slug}
+          articleId={popupArticle.id}
+        />
+      )}
     </>
   )
 }

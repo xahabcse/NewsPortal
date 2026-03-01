@@ -7,12 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#0c0d0e",
-        foreground: "#161718",
-        accent: "#6366f1",
-        secondary: "#94a3b8",
-        glass: "rgba(255, 255, 255, 0.03)",
-        "glass-border": "rgba(255, 255, 255, 0.08)",
+        background: "rgb(var(--color-bg) / <alpha-value>)",
+        foreground: "rgb(var(--color-fg) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
+        secondary: "rgb(var(--color-secondary) / <alpha-value>)",
+        glass: "var(--color-glass)",
+        "glass-border": "var(--color-glass-border)",
+        "glass-surface": "var(--color-glass-surface)",
       },
       backdropBlur: {
         xs: "2px",
