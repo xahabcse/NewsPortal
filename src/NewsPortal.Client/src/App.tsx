@@ -21,6 +21,7 @@ import CategoriesPage from './pages/admin/CategoriesPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
 import ArticleManagementPage from './pages/admin/ArticleManagementPage'
 import ContentAnalyticsPage from './pages/admin/ContentAnalyticsPage'
+import TimelinePage from './pages/TimelinePage'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import BackToTop from './components/BackToTop'
@@ -54,6 +55,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/search" element={<SearchResultsPage />} />
+                    <Route path="/timeline" element={<TimelinePage />} />
                     <Route path="/trending" element={<TrendingPage />} />
                     <Route path="/bookmarks" element={<BookmarksPage />} />
                     <Route path="/news-sources" element={<NewsSourcesPage />} />

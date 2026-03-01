@@ -20,6 +20,14 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     const [categories, setCategories] = useState<Category[]>([])
     const [showAllCategories, setShowAllCategories] = useState(false)
 
+    // Auto-close sidebar on navigation (mobile)
+    useEffect(() => {
+        if (isOpen && onClose) {
+            onClose();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname]);
+
     const isActive = (path: string) => {
         return location.pathname === path ? 'active' : ''
     }
@@ -69,7 +77,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     return (
         <>
             {/* Mobile overlay */}
-            {!isOpen && (
+            {isOpen && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
                     onClick={onClose}
@@ -116,6 +124,12 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Main Menu</div>
                     <Link to="/" className={`huly-sidebar-item ${isActive('/')}`}>
                         <span>Home</span>
+                    </Link>
+                    <Link to="/timeline" className={`huly-sidebar-item ${isActive('/timeline')}`}>
+                        <div className="flex flex-col">
+                            <span>Daily Timeline</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Day-wise highlights</span>
+                        </div>
                     </Link>
                     <Link to="/trending" className={`huly-sidebar-item ${isActive('/trending')}`}>
                         <div className="flex flex-col">
