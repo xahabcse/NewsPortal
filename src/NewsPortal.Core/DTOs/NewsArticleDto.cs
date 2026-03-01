@@ -44,3 +44,26 @@ public class CreateNewsArticleDto
     public int SourceId { get; set; }
     public int? CategoryId { get; set; }
 }
+
+public class DailyHighlightDto
+{
+    public DateTime Date { get; set; }
+    public List<CategoryHighlightDto> Highlights { get; set; } = new();
+}
+
+public class CategoryHighlightDto
+{
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public string CategoryNameBn { get; set; } = string.Empty;
+    public string CategorySlug { get; set; } = string.Empty;
+    public string? CategoryIcon { get; set; }
+    public string? CategoryColor { get; set; }
+    public int ArticleId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string? Summary { get; set; }
+    public string SourceName { get; set; } = string.Empty;
+    public DateTime? PublishedAt { get; set; }
+    public int ViewCount { get; set; }
+}

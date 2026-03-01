@@ -127,6 +127,14 @@ public class NewsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("daily-highlights")]
+    public async Task<IActionResult> GetDailyHighlights(
+        [FromQuery][Range(1, 30)] int days = 7)
+    {
+        var result = await _newsService.GetDailyHighlightsAsync(days);
+        return Ok(result);
+    }
+
     [HttpGet("stats/today")]
     public async Task<IActionResult> GetTodayStats()
     {

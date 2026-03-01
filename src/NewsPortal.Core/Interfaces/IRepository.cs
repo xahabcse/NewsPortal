@@ -31,6 +31,7 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
     Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
+    Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days);
 }
 
 public interface ICategoryRepository : IRepository<Category>

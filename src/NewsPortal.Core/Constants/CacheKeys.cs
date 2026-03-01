@@ -14,6 +14,7 @@ public static class CacheKeys
     public static string NewsArticleBySlug(string slug) => $"news:article:slug:{slug}";
     public static string SearchResults(string query) => $"search:{query.ToLowerInvariant()}";
     public static string CategoryBySlug(string slug) => $"category:slug:{slug}";
+    public const string DailyHighlights = "news:daily-highlights";
 }
 
 public static class CacheDurations

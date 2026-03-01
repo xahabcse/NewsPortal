@@ -22,6 +22,7 @@ public interface INewsService
     Task<IEnumerable<NewsArticleListDto>> GetTrendingNewsAsync(int count, int hours = 24);
     Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
     Task<int> GetArticlesCountTodayAsync();
+    Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7);
 }
 
 public class NewsService : INewsService
@@ -469,6 +470,72 @@ public class NewsService : INewsService
             await _unitOfWork.RollbackTransactionAsync();
             throw;
         }
+    }
+
+    public async Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7)
+    {
+        var cacheKey = $"{CacheKeys.DailyHighlights}:{days}";
+
+        return await _cache.GetOrSetAsync(cacheKey, async () =>
+        {
+            var categoryIds = new[] { 1, 2 }; // National, International
+            var allCandidates = await _unitOfWork.NewsArticles
+                .GetTopArticlePerCategoryPerDayAsync(categoryIds, days);
+
+            // Group candidates by date + category, sorted by rank (ViewCount desc, PublishedAt desc)
+            var grouped = allCandidates
+                .GroupBy(a => new
+                {
+                    Date = (a.PublishedAt ?? a.FetchedAt).Date,
+                    CategoryId = a.CategoryId!.Value
+                })
+                .OrderByDescending(g => g.Key.Date)
+                .ThenBy(g => g.Key.CategoryId);
+
+            // Track already-used titles for deduplication across all days
+            var usedTitles = new List<string>();
+            var selectedArticles = new List<(DateTime Date, NewsArticle Article)>();
+
+            foreach (var group in grouped)
+            {
+                // Pick the first article in this group that is NOT similar to any already-used title
+                var picked = group.FirstOrDefault(a =>
+                    !TitleSimilarityHelper.FindNearDuplicates(a.Title, usedTitles, 0.7).Any());
+
+                if (picked != null)
+                {
+                    usedTitles.Add(picked.Title);
+                    selectedArticles.Add((group.Key.Date, picked));
+                }
+            }
+
+            return selectedArticles
+                .GroupBy(x => x.Date)
+                .OrderByDescending(g => g.Key)
+                .Select(g => new DailyHighlightDto
+                {
+                    Date = g.Key,
+                    Highlights = g.Select(x => new CategoryHighlightDto
+                    {
+                        CategoryId = x.Article.CategoryId!.Value,
+                        CategoryName = x.Article.Category?.Name ?? "Unknown",
+                        CategoryNameBn = x.Article.Category?.NameBn ?? "",
+                        CategorySlug = x.Article.Category?.Slug ?? "",
+                        CategoryIcon = x.Article.Category?.Icon,
+                        CategoryColor = x.Article.Category?.Color,
+                        ArticleId = x.Article.Id,
+                        Title = x.Article.Title,
+                        Slug = x.Article.Slug,
+                        Summary = x.Article.Summary,
+                        SourceName = x.Article.Source?.Name ?? "Unknown Source",
+                        PublishedAt = x.Article.PublishedAt,
+                        ViewCount = x.Article.ViewCount
+                    })
+                    .OrderBy(h => h.CategoryId)
+                    .ToList()
+                })
+                .ToList();
+        }, CacheDurations.Medium);
     }
 
     private async Task<string> GenerateUniqueSlugAsync(string title, HashSet<string>? reservedSlugs = null)

@@ -7,6 +7,7 @@ import { newsApi, type NewsArticle } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
 import { getNotificationPrefs } from '../components/NotificationPreferences'
+import DailyTimeline from '../components/DailyTimeline'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
@@ -195,6 +196,9 @@ const HomePage = () => {
             </div>
           )}
         </div>
+
+        {/* Daily News Timeline */}
+        <DailyTimeline />
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
