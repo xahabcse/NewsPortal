@@ -132,6 +132,45 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
+    public async Task<(IEnumerable<NewsArticle> Items, int Total)> GetFilteredAsync(NewsPortal.Core.DTOs.NewsFilterQuery filter)
+    {
+        var query = _dbSet
+            .Include(x => x.Source)
+            .Include(x => x.Category)
+            .Where(x => x.IsActive)
+            .AsQueryable();
+
+        if (filter.SourceIds.Length > 0)
+            query = query.Where(x => filter.SourceIds.Contains(x.SourceId));
+
+        if (filter.CategoryIds.Length > 0)
+            query = query.Where(x => x.CategoryId.HasValue && filter.CategoryIds.Contains(x.CategoryId.Value));
+
+        if (filter.DateFrom.HasValue)
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) >= filter.DateFrom.Value);
+
+        if (filter.DateTo.HasValue)
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) < filter.DateTo.Value.AddDays(1));
+
+        if (filter.HasThumbnail)
+            query = query.Where(x => x.OriginalImageUrl != null && x.OriginalImageUrl != "");
+
+        query = filter.SortBy switch
+        {
+            "oldest"    => query.OrderBy(x => x.PublishedAt ?? x.FetchedAt),
+            "mostviewed" => query.OrderByDescending(x => x.ViewCount).ThenByDescending(x => x.PublishedAt ?? x.FetchedAt),
+            _           => query.OrderByDescending(x => x.PublishedAt ?? x.FetchedAt)
+        };
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
     public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int days)
     {
         var since = DateTime.UtcNow.Date.AddDays(-(days - 1));

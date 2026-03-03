@@ -36,6 +36,17 @@ export interface PagedResult<T> {
     hasPreviousPage: boolean;
 }
 
+export interface NewsFilterParams {
+    sourceIds?: number[];
+    categoryIds?: number[];
+    dateFrom?: string;   // YYYY-MM-DD
+    dateTo?: string;     // YYYY-MM-DD
+    sortBy?: 'newest' | 'oldest' | 'mostviewed';
+    hasThumbnail?: boolean;
+    page?: number;
+    pageSize?: number;
+}
+
 export interface Category {
     id: number;
     name: string;
@@ -119,6 +130,24 @@ export const newsApi = {
         if (!response.ok) {
             const body = await response.text().catch(() => 'No body');
             throw new Error(`Failed to fetch daily highlights. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+        }
+        return response.json();
+    },
+
+    getFilteredNews: async (params: NewsFilterParams): Promise<PagedResult<NewsArticle>> => {
+        const qs = new URLSearchParams();
+        if (params.sourceIds?.length)    params.sourceIds.forEach(id => qs.append('sourceIds', String(id)));
+        if (params.categoryIds?.length)  params.categoryIds.forEach(id => qs.append('categoryIds', String(id)));
+        if (params.dateFrom)             qs.set('dateFrom', params.dateFrom);
+        if (params.dateTo)               qs.set('dateTo', params.dateTo);
+        if (params.sortBy)               qs.set('sortBy', params.sortBy);
+        if (params.hasThumbnail)         qs.set('hasThumbnail', 'true');
+        if (params.page)                 qs.set('page', String(params.page));
+        if (params.pageSize)             qs.set('pageSize', String(params.pageSize));
+        const response = await fetch(`${API_BASE_URL}/news/filter?${qs.toString()}`);
+        if (!response.ok) {
+            const body = await response.text().catch(() => 'No body');
+            throw new Error(`Failed to fetch filtered news. Status: ${response.status} ${response.statusText}. Body: ${body}`);
         }
         return response.json();
     }

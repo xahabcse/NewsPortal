@@ -23,6 +23,7 @@ public interface INewsService
     Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
     Task<int> GetArticlesCountTodayAsync();
     Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7);
+    Task<PagedResultDto<NewsArticleListDto>> GetFilteredNewsAsync(NewsFilterQuery filter);
 }
 
 public class NewsService : INewsService
@@ -470,6 +471,19 @@ public class NewsService : INewsService
             await _unitOfWork.RollbackTransactionAsync();
             throw;
         }
+    }
+
+    public async Task<PagedResultDto<NewsArticleListDto>> GetFilteredNewsAsync(NewsFilterQuery filter)
+    {
+        var (articles, total) = await _unitOfWork.NewsArticles.GetFilteredAsync(filter);
+
+        return new PagedResultDto<NewsArticleListDto>
+        {
+            Items = articles.Select(MapToListDto).ToList(),
+            TotalCount = total,
+            Page = filter.Page,
+            PageSize = filter.PageSize
+        };
     }
 
     public async Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7)

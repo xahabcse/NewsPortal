@@ -32,6 +32,7 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
     Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
     Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int days);
+    Task<(IEnumerable<NewsArticle> Items, int Total)> GetFilteredAsync(NewsPortal.Core.DTOs.NewsFilterQuery filter);
 }
 
 public interface ICategoryRepository : IRepository<Category>
