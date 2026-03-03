@@ -86,40 +86,57 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // Seed Super Admin User (created on first application run)
+        // Seed one user per role (created on first application run)
         if (!await context.Users.AnyAsync())
         {
-            // Create Super Admin
-            var superAdminUser = new User
+            var seedUsers = new List<User>
             {
-                Username = "superadmin",
-                Email = "superadmin@newsportal.com",
-                PasswordHash = PasswordHelper.HashPassword("superadmin"),
-                FirstName = "Super",
-                LastName = "Admin",
-                Role = UserRole.SuperAdmin,
-                IsActive = true
+                new() {
+                    Username = "superadmin",
+                    Email = "superadmin@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("superadmin"),
+                    FirstName = "Super",
+                    LastName = "Admin",
+                    Role = UserRole.SuperAdmin,
+                    IsActive = true
+                },
+                new() {
+                    Username = "admin",
+                    Email = "admin@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("admin1"),
+                    FirstName = "System",
+                    LastName = "Admin",
+                    Role = UserRole.Admin,
+                    IsActive = true
+                },
+                new() {
+                    Username = "editor",
+                    Email = "editor@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("editor"),
+                    FirstName = "News",
+                    LastName = "Editor",
+                    Role = UserRole.Editor,
+                    IsActive = true
+                },
+                new() {
+                    Username = "reader",
+                    Email = "reader@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("reader"),
+                    FirstName = "Regular",
+                    LastName = "Reader",
+                    Role = UserRole.Reader,
+                    IsActive = true
+                },
             };
 
-            // Create default Admin
-            var adminUser = new User
-            {
-                Username = "admin",
-                Email = "admin@newsportal.com",
-                PasswordHash = PasswordHelper.HashPassword("Admin@123"),
-                FirstName = "System",
-                LastName = "Admin",
-                Role = UserRole.Admin,
-                IsActive = true
-            };
-
-            await context.Users.AddAsync(superAdminUser);
-            await context.Users.AddAsync(adminUser);
+            await context.Users.AddRangeAsync(seedUsers);
             await context.SaveChangesAsync();
-            
+
             Console.WriteLine("=== Default users created ===");
-            Console.WriteLine("Super Admin: username=superadmin, password=superadmin");
-            Console.WriteLine("Admin: username=admin, password=Admin@123");
+            Console.WriteLine("SuperAdmin : username=superadmin  password=superadmin");
+            Console.WriteLine("Admin      : username=admin        password=admin1");
+            Console.WriteLine("Editor     : username=editor       password=editor");
+            Console.WriteLine("Reader     : username=reader       password=reader");
         }
     }
 }
