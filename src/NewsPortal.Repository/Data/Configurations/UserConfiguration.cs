@@ -35,7 +35,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Role)
             .IsRequired()
             .HasMaxLength(20)
-            .HasDefaultValue(UserRole.Viewer);
+            .HasDefaultValue(UserRole.Reader);
 
         builder.Property(x => x.IsActive)
             .HasDefaultValue(true);

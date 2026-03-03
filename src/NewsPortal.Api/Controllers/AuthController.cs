@@ -119,6 +119,25 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Sign in (or auto-register) with a Google ID token
+    /// </summary>
+    [HttpPost("google")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _authService.GoogleLoginAsync(dto.Credential);
+
+        if (result == null)
+            return Unauthorized(new { message = "Google authentication failed" });
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Validate JWT token (for client-side checks)
     /// </summary>
     [Authorize]

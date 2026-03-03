@@ -3,11 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import SEO from '../components/SEO';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login } = useAuth();
+    const { isAuthenticated, login, googleLogin } = useAuth();
 
     const params = new URLSearchParams(location.search);
     const justRegistered = params.get('registered') === 'true';
@@ -15,6 +16,12 @@ const LoginPage = () => {
         const r = params.get('redirect') || '/';
         return r.startsWith('/') ? r : '/';
     })();
+
+    // Already logged in — redirect immediately
+    if (isAuthenticated) {
+        navigate(redirectTo, { replace: true });
+        return null;
+    }
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -49,6 +56,19 @@ const LoginPage = () => {
             } else {
                 setError('Login failed. Please try again.');
             }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleGoogleCredential = async (credential: string) => {
+        setError('');
+        setSubmitting(true);
+        try {
+            await googleLogin(credential);
+            navigate(redirectTo, { replace: true });
+        } catch {
+            setError('Google sign-in failed. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -138,6 +158,12 @@ const LoginPage = () => {
                                 {submitting ? 'Signing in…' : 'Sign In'}
                             </button>
                         </form>
+
+                        {/* Google sign-in */}
+                        <div className="mt-4 pt-4 border-t border-glass-border">
+                            <p className="text-xs text-secondary text-center mb-3">Or continue with</p>
+                            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
+                        </div>
 
                         {/* Register link */}
                         <div className="mt-6 text-center">

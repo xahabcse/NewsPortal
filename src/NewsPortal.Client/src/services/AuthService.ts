@@ -35,6 +35,11 @@ export const AuthService = {
         return response.data;
     },
 
+    googleLogin: async (credential: string): Promise<AuthSession> => {
+        const response = await axios.post<AuthSession>(`${API_URL}/auth/google`, { credential });
+        return response.data;
+    },
+
     validateToken: async (token: string): Promise<boolean> => {
         try {
             await axios.get(`${API_URL}/auth/validate`, {
