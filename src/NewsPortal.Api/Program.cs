@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
@@ -144,6 +146,34 @@ builder.Services.AddSwaggerGen(options =>
 // News fetching now handled exclusively by Hangfire recurring job in McpServer (every 15 min)
 // builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
 
+// Rate limiting — 10 login attempts per minute per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("LoginPolicy", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+            }
+        )
+    );
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Too many login attempts. Please wait a moment and try again.\"}",
+            token
+        );
+    };
+});
+
 // Enable CORS with restricted methods and headers
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
 builder.Services.AddCors(options =>
@@ -220,6 +250,7 @@ app.UseSerilogRequestLogging();
 // Add Prometheus metrics
 app.UseHttpMetrics();
 
+app.UseRateLimiter();
 app.UseCors("NewsPortalPolicy");
 
 // Add authentication and authorization middleware

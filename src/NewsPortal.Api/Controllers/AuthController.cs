@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Interfaces;
 using System.Security.Claims;
@@ -25,6 +26,7 @@ public class AuthController : ControllerBase
     /// Login with username and password
     /// </summary>
     [HttpPost("login")]
+    [EnableRateLimiting("LoginPolicy")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
