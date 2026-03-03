@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NewsPortal.Service.Services;
+using NewsPortal.Core.Constants;
 using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
 using NewsPortal.Core.Interfaces;
@@ -23,6 +24,7 @@ public class NewsFetchJob : INewsFetchJob
     private readonly INewsService _newsService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly INewsFetchLogRepository _fetchLogRepository;
+    private readonly ICacheService _cache;
     private readonly ILogger<NewsFetchJob> _logger;
 
     public NewsFetchJob(
@@ -31,6 +33,7 @@ public class NewsFetchJob : INewsFetchJob
         INewsService newsService,
         IUnitOfWork unitOfWork,
         INewsFetchLogRepository fetchLogRepository,
+        ICacheService cache,
         ILogger<NewsFetchJob> logger)
     {
         _sourceService = sourceService;
@@ -38,6 +41,7 @@ public class NewsFetchJob : INewsFetchJob
         _newsService = newsService;
         _unitOfWork = unitOfWork;
         _fetchLogRepository = fetchLogRepository;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -187,7 +191,8 @@ public class NewsFetchJob : INewsFetchJob
 
                 await _unitOfWork.NewsSources.UpdateAsync(source);
                 await _unitOfWork.SaveChangesAsync();
-                
+                await _cache.RemoveAsync(CacheKeys.ActiveSources);
+
                 AppMetrics.McpFetchesTotal.Inc();
 
                 _logger.LogInformation(
@@ -249,6 +254,7 @@ public class NewsFetchJob : INewsFetchJob
 
         await _unitOfWork.NewsSources.UpdateAsync(source);
         await _unitOfWork.SaveChangesAsync();
+        await _cache.RemoveAsync(CacheKeys.ActiveSources);
 
         _logger.LogError(finalError, "Failed to fetch news from source: {SourceName}", source.Name);
     }

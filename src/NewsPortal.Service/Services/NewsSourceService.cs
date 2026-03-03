@@ -9,6 +9,7 @@ namespace NewsPortal.Service.Services;
 public interface INewsSourceService
 {
     Task<IEnumerable<NewsSourceDto>> GetAllSourcesAsync();
+    Task<IEnumerable<NewsSourceDto>> GetAllSourcesIncludingDisabledAsync();
     Task<NewsSourceDto?> GetSourceBySlugAsync(string slug);
     Task<NewsSource> CreateSourceAsync(CreateNewsSourceDto dto);
     Task UpdateSourceAsync(int id, CreateNewsSourceDto dto);
@@ -64,6 +65,38 @@ public class NewsSourceService : INewsSourceService
 
             return result;
         }, CacheDurations.Long);
+    }
+
+    public async Task<IEnumerable<NewsSourceDto>> GetAllSourcesIncludingDisabledAsync()
+    {
+        var sources = await _unitOfWork.NewsSources.GetAllSourcesIncludingDisabledAsync();
+        var articleCounts = await _unitOfWork.NewsSources.GetActiveSourcesWithArticleCountsAsync();
+
+        return sources.Select(source => new NewsSourceDto
+        {
+            Id = source.Id,
+            Name = source.Name,
+            Slug = source.Slug,
+            BaseUrl = source.BaseUrl,
+            LogoUrl = source.LogoUrl,
+            FetchMethod = source.FetchMethod,
+            RssFeedUrl = source.RssFeedUrl,
+            ApiEndpoint = source.ApiEndpoint,
+            ApiKey = source.ApiKey,
+            FetchIntervalMinutes = source.FetchIntervalMinutes > 0 ? source.FetchIntervalMinutes : 30,
+            IsActive = source.IsActive,
+            LastFetchedAt = source.LastFetchedAt,
+            HealthStatus = source.HealthStatus,
+            ConsecutiveFailures = source.ConsecutiveFailures,
+            LastSuccessAt = source.LastSuccessAt,
+            LastFailureAt = source.LastFailureAt,
+            LastErrorCode = source.LastErrorCode,
+            NextRetryAt = source.NextRetryAt,
+            RequestTimeoutSeconds = source.RequestTimeoutSeconds > 0 ? source.RequestTimeoutSeconds : 90,
+            MaxRetryAttempts = source.MaxRetryAttempts > 0 ? source.MaxRetryAttempts : 3,
+            CircuitBreakerThreshold = source.CircuitBreakerThreshold > 0 ? source.CircuitBreakerThreshold : 5,
+            ArticleCount = articleCounts.GetValueOrDefault(source.Id, 0)
+        }).ToList();
     }
 
     public async Task<NewsSourceDto?> GetSourceBySlugAsync(string slug)

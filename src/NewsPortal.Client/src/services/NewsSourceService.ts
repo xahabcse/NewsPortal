@@ -36,7 +36,8 @@ const getAuthHeaders = () => {
 
 export const NewsSourceService = {
     getAll: async (): Promise<NewsSource[]> => {
-        const response = await axios.get<NewsSource[]>(`${API_URL}/newssources`);
+        // Use admin endpoint to include disabled sources in management view
+        const response = await axios.get<NewsSource[]>(`${API_URL}/newssources/all`, { headers: getAuthHeaders() });
         return response.data;
     },
 

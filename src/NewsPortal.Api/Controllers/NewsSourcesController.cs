@@ -50,6 +50,14 @@ public class NewsSourcesController : ControllerBase
         return Ok(sources);
     }
 
+    [Authorize(Roles = "Admin,Editor,SuperAdmin")]
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllIncludingDisabled()
+    {
+        var sources = await _sourceService.GetAllSourcesIncludingDisabledAsync();
+        return Ok(sources);
+    }
+
     [HttpGet("{slug}")]
     public async Task<IActionResult> GetBySlug(string slug)
     {
