@@ -478,63 +478,73 @@ public class NewsService : INewsService
 
         return await _cache.GetOrSetAsync(cacheKey, async () =>
         {
-            var categoryIds = new[] { 1, 2 }; // National, International
+            // Fetch all categorized articles across ALL categories for the last N days
             var allCandidates = await _unitOfWork.NewsArticles
-                .GetTopArticlePerCategoryPerDayAsync(categoryIds, days);
+                .GetTopArticlePerCategoryPerDayAsync(days);
 
-            // Group candidates by date + category, sorted by rank (ViewCount desc, PublishedAt desc)
-            var grouped = allCandidates
-                .GroupBy(a => new
-                {
-                    Date = (a.PublishedAt ?? a.FetchedAt).Date,
-                    CategoryId = a.CategoryId!.Value
-                })
-                .OrderByDescending(g => g.Key.Date)
-                .ThenBy(g => g.Key.CategoryId);
+            const int maxPerCategoryPerDay = 3;
 
-            // Track already-used titles for deduplication across all days
-            var usedTitles = new List<string>();
-            var selectedArticles = new List<(DateTime Date, NewsArticle Article)>();
+            // Group by date, then within each day group by category
+            var byDate = allCandidates
+                .GroupBy(a => (a.PublishedAt ?? a.FetchedAt).Date)
+                .OrderByDescending(g => g.Key);
 
-            foreach (var group in grouped)
+            var result = new List<DailyHighlightDto>();
+
+            foreach (var dayGroup in byDate)
             {
-                // Pick the first article in this group that is NOT similar to any already-used title
-                var picked = group.FirstOrDefault(a =>
-                    !TitleSimilarityHelper.FindNearDuplicates(a.Title, usedTitles, 0.7).Any());
+                // Dedup titles within this day only (reset per day)
+                var usedTitles = new List<string>();
+                var selectedArticles = new List<NewsArticle>();
 
-                if (picked != null)
+                // Group by category within the day, maintain category sort order
+                var byCategory = dayGroup
+                    .GroupBy(a => a.CategoryId!.Value)
+                    .OrderBy(g => g.Key);
+
+                foreach (var catGroup in byCategory)
                 {
-                    usedTitles.Add(picked.Title);
-                    selectedArticles.Add((group.Key.Date, picked));
+                    var picked = 0;
+                    foreach (var article in catGroup)
+                    {
+                        if (picked >= maxPerCategoryPerDay) break;
+                        if (!TitleSimilarityHelper.FindNearDuplicates(article.Title, usedTitles, 0.85).Any())
+                        {
+                            usedTitles.Add(article.Title);
+                            selectedArticles.Add(article);
+                            picked++;
+                        }
+                    }
+                }
+
+                if (selectedArticles.Count > 0)
+                {
+                    result.Add(new DailyHighlightDto
+                    {
+                        Date = dayGroup.Key,
+                        Highlights = selectedArticles.Select(x => new CategoryHighlightDto
+                        {
+                            CategoryId = x.CategoryId!.Value,
+                            CategoryName = x.Category?.Name ?? "Unknown",
+                            CategoryNameBn = x.Category?.NameBn ?? "",
+                            CategorySlug = x.Category?.Slug ?? "",
+                            CategoryIcon = x.Category?.Icon,
+                            CategoryColor = x.Category?.Color,
+                            ArticleId = x.Id,
+                            Title = x.Title,
+                            Slug = x.Slug,
+                            Summary = x.Summary,
+                            SourceName = x.Source?.Name ?? "Unknown Source",
+                            PublishedAt = x.PublishedAt,
+                            ViewCount = x.ViewCount
+                        })
+                        .OrderBy(h => h.CategoryId)
+                        .ToList()
+                    });
                 }
             }
 
-            return selectedArticles
-                .GroupBy(x => x.Date)
-                .OrderByDescending(g => g.Key)
-                .Select(g => new DailyHighlightDto
-                {
-                    Date = g.Key,
-                    Highlights = g.Select(x => new CategoryHighlightDto
-                    {
-                        CategoryId = x.Article.CategoryId!.Value,
-                        CategoryName = x.Article.Category?.Name ?? "Unknown",
-                        CategoryNameBn = x.Article.Category?.NameBn ?? "",
-                        CategorySlug = x.Article.Category?.Slug ?? "",
-                        CategoryIcon = x.Article.Category?.Icon,
-                        CategoryColor = x.Article.Category?.Color,
-                        ArticleId = x.Article.Id,
-                        Title = x.Article.Title,
-                        Slug = x.Article.Slug,
-                        Summary = x.Article.Summary,
-                        SourceName = x.Article.Source?.Name ?? "Unknown Source",
-                        PublishedAt = x.Article.PublishedAt,
-                        ViewCount = x.Article.ViewCount
-                    })
-                    .OrderBy(h => h.CategoryId)
-                    .ToList()
-                })
-                .ToList();
+            return result;
         }, CacheDurations.Medium);
     }
 

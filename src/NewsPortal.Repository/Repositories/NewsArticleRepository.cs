@@ -132,21 +132,18 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days)
+    public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int days)
     {
         var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
 
-        var candidates = await _dbSet
+        return await _dbSet
             .Include(x => x.Source)
             .Include(x => x.Category)
             .Where(x => x.IsActive
                 && x.CategoryId.HasValue
-                && categoryIds.Contains(x.CategoryId.Value)
                 && (x.PublishedAt ?? x.FetchedAt) >= since)
             .OrderByDescending(x => x.ViewCount)
             .ThenByDescending(x => x.PublishedAt ?? x.FetchedAt)
             .ToListAsync();
-
-        return candidates;
     }
 }
