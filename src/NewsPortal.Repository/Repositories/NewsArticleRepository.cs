@@ -146,11 +146,21 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
         if (filter.CategoryIds.Length > 0)
             query = query.Where(x => x.CategoryId.HasValue && filter.CategoryIds.Contains(x.CategoryId.Value));
 
-        if (filter.DateFrom.HasValue)
-            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) >= filter.DateFrom.Value);
+        if (!string.IsNullOrEmpty(filter.DateFrom) &&
+            DateTime.TryParse(filter.DateFrom, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var fromDate))
+        {
+            var fromUtc = DateTime.SpecifyKind(fromDate, DateTimeKind.Utc);
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) >= fromUtc);
+        }
 
-        if (filter.DateTo.HasValue)
-            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) < filter.DateTo.Value.AddDays(1));
+        if (!string.IsNullOrEmpty(filter.DateTo) &&
+            DateTime.TryParse(filter.DateTo, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var toDate))
+        {
+            var toUtc = DateTime.SpecifyKind(toDate.AddDays(1), DateTimeKind.Utc);
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) < toUtc);
+        }
 
         if (filter.HasThumbnail)
             query = query.Where(x => x.OriginalImageUrl != null && x.OriginalImageUrl != "");

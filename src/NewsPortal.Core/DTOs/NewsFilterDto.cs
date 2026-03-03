@@ -4,8 +4,11 @@ public class NewsFilterQuery
 {
     public int[] SourceIds { get; set; } = [];
     public int[] CategoryIds { get; set; } = [];
-    public DateTime? DateFrom { get; set; }
-    public DateTime? DateTo { get; set; }
+    /// <summary>YYYY-MM-DD</summary>
+    public string? DateFrom { get; set; }
+
+    /// <summary>YYYY-MM-DD</summary>
+    public string? DateTo { get; set; }
 
     /// <summary>newest | oldest | mostviewed</summary>
     public string SortBy { get; set; } = "newest";
