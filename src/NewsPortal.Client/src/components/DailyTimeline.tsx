@@ -1,25 +1,13 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { newsApi, type DailyHighlight } from '../services/api';
+import type { DailyHighlight } from '../services/api';
 
-const DailyTimeline = () => {
+interface Props {
+    highlights: DailyHighlight[];
+    loading: boolean;
+}
+
+const DailyTimeline = ({ highlights, loading }: Props) => {
     const navigate = useNavigate();
-    const [highlights, setHighlights] = useState<DailyHighlight[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchHighlights = async () => {
-            try {
-                const data = await newsApi.getDailyHighlights(7);
-                setHighlights(data);
-            } catch (err) {
-                console.error('Failed to fetch daily highlights:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchHighlights();
-    }, []);
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -43,9 +31,6 @@ const DailyTimeline = () => {
     if (loading) {
         return (
             <div className="mb-8">
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    <div className="h-5 w-40 bg-white/10 rounded animate-pulse"></div>
-                </div>
                 <div className="relative">
                     <div className="absolute left-1/2 -translate-x-1/2 w-0.5 h-full bg-glass-border hidden md:block"></div>
                     {Array.from({ length: 3 }).map((_, i) => (
@@ -79,21 +64,6 @@ const DailyTimeline = () => {
 
     return (
         <div className="mb-8">
-            {/* Header */}
-            <div className="flex items-center justify-center gap-2 mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                    strokeLinejoin="round" className="text-accent">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
-                    Daily News Timeline
-                </h3>
-            </div>
-
             {/* Timeline */}
             <div className="relative">
                 {/* Center vertical line - desktop only */}
@@ -108,7 +78,7 @@ const DailyTimeline = () => {
                     const isFirstOfDay = node.highlightIndex === 0;
 
                     return (
-                        <div key={`${node.day.date}-${h.categoryId}`} className="relative mb-6">
+                        <div key={`${node.day.date}-${h.categoryId}-${h.articleId}`} className="relative mb-6">
                             {/* Date label - shown on first highlight of each day */}
                             {isFirstOfDay && (
                                 <div className="text-center mb-2">

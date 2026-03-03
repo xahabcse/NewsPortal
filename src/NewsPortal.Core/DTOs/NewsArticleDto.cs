@@ -63,6 +63,7 @@ public class CategoryHighlightDto
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string? Summary { get; set; }
+    public int SourceId { get; set; }
     public string SourceName { get; set; } = string.Empty;
     public DateTime? PublishedAt { get; set; }
     public int ViewCount { get; set; }

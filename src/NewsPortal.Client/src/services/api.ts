@@ -69,6 +69,7 @@ export interface CategoryHighlight {
     title: string;
     slug: string;
     summary: string | null;
+    sourceId: number;
     sourceName: string;
     publishedAt: string | null;
     viewCount: number;

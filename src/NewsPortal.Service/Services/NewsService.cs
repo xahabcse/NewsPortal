@@ -548,6 +548,7 @@ public class NewsService : INewsService
                             Title = x.Title,
                             Slug = x.Slug,
                             Summary = x.Summary,
+                            SourceId = x.SourceId,
                             SourceName = x.Source?.Name ?? "Unknown Source",
                             PublishedAt = x.PublishedAt,
                             ViewCount = x.ViewCount
