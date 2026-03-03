@@ -173,19 +173,19 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            placeholder="Search news, topics, or authors..."
-                            className="w-full bg-white/5 border border-glass-border rounded-lg py-2 pl-4 pr-10 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                            placeholder="Search news..."
+                            className="w-full bg-white/5 border border-glass-border rounded-lg py-2 pl-3 pr-8 sm:pl-4 sm:pr-14 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                         />
-                        <div className="absolute right-3 top-2 flex items-center gap-2">
-                            <span className="text-[10px] bg-white/10 border border-glass-border px-1.5 py-0.5 rounded text-secondary/70 font-mono">/</span>
+                        <div className="absolute right-2 sm:right-3 top-2 flex items-center gap-1.5">
+                            <span className="hidden sm:inline-block text-[10px] bg-white/10 border border-glass-border px-1.5 py-0.5 rounded text-secondary/70 font-mono">/</span>
                             <div className="text-secondary">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 sm:gap-4">
                     {/* Notification Bell */}
                     <div className="relative" ref={notificationRef}>
                         <button
@@ -207,7 +207,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         {/* Notification Dropdown */}
                         {showNotifications && (
                             <div
-                                className="absolute right-0 mt-2 w-80 bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
+                                className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
                                 role="dialog"
                                 aria-label="Notifications"
                                 aria-modal="true"
@@ -296,7 +296,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     <div className="relative" ref={userMenuRef}>
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex items-center gap-3 pl-6 border-l border-glass-border hover:bg-white/5 rounded-lg px-3 py-1.5 transition-colors"
+                            className="flex items-center gap-2 pl-2 sm:pl-6 border-l border-glass-border hover:bg-white/5 rounded-lg px-2 sm:px-3 py-1.5 transition-colors"
                             aria-label="User menu"
                         >
                             <div className="text-right hidden sm:block">
@@ -306,7 +306,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 border border-glass-border flex items-center justify-center text-white font-bold shadow-lg">
                                 {avatarLetter}
                             </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary hidden sm:block">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
@@ -314,7 +314,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         {/* User Dropdown Menu */}
                         {showUserMenu && isAuthenticated && (
                             <div
-                                className="absolute right-0 mt-2 w-56 bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
+                                className="absolute right-0 mt-2 w-52 max-w-[calc(100vw-1rem)] bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
                                 role="menu"
                                 aria-label="User menu"
                             >

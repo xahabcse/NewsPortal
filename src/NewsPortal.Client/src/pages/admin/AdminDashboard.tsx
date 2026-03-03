@@ -85,8 +85,8 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-4 sm:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {Array.from({ length: 8 }).map((_, idx) => (
                         <div key={idx} className="glass-morphism border border-glass-border rounded-2xl p-6 animate-pulse">
                             <div className="h-4 bg-white/10 rounded w-24 mb-4"></div>
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
 
     if (error) {
         return (
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
                     <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
@@ -136,7 +136,7 @@ const AdminDashboard = () => {
                 title="Admin Dashboard"
                 description="NewsPortal administration dashboard with system statistics and operational metrics."
             />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
@@ -144,7 +144,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Overview Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6">
                         <div className="text-sm text-secondary mb-2">Total Sources</div>
                         <div className="text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>

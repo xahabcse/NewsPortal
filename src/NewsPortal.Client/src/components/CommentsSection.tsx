@@ -125,7 +125,7 @@ const CommentsSection = () => {
         const userVote = userVotes[comment.id] ?? null;
 
         return (
-            <div className={`${isReply ? 'ml-8 mt-3' : ''}`}>
+            <div className={`${isReply ? 'ml-4 sm:ml-8 mt-3' : ''}`}>
                 <div className="bg-white/5 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold text-white">{comment.username}</span>

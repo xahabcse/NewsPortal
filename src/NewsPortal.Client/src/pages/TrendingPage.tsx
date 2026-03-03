@@ -66,10 +66,10 @@ const TrendingPage = () => {
                 title="Trending News - Most Viewed Articles"
                 description="Discover the most popular and trending news articles. See what everyone is reading right now."
             />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
             {/* Header */}
             <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
