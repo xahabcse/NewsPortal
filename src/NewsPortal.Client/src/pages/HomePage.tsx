@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
 import ArticlePopup from '../components/ArticlePopup'
@@ -9,6 +9,7 @@ import { newsApi, type NewsArticle, type Category } from '../services/api'
 import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
 import { getNotificationPrefs } from '../components/NotificationPreferences'
+import { getBanglaDate, getBengaliCalendarDate, getHijriDate, getSession, getBanglaRitu, toBanglaDigits } from '../utils/dateLocale'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
@@ -29,6 +30,17 @@ const HomePage = () => {
   const [feedMode, setFeedMode] = useState<'all' | 'foryou'>('all')
 
   const userCategorySlugs = getNotificationPrefs().categories
+
+  const { session, bengaliDate, hijriDate, banglaDate, ritu } = useMemo(() => {
+    const now = new Date()
+    return {
+      session: getSession(now.getHours()),
+      bengaliDate: getBengaliCalendarDate(now),
+      hijriDate: getHijriDate(now),
+      banglaDate: getBanglaDate(now),
+      ritu: getBanglaRitu(now),
+    }
+  }, [])
 
   const handlePremiumClick = () => {
     toast(
@@ -120,12 +132,31 @@ const HomePage = () => {
       <main className="flex-1 overflow-y-auto p-4 lg:p-8">
         <div className="mb-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-start gap-4 mb-4">
+            <span className="text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Morning, Reader</h1>
-              <p className="text-secondary text-sm">
-                {loading ? 'Loading latest headlines…' : (
-                  <>Stay updated with <span className="text-accent font-semibold">{totalCount}</span> articles.</>
+              <h1 className="text-4xl font-extrabold text-white mb-1.5 tracking-tight">
+                {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">পাঠক</span>
+              </h1>
+              <p className="text-base font-bold mb-1 flex flex-wrap items-center gap-x-1.5">
+                <span className="text-white/80">আজ</span>
+                <span className="text-emerald-400">{bengaliDate}</span>
+                <span className="text-white/20">•</span>
+                <span className="text-amber-400">{hijriDate}</span>
+                <span className="text-white/20">•</span>
+                <span className="text-sky-400">{banglaDate}</span>
+              </p>
+              <p className="text-sm font-semibold mb-1 flex items-center gap-1.5">
+                <span>{ritu.emoji}</span>
+                <span className="text-white/60">ঋতু পরিক্রমায়</span>
+                <span className="text-pink-400 font-bold">{ritu.name}</span>
+              </p>
+              <p className="text-secondary text-sm font-medium flex items-center">
+                {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
+                  <>
+                    সর্বমোট <span className="text-accent font-bold text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
+                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+                  </>
                 )}
               </p>
             </div>
