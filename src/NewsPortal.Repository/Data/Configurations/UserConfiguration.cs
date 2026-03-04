@@ -37,6 +37,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(20)
             .HasDefaultValue(UserRole.Reader);
 
+        builder.Property(x => x.AuthProvider)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("Local");
+
         builder.Property(x => x.IsActive)
             .HasDefaultValue(true);
 

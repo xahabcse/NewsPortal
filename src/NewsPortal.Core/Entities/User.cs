@@ -8,6 +8,7 @@ public class User : BaseEntity
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Role { get; set; } = UserRole.Reader; // SuperAdmin, Admin, Editor, Reader
+    public string AuthProvider { get; set; } = "Local"; // "Local" or "Google"
     public DateTime? LastLoginAt { get; set; }
 }
 

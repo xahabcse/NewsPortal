@@ -122,6 +122,7 @@ public class AuthController : ControllerBase
     /// Sign in (or auto-register) with a Google ID token
     /// </summary>
     [HttpPost("google")]
+    [EnableRateLimiting("LoginPolicy")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto)

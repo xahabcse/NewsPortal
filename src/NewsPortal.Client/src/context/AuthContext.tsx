@@ -7,6 +7,7 @@ interface AuthContextValue {
     session: AuthSession | null;
     isAuthenticated: boolean;
     role: string;
+    authProvider: string;
     canManageSources: boolean;
     canCreateSources: boolean;
     canEditSources: boolean;
@@ -107,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         isAuthenticated: !!session,
         role: getRole(session),
+        authProvider: session?.authProvider ?? 'Local',
         canManageSources: hasManageRole(session),
         canCreateSources: session?.role === 'Admin' || session?.role === 'SuperAdmin',
         canEditSources: session?.role === 'Admin' || session?.role === 'Editor' || session?.role === 'SuperAdmin',

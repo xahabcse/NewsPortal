@@ -111,6 +111,13 @@ public class AuthService : IAuthService
                     Audience = new[] { clientId }
                 });
 
+            // Reject unverified emails
+            if (!payload.EmailVerified)
+            {
+                _logger.LogWarning("Google login rejected: email not verified for {Email}", payload.Email);
+                return null;
+            }
+
             // Find existing user by email
             var user = await _unitOfWork.Users.GetByEmailAsync(payload.Email);
 
@@ -122,19 +129,30 @@ public class AuthService : IAuthService
                 {
                     Username = username,
                     Email = payload.Email,
-                    PasswordHash = PasswordHelper.HashPassword(Guid.NewGuid().ToString()), // Random — Google users can't password-login
+                    PasswordHash = PasswordHelper.HashPassword(Guid.NewGuid().ToString()),
                     FirstName = payload.GivenName ?? "",
                     LastName = payload.FamilyName ?? "",
                     Role = UserRole.Reader,
+                    AuthProvider = "Google",
                     IsActive = true
                 };
                 await _unitOfWork.Users.AddAsync(user);
                 _logger.LogInformation("New user auto-registered via Google: {Email}", payload.Email);
             }
+            else if (user.AuthProvider != "Google")
+            {
+                // Prevent account takeover: email registered via password cannot login via Google
+                _logger.LogWarning("Google login rejected: email {Email} already registered via {Provider}",
+                    payload.Email, user.AuthProvider);
+                return null;
+            }
             else if (!user.IsActive)
             {
-                _logger.LogWarning("Disabled user attempted Google login: {Email}", payload.Email);
-                return null;
+                // Reactivate soft-deleted Google user on re-login
+                user.IsActive = true;
+                user.FirstName = payload.GivenName ?? user.FirstName;
+                user.LastName = payload.FamilyName ?? user.LastName;
+                _logger.LogInformation("Reactivated soft-deleted Google user: {Email}", payload.Email);
             }
 
             await _unitOfWork.Users.UpdateLastLoginAsync(user.Id);
@@ -224,6 +242,7 @@ public class AuthService : IAuthService
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,
+            AuthProvider = user.AuthProvider,
             ExpiresAt = DateTime.UtcNow.AddHours(GetTokenExpirationHours())
         };
     }

@@ -21,6 +21,7 @@ export interface AuthSession {
     username: string;
     email: string;
     role: string;
+    authProvider: string;
     expiresAt: string;
 }
 
