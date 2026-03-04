@@ -190,7 +190,9 @@ public class AuthService : IAuthService
                 Role = user.Role,
                 IsActive = user.IsActive,
                 LastLoginAt = user.LastLoginAt,
-                CreatedAt = user.CreatedAt
+                CreatedAt = user.CreatedAt,
+                Bio = user.Bio,
+                AvatarId = user.AvatarId
             };
         }
         catch (Exception ex)
@@ -243,6 +245,7 @@ public class AuthService : IAuthService
             Email = user.Email,
             Role = user.Role,
             AuthProvider = user.AuthProvider,
+            AvatarId = user.AvatarId,
             ExpiresAt = DateTime.UtcNow.AddHours(GetTokenExpirationHours())
         };
     }

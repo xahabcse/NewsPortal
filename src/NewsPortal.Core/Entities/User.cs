@@ -10,6 +10,8 @@ public class User : BaseEntity
     public string Role { get; set; } = UserRole.Reader; // SuperAdmin, Admin, Editor, Reader
     public string AuthProvider { get; set; } = "Local"; // "Local" or "Google"
     public DateTime? LastLoginAt { get; set; }
+    public string? Bio { get; set; }
+    public int AvatarId { get; set; } = 1; // 1-10 seed avatars
 }
 
 public static class UserRole

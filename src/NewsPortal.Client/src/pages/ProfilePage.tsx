@@ -4,6 +4,7 @@ import SEO from '../components/SEO';
 import { useAuth } from '../context/AuthContext';
 import { axiosInstance } from '../services/axiosInstance';
 import toast from 'react-hot-toast';
+import { Avatar, AvatarSelector } from '../utils/avatars';
 
 interface UserProfile {
     id: number;
@@ -15,10 +16,12 @@ interface UserProfile {
     isActive: boolean;
     lastLoginAt: string | null;
     createdAt: string;
+    bio: string | null;
+    avatarId: number;
 }
 
 const ProfilePage = () => {
-    const { isAuthenticated, session, authProvider, logout } = useAuth();
+    const { isAuthenticated, session, authProvider, logout, updateAvatarId } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -30,6 +33,9 @@ const ProfilePage = () => {
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [generalError, setGeneralError] = useState('');
+    const [bio, setBio] = useState('');
+    const [selectedAvatar, setSelectedAvatar] = useState(1);
+    const [profileSaving, setProfileSaving] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -46,6 +52,8 @@ const ProfilePage = () => {
                 setProfileLoading(true);
                 const response = await axiosInstance.get<UserProfile>('/auth/me');
                 setProfile(response.data);
+                setBio(response.data.bio || '');
+                setSelectedAvatar(response.data.avatarId || 1);
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
                 toast.error('Failed to load profile information');
@@ -86,6 +94,28 @@ const ProfilePage = () => {
                 delete next[name];
                 return next;
             });
+        }
+    };
+
+    const handleProfileSave = async () => {
+        setProfileSaving(true);
+        try {
+            await axiosInstance.put('/auth/profile', {
+                bio: bio.trim() || null,
+                avatarId: selectedAvatar,
+            });
+            updateAvatarId(selectedAvatar);
+            setProfile(prev => prev ? { ...prev, bio: bio.trim() || null, avatarId: selectedAvatar } : prev);
+            toast.success('Profile updated!');
+        } catch (err: unknown) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { message?: string } } };
+                toast.error(axiosError.response?.data?.message || 'Failed to update profile');
+            } else {
+                toast.error('Failed to update profile');
+            }
+        } finally {
+            setProfileSaving(false);
         }
     };
 
@@ -146,9 +176,7 @@ const ProfilePage = () => {
                     {/* Profile Info Card */}
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent to-purple-500 border-2 border-glass-border flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                                {profile?.username.charAt(0).toUpperCase() || session?.username.charAt(0).toUpperCase()}
-                            </div>
+                            <Avatar id={selectedAvatar} size="xl" />
                             <div>
                                 <h2 className="text-xl font-bold text-white">{profile?.username || session?.username}</h2>
                                 <p className="text-sm text-secondary">{profile?.role || session?.role}</p>
@@ -228,6 +256,39 @@ const ProfilePage = () => {
                         ) : (
                             <p className="text-secondary text-sm">Failed to load profile information</p>
                         )}
+                    </div>
+
+                    {/* Avatar & Bio Card */}
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
+                        <h3 className="text-lg font-bold text-white mb-4">Avatar & Bio</h3>
+
+                        <div className="mb-6">
+                            <label className="block text-sm text-secondary mb-3">Choose your avatar</label>
+                            <AvatarSelector selected={selectedAvatar} onSelect={setSelectedAvatar} />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm text-secondary mb-1">Bio</label>
+                            <textarea
+                                value={bio}
+                                onChange={(e) => setBio(e.target.value)}
+                                placeholder="Tell us about yourself..."
+                                className="w-full bg-white/5 border border-glass-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-accent/50 resize-none"
+                                rows={3}
+                                maxLength={255}
+                            />
+                            <div className="flex justify-end mt-1">
+                                <span className={`text-xs ${bio.length > 240 ? 'text-amber-400' : 'text-secondary'}`}>{bio.length}/255</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleProfileSave}
+                            disabled={profileSaving}
+                            className="w-full py-3 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {profileSaving ? 'Saving...' : 'Save Profile'}
+                        </button>
                     </div>
 
                     {/* Change Password Card — only for Local auth users */}

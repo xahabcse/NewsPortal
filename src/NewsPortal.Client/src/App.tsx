@@ -15,6 +15,7 @@ import TrendingPage from './pages/TrendingPage'
 import BookmarksPage from './pages/BookmarksPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
+import UserProfilePage from './pages/UserProfilePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
@@ -75,6 +76,7 @@ function App() {
                       <Route path="/category/:slug" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
                       <Route path="/bookmarks" element={<ProtectedRoute><BookmarksPage /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/user/:username" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
 
                       {/* Admin routes — Admin or SuperAdmin */}
                       <Route path="/admin/dashboard" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><AdminDashboard /></ProtectedRoute>} />

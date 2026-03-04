@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import LanguageToggle from './LanguageToggle';
 import NotificationPreferences from './NotificationPreferences';
 import { signalRService } from '../services/SignalRService';
+import { Avatar } from '../utils/avatars';
 
 interface Notification {
     id: string;
@@ -101,7 +102,6 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
 
     const displayName = session?.username ?? 'Guest User';
     const displayRole = session?.role ?? 'Guest';
-    const avatarLetter = displayName.charAt(0).toUpperCase() || 'G';
     const isAdmin = session?.role === 'Admin' || session?.role === 'SuperAdmin';
 
     return (
@@ -255,9 +255,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                 <div className="text-sm font-medium text-white">{displayName}</div>
                                 <div className="text-xs text-secondary">{displayRole}</div>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 border border-glass-border flex items-center justify-center text-white font-bold shadow-lg">
-                                {avatarLetter}
-                            </div>
+                            <Avatar id={session?.avatarId || 1} size="md" />
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary hidden sm:block">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>

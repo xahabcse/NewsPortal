@@ -48,6 +48,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.LastLoginAt)
             .IsRequired(false);
 
+        builder.Property(x => x.Bio)
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        builder.Property(x => x.AvatarId)
+            .HasDefaultValue(1);
+
         // Indexes
         builder.HasIndex(x => x.Username).IsUnique();
         builder.HasIndex(x => x.Email).IsUnique();

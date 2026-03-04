@@ -22,6 +22,7 @@ export interface AuthSession {
     email: string;
     role: string;
     authProvider: string;
+    avatarId: number;
     expiresAt: string;
 }
 

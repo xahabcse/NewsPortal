@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using NewsPortal.Core.DTOs;
 using NewsPortal.Core.Interfaces;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 
 namespace NewsPortal.Api.Controllers;
 
@@ -14,11 +15,13 @@ namespace NewsPortal.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, IUnitOfWork unitOfWork, ILogger<AuthController> logger)
     {
         _authService = authService;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -148,5 +151,55 @@ public class AuthController : ControllerBase
     public IActionResult ValidateToken()
     {
         return Ok(new { valid = true, user = User.Identity?.Name });
+    }
+
+    /// <summary>
+    /// Update current user's profile (bio and avatar)
+    /// </summary>
+    [Authorize]
+    [HttpPut("profile")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null) return NotFound(new { message = "User not found" });
+
+        user.Bio = dto.Bio?.Trim();
+        user.AvatarId = dto.AvatarId;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        var updated = await _authService.GetUserByIdAsync(userId);
+        return Ok(updated);
+    }
+
+    /// <summary>
+    /// Get public user profile by username
+    /// </summary>
+    [HttpGet("user/{username}")]
+    public async Task<IActionResult> GetPublicProfile(string username)
+    {
+        var user = await _unitOfWork.Users.GetByUsernameAsync(username);
+        if (user == null || !user.IsActive)
+            return NotFound(new { message = "User not found" });
+
+        return Ok(new
+        {
+            username = user.Username,
+            bio = user.Bio,
+            avatarId = user.AvatarId,
+            role = user.Role,
+            createdAt = user.CreatedAt
+        });
     }
 }

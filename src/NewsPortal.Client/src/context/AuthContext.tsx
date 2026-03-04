@@ -14,6 +14,7 @@ interface AuthContextValue {
     canDeleteSources: boolean;
     canFetchSources: boolean;
     sourcePermissionMessage: string;
+    updateAvatarId: (avatarId: number) => void;
     login: (username: string, password: string) => Promise<void>;
     googleLogin: (credential: string) => Promise<void>;
     logout: () => void;
@@ -66,6 +67,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const newSession = await AuthService.googleLogin(credential);
         authStorage.set(newSession);
         setSession(newSession);
+    }, []);
+
+    const updateAvatarId = useCallback((avatarId: number) => {
+        setSession(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, avatarId };
+            authStorage.set(updated);
+            return updated;
+        });
     }, []);
 
     useEffect(() => {
@@ -123,10 +133,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     : session.role === 'Editor'
                         ? 'Editor mode. You can test, edit, and fetch channels. Create/Delete requires Admin.'
                         : 'Read-only mode. Your role does not have channel management permissions.',
+        updateAvatarId,
         login,
         googleLogin,
         logout
-    }), [session, login, googleLogin, logout]);
+    }), [session, updateAvatarId, login, googleLogin, logout]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
