@@ -291,9 +291,10 @@ public class NewsService : INewsService
         await _unitOfWork.NewsArticles.AddAsync(article);
         await _unitOfWork.SaveChangesAsync();
 
-        // Clear related list/search caches (keys include pagination/count suffixes)
+        // Clear related list/search/category caches
         await _cache.RemoveByPatternAsync("news:*");
         await _cache.RemoveByPatternAsync("search:*");
+        await _cache.RemoveByPatternAsync("categories:*");
 
         AppMetrics.TotalNewsArticles.Inc();
 
@@ -459,7 +460,8 @@ public class NewsService : INewsService
             {
                 await _cache.RemoveByPatternAsync("news:*");
                 await _cache.RemoveByPatternAsync("search:*");
-                
+                await _cache.RemoveByPatternAsync("categories:*");
+
                 AppMetrics.TotalNewsArticles.Inc(result.ImportedCount);
             }
 

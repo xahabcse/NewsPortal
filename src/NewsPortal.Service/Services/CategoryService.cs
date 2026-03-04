@@ -42,7 +42,7 @@ public class CategoryService : ICategoryService
                 Color = c.Color,
                 ArticleCount = c.Articles.Count
             }).ToList();
-        }, CacheDurations.Long);
+        }, CacheDurations.Short);
     }
 
     public async Task<CategoryDto?> GetCategoryBySlugAsync(string slug)
