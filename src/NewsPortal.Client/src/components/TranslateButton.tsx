@@ -48,7 +48,7 @@ const TranslateButton = ({ articleId, originalTitle: _originalTitle, originalSum
     const activeLang = translation ? LANGUAGES.find(l => l.code === translation.targetLang) : null;
 
     return (
-        <div className="w-full">
+        <div>
             <div className="relative inline-block">
                 <button
                     onClick={() => setShowDropdown(!showDropdown)}

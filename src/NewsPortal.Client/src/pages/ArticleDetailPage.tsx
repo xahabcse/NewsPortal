@@ -326,12 +326,41 @@ const ArticleDetailPage = () => {
                     />
                 </div>
 
-                {/* AI Features: Summarize + Translate */}
-                <div className="flex flex-col gap-2 mt-3">
-                    <div className="flex items-start gap-3 flex-wrap">
-                        <SummarizeButton articleId={article.id} />
-                        <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
-                    </div>
+                {/* AI Features + Read Original + Font Size */}
+                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                    <SummarizeButton articleId={article.id} />
+                    <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
+                    {article.sourceUrl && (
+                        <a
+                            href={article.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all border bg-white/5 border-glass-border text-secondary hover:text-white hover:bg-white/10"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            Read Original
+                        </a>
+                    )}
+                    {article.content && (
+                        <div className="flex items-center gap-2 ml-auto" data-testid="font-size-control">
+                            <span className="text-xs text-secondary mr-1">Font:</span>
+                            {(['small', 'medium', 'large'] as const).map(size => (
+                                <button
+                                    key={size}
+                                    onClick={() => { setFontSize(size); localStorage.setItem('newsportal-fontsize', size); }}
+                                    className={`px-2 py-1 rounded text-xs border transition-colors ${
+                                        fontSize === size ? 'bg-accent/20 border-accent/40 text-white' : 'bg-white/5 border-glass-border text-secondary hover:text-white'
+                                    }`}
+                                >
+                                    {size === 'small' ? 'A' : size === 'medium' ? 'A+' : 'A++'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -360,24 +389,6 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
-            {/* Font Size Control */}
-            {article.content && (
-                <div className="flex items-center gap-2 mb-4" data-testid="font-size-control">
-                    <span className="text-xs text-secondary mr-1">Font:</span>
-                    {(['small', 'medium', 'large'] as const).map(size => (
-                        <button
-                            key={size}
-                            onClick={() => { setFontSize(size); localStorage.setItem('newsportal-fontsize', size); }}
-                            className={`px-2 py-1 rounded text-xs border transition-colors ${
-                                fontSize === size ? 'bg-accent/20 border-accent/40 text-white' : 'bg-white/5 border-glass-border text-secondary hover:text-white'
-                            }`}
-                        >
-                            {size === 'small' ? 'A' : size === 'medium' ? 'A+' : 'A++'}
-                        </button>
-                    ))}
-                </div>
-            )}
-
             {/* Article Content */}
             {article.content ? (
                 <article className="prose prose-invert prose-lg max-w-none">
@@ -394,24 +405,12 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
-            {/* Source Link */}
-            {article.sourceUrl && (
-                <div className="mt-8 pt-8 border-t border-glass-border">
-                    <a
-                        href={article.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-accent hover:text-accent/80 transition-colors font-medium"
-                    >
-                        Read Original Article
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                    </a>
-                </div>
-            )}
+            {/* Sentiment + Comments */}
+            <div className="mt-8">
+                <SentimentBadge articleId={article.id} />
+            </div>
+
+            <CommentsSection />
 
             {/* Related Articles */}
             {relatedArticles.length > 0 && (
@@ -433,14 +432,6 @@ const ArticleDetailPage = () => {
                     </div>
                 </div>
             )}
-
-            {/* Comment Sentiment Analysis */}
-            <div className="mt-8">
-                <SentimentBadge articleId={article.id} />
-            </div>
-
-            {/* Comments Section */}
-            <CommentsSection />
         </div>
         </>
     );

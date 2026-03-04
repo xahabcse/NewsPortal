@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom';
 import { axiosInstance } from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { Avatar } from '../utils/avatars';
 
 interface Comment {
     id: number;
     articleId: number;
     userId: number;
     username: string;
+    avatarId: number;
     content: string;
     createdAt: string;
     parentId?: number;
@@ -27,6 +29,8 @@ const CommentsSection = () => {
     const [sortMode, setSortMode] = useState<SortMode>('newest');
     const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; score: number }>>({});
     const [userVotes, setUserVotes] = useState<Record<number, string | null>>({});
+    const COMMENTS_PER_PAGE = 5;
+    const [displayCount, setDisplayCount] = useState(COMMENTS_PER_PAGE);
 
     useEffect(() => {
         if (slug) {
@@ -128,7 +132,10 @@ const CommentsSection = () => {
             <div className={`${isReply ? 'ml-4 sm:ml-8 mt-3' : ''}`}>
                 <div className="bg-white/5 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold text-white">{comment.username}</span>
+                        <div className="flex items-center gap-2">
+                            <Avatar id={comment.avatarId || 1} size="xs" clickable username={comment.username} />
+                            <span className="text-sm font-semibold text-white">{comment.username}</span>
+                        </div>
                         <span className="text-xs text-secondary">
                             {new Date(comment.createdAt).toLocaleDateString()}
                         </span>
@@ -188,7 +195,7 @@ const CommentsSection = () => {
                         {(['newest', 'oldest', 'top'] as SortMode[]).map(mode => (
                             <button
                                 key={mode}
-                                onClick={() => setSortMode(mode)}
+                                onClick={() => { setSortMode(mode); setDisplayCount(COMMENTS_PER_PAGE); }}
                                 className={`px-3 py-1 text-xs rounded-md transition-colors capitalize ${
                                     sortMode === mode ? 'bg-accent text-white' : 'text-secondary hover:text-white'
                                 }`}
@@ -238,11 +245,29 @@ const CommentsSection = () => {
             ) : comments.length === 0 ? (
                 <p className="text-secondary text-sm">No comments yet. Be the first to comment!</p>
             ) : (
-                <div className="space-y-4">
-                    {sortedComments.map(comment => (
-                        <CommentItem key={comment.id} comment={comment} />
-                    ))}
-                </div>
+                <>
+                    <div className="space-y-4">
+                        {sortedComments.slice(0, displayCount).map(comment => (
+                            <CommentItem key={comment.id} comment={comment} />
+                        ))}
+                    </div>
+                    {sortedComments.length > displayCount && (
+                        <div className="flex items-center justify-center gap-3 mt-6">
+                            <button
+                                onClick={() => setDisplayCount(prev => prev + COMMENTS_PER_PAGE)}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-glass-border text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                See More ({sortedComments.length - displayCount} remaining)
+                            </button>
+                            <button
+                                onClick={() => setDisplayCount(sortedComments.length)}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
+                            >
+                                See All Comments
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
