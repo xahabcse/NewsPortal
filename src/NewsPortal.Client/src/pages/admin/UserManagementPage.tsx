@@ -24,20 +24,22 @@ const UserManagementPage = () => {
     const [newPassword, setNewPassword] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const ROLES = ['SuperAdmin', 'Admin', 'Editor', 'Viewer'];
+    const ROLES = ['SuperAdmin', 'Admin', 'Editor', 'Reader'];
+
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
 
     useEffect(() => {
-        if (!isAuthenticated || role !== 'SuperAdmin') {
+        if (!isAuthenticated || !isAdmin) {
             navigate('/');
-            toast.error('Access denied. SuperAdmin role required.');
+            toast.error('Access denied. Admin role required.');
         }
-    }, [isAuthenticated, role, navigate]);
+    }, [isAuthenticated, isAdmin, navigate]);
 
     useEffect(() => {
-        if (role === 'SuperAdmin') {
+        if (isAdmin) {
             fetchUsers();
         }
-    }, [role]);
+    }, [isAdmin]);
 
     const fetchUsers = async () => {
         try {
@@ -206,7 +208,7 @@ const UserManagementPage = () => {
 
     const superAdminCount = users.filter(u => u.role === 'SuperAdmin' && u.isActive).length;
 
-    if (!isAuthenticated || role !== 'SuperAdmin') {
+    if (!isAuthenticated || !isAdmin) {
         return null;
     }
 

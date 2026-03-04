@@ -353,10 +353,10 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     </nav>
                 )}
 
-                {/* Super Admin Section */}
-                {role === 'SuperAdmin' && (
+                {/* Admin Section */}
+                {(role === 'Admin' || role === 'SuperAdmin') && (
                     <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
-                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Super Admin</div>
+                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Admin</div>
 
                         <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="User Management">
                             <span className="shrink-0"><IconUsers /></span>
