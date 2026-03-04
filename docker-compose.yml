@@ -131,6 +131,7 @@ services:
       - Cors__AllowedOrigins=${CORS_ALLOWED_ORIGINS:-http://localhost:5000}
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       - Authentication__Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Gemini__ApiKey=${GEMINI_API_KEY}
     ports:
       - "8080:8080"
     depends_on:
