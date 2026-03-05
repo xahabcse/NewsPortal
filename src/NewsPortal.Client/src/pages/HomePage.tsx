@@ -132,13 +132,13 @@ const HomePage = () => {
       <main className="flex-1 overflow-y-auto p-4 lg:p-8">
         <div className="mb-6">
           {/* Header */}
-          <div className="flex items-start gap-4 mb-4">
-            <span className="text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
+          <div className="flex items-start gap-2 sm:gap-4 mb-4">
+            <span className="text-4xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
             <div>
-              <h1 className="text-4xl font-extrabold text-white mb-1.5 tracking-tight">
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight">
                 {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">পাঠক</span>
               </h1>
-              <p className="text-base font-bold mb-1 flex flex-wrap items-center gap-x-1.5">
+              <p className="text-xs sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
                 <span className="text-white/80">আজ</span>
                 <span className="text-emerald-400">{bengaliDate}</span>
                 <span className="text-white/20">•</span>
@@ -146,15 +146,15 @@ const HomePage = () => {
                 <span className="text-white/20">•</span>
                 <span className="text-sky-400">{banglaDate}</span>
               </p>
-              <p className="text-sm font-semibold mb-1 flex items-center gap-1.5">
+              <p className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
                 <span>{ritu.emoji}</span>
                 <span className="text-white/60">ঋতু পরিক্রমায়</span>
                 <span className="text-pink-400 font-bold">{ritu.name}</span>
               </p>
-              <p className="text-secondary text-sm font-medium flex items-center">
+              <p className="text-secondary text-xs sm:text-sm font-medium flex items-center">
                 {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
                   <>
-                    সর্বমোট <span className="text-accent font-bold text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
+                    সর্বমোট <span className="text-accent font-bold text-sm sm:text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
                     <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
                   </>
                 )}
@@ -271,15 +271,15 @@ const HomePage = () => {
         )}
 
         {/* Premium banner */}
-        <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-accent/20 via-purple-500/10 to-transparent border border-accent/10 relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-12 p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-accent/20 via-purple-500/10 to-transparent border border-accent/10 relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
             <div className="max-w-md">
-              <h2 className="text-2xl font-bold text-white mb-2">Upgrade to NewsPortal+</h2>
-              <p className="text-secondary text-sm italic">Unlock exclusive analysis, ad-free experience, and early access to breaking news stories from around the globe.</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Upgrade to NewsPortal+</h2>
+              <p className="text-secondary text-xs sm:text-sm italic">Unlock exclusive analysis, ad-free experience, and early access to breaking news stories from around the globe.</p>
             </div>
             <button
               onClick={handlePremiumClick}
-              className="bg-white text-background px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all transform hover:scale-105"
+              className="bg-white text-background px-4 sm:px-8 py-2 sm:py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all transform hover:scale-105"
             >
               Explore Premium
             </button>

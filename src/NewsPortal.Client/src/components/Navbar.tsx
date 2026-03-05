@@ -159,7 +159,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         {/* Notification Dropdown */}
                         {showNotifications && (
                             <div
-                                className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
+                                className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
                                 role="dialog"
                                 aria-label="Notifications"
                                 aria-modal="true"

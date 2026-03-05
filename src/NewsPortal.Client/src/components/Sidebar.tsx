@@ -129,9 +129,9 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
         // Width: icon-only on desktop when collapsed, full-width otherwise
         isCollapsed ? 'w-64 lg:w-16' : 'w-64',
         // Padding: compact on desktop when collapsed, normal otherwise
-        isCollapsed ? 'p-6 lg:p-2' : 'p-6',
+        isCollapsed ? 'p-4 sm:p-6 lg:p-2' : 'p-4 sm:p-6',
         // Gap: compact on desktop when collapsed, normal otherwise
-        isCollapsed ? 'gap-6 lg:gap-2' : 'gap-6',
+        isCollapsed ? 'gap-4 sm:gap-6 lg:gap-2' : 'gap-4 sm:gap-6',
         // Visibility: on mobile hide off-screen by default, show when isOpen.
         // On desktop (lg+) always visible regardless of isOpen.
         isOpen ? 'translate-x-0' : '-translate-x-full',

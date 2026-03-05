@@ -259,7 +259,7 @@ const ArticleDetailPage = () => {
                 </h1>
 
                 {/* Meta Information */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-secondary">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-secondary">
                     {article.sourceName && (
                         <span className="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -302,7 +302,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* Action Buttons: Reactions + Share + Listen */}
-                <div className="flex items-center gap-3 mt-4 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 mt-4 flex-wrap">
                     <ArticleReactions articleId={article.id} />
                     <ShareButton
                         title={article.title}
@@ -327,7 +327,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* AI Features + Read Original + Font Size */}
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 mt-3 flex-wrap">
                     <SummarizeButton articleId={article.id} />
                     <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
                     {article.sourceUrl && (
@@ -346,7 +346,7 @@ const ArticleDetailPage = () => {
                         </a>
                     )}
                     {article.content && (
-                        <div className="flex items-center gap-2 ml-auto" data-testid="font-size-control">
+                        <div className="flex items-center gap-1 sm:gap-2 ml-auto" data-testid="font-size-control">
                             <span className="text-xs text-secondary mr-1">Font:</span>
                             {(['small', 'medium', 'large'] as const).map(size => (
                                 <button

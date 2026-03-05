@@ -74,9 +74,9 @@ const UserProfilePage = () => {
     return (
         <>
             <SEO title={`${profile.username}'s Profile`} description={profile.bio || `${profile.username}'s profile on NewsPortal`} />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 <div className="max-w-md mx-auto">
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-8">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-8">
                         <div className="flex flex-col items-center text-center">
                             <Avatar id={profile.avatarId} size="xl" className="mb-4" />
                             <h1 className="text-2xl font-bold text-white mb-1">{profile.username}</h1>

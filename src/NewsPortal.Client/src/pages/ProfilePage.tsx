@@ -165,17 +165,17 @@ const ProfilePage = () => {
                 title="My Profile"
                 description="Manage your NewsPortal account settings and change your password."
             />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 <div className="max-w-2xl mx-auto">
                     {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-white mb-2">My Profile</h1>
+                    <div className="mb-4 sm:mb-8">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">My Profile</h1>
                         <p className="text-secondary text-sm">Manage your account settings</p>
                     </div>
 
                     {/* Profile Info Card */}
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
-                        <div className="flex items-center gap-4 mb-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6 mb-6">
+                        <div className="flex items-center gap-3 sm:gap-4 mb-6">
                             <Avatar id={selectedAvatar} size="xl" />
                             <div>
                                 <h2 className="text-xl font-bold text-white">{profile?.username || session?.username}</h2>

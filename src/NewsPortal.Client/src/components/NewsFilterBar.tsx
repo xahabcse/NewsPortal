@@ -221,13 +221,13 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
     return (
         <div ref={barRef} className="relative">
             {/* Filter buttons row */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
 
                 {/* Sources button */}
                 <div className="relative">
                     <button
                         onClick={() => toggle('sources')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${open === 'sources' || filters.sourceIds.length > 0
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${open === 'sources' || filters.sourceIds.length > 0
                             ? 'bg-accent/20 text-accent border-accent/40'
                             : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                     >
@@ -242,7 +242,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                     </button>
 
                     {open === 'sources' && (
-                        <div className="absolute top-full left-0 mt-1.5 w-60 bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-1.5 w-60 max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div className="px-3 pt-2 pb-1 border-b border-glass-border flex items-center justify-between">
                                 <span className="text-[11px] font-semibold text-white uppercase tracking-wider">News Sources</span>
                                 {filters.sourceIds.length > 0 && (
@@ -264,7 +264,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 <div className="relative">
                     <button
                         onClick={() => toggle('categories')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${open === 'categories' || filters.categoryIds.length > 0
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${open === 'categories' || filters.categoryIds.length > 0
                             ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
                             : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                     >
@@ -279,7 +279,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                     </button>
 
                     {open === 'categories' && (
-                        <div className="absolute top-full left-0 mt-1.5 w-60 bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-1.5 w-60 max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div className="px-3 pt-2 pb-1 border-b border-glass-border flex items-center justify-between">
                                 <span className="text-[11px] font-semibold text-white uppercase tracking-wider">Categories</span>
                                 {filters.categoryIds.length > 0 && (
@@ -302,7 +302,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 <div className="relative">
                     <button
                         onClick={() => toggle('date')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${open === 'date' || (filters.dateFrom || filters.dateTo)
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${open === 'date' || (filters.dateFrom || filters.dateTo)
                             ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
                             : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                     >
@@ -322,7 +322,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                     </button>
 
                     {open === 'date' && (
-                        <div className="absolute top-full left-0 mt-1.5 w-72 bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-1.5 w-72 max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div className="px-3 pt-2 pb-1 border-b border-glass-border">
                                 <span className="text-[11px] font-semibold text-white uppercase tracking-wider">Date Range</span>
                             </div>
@@ -347,7 +347,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                                 {/* Custom range */}
                                 <div className="space-y-2">
                                     <label className="block text-[11px] text-secondary/70 font-medium">Custom range</label>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                         <div className="flex-1">
                                             <label className="text-[10px] text-secondary/50 mb-0.5 block">From</label>
                                             <input
@@ -358,7 +358,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                                                 className="w-full bg-white/5 border border-glass-border rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent/50 [color-scheme:dark]"
                                             />
                                         </div>
-                                        <svg className="text-secondary/40 flex-shrink-0 mt-4" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                        <svg className="text-secondary/40 flex-shrink-0 hidden sm:block mt-4" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                                         <div className="flex-1">
                                             <label className="text-[10px] text-secondary/50 mb-0.5 block">To</label>
                                             <input
@@ -390,7 +390,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 <div className="relative">
                     <button
                         onClick={() => toggle('sort')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${open === 'sort' || filters.sortBy !== 'newest'
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${open === 'sort' || filters.sortBy !== 'newest'
                             ? 'bg-green-500/20 text-green-400 border-green-500/40'
                             : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                     >
@@ -400,7 +400,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                     </button>
 
                     {open === 'sort' && (
-                        <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-1.5 w-44 max-w-[calc(100vw-2rem)] bg-[#1a1a2e] border border-glass-border rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div className="px-3 pt-2 pb-1 border-b border-glass-border">
                                 <span className="text-[11px] font-semibold text-white uppercase tracking-wider">Sort by</span>
                             </div>
@@ -425,7 +425,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 {/* Has thumbnail toggle */}
                 <button
                     onClick={() => set({ hasThumbnail: !filters.hasThumbnail })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${filters.hasThumbnail
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${filters.hasThumbnail
                         ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
                         : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                 >

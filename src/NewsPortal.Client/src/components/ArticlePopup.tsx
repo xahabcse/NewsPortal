@@ -113,7 +113,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                 )}
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                     {/* Category Badge */}
                     <span className="inline-block bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded mb-4">
                         {category}
@@ -152,7 +152,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-4 border-t border-glass-border flex items-center gap-3 flex-shrink-0 bg-[#1a1b1e]">
+                <div className="p-3 sm:p-4 border-t border-glass-border flex items-center gap-2 sm:gap-3 flex-shrink-0 bg-[#1a1b1e]">
                     {sourceUrl && (
                         <a
                             href={sourceUrl}

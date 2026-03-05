@@ -138,39 +138,39 @@ const AdminDashboard = () => {
             />
             <div className="p-4 sm:p-8">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+                <div className="mb-4 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
                     <p className="text-secondary text-sm">System overview and operational metrics</p>
                 </div>
 
                 {/* Overview Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Sources</div>
-                        <div className="text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
                         <div className="text-xs text-secondary/70">News sources configured</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Articles</div>
-                        <div className="text-3xl font-bold text-emerald-400 mb-1">{stats.totalArticles.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-emerald-400 mb-1">{stats.totalArticles.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Articles in database</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Articles Today</div>
-                        <div className="text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Fetched in last 24h</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Users</div>
-                        <div className="text-3xl font-bold text-orange-400 mb-1">{stats.totalUsers.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-orange-400 mb-1">{stats.totalUsers.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Registered users</div>
                     </div>
                 </div>
 
                 {/* Charts Row 1: Daily Articles + Source Health */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
                     {/* Daily Articles Trend */}
-                    <div className="lg:col-span-2 glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="lg:col-span-2 glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <h2 className="text-lg font-bold text-white mb-4">Articles Published (Last 7 Days)</h2>
                         {chartStats?.dailyArticles && chartStats.dailyArticles.length > 0 ? (
                             <ResponsiveContainer width="100%" height={250}>

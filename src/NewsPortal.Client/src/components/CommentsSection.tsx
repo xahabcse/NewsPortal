@@ -129,8 +129,8 @@ const CommentsSection = () => {
         const userVote = userVotes[comment.id] ?? null;
 
         return (
-            <div className={`${isReply ? 'ml-4 sm:ml-8 mt-3' : ''}`}>
-                <div className="bg-white/5 rounded-lg p-4">
+            <div className={`${isReply ? 'ml-3 sm:ml-8 mt-3' : ''}`}>
+                <div className="bg-white/5 rounded-lg p-3 sm:p-4">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <Avatar id={comment.avatarId || 1} size="xs" clickable username={comment.username} />
@@ -186,9 +186,9 @@ const CommentsSection = () => {
 
     return (
         <div className="mt-12 pt-8 border-t border-glass-border">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                    Comments {comments.length > 0 && <span className="text-base font-normal text-secondary">({comments.length})</span>}
+            <div className="flex items-center justify-between gap-2 mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">
+                    Comments {comments.length > 0 && <span className="text-sm sm:text-base font-normal text-secondary">({comments.length})</span>}
                 </h2>
                 {comments.length > 1 && (
                     <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-glass-border">
@@ -196,7 +196,7 @@ const CommentsSection = () => {
                             <button
                                 key={mode}
                                 onClick={() => { setSortMode(mode); setDisplayCount(COMMENTS_PER_PAGE); }}
-                                className={`px-3 py-1 text-xs rounded-md transition-colors capitalize ${
+                                className={`px-2 sm:px-3 py-1 text-[10px] sm:text-xs rounded-md transition-colors capitalize ${
                                     sortMode === mode ? 'bg-accent text-white' : 'text-secondary hover:text-white'
                                 }`}
                             >
