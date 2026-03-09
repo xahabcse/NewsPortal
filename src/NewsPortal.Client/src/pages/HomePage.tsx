@@ -10,11 +10,13 @@ import { NewsSourceService } from '../services/NewsSourceService'
 import type { NewsSource } from '../types/NewsSource'
 import { getNotificationPrefs } from '../components/NotificationPreferences'
 import { getBanglaDate, getBengaliCalendarDate, getHijriDate, getSession, getBanglaRitu, toBanglaDigits } from '../utils/dateLocale'
+import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
 
 const HomePage = () => {
+  const { session: authSession } = useAuth()
   const [news, setNews] = useState<NewsArticle[]>([])
   const [sources, setSources] = useState<NewsSource[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -136,7 +138,7 @@ const HomePage = () => {
             <span className="text-4xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
             <div>
               <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight">
-                {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">পাঠক</span>
+                {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">{authSession?.username || 'পাঠক'}</span>
               </h1>
               <p className="text-xs sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
                 <span className="text-white/80">আজ</span>

@@ -374,7 +374,9 @@ export default function NewsSourcesPage() {
 
     const loadSources = useCallback(async () => {
         try {
-            const data = await NewsSourceService.getAll();
+            const data = canManageSources
+                ? await NewsSourceService.getAll()
+                : await NewsSourceService.getActive();
             setSources(data);
             setError(null);
         } catch (err) {
@@ -382,7 +384,7 @@ export default function NewsSourcesPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [canManageSources]);
 
     useEffect(() => { void loadSources(); }, [loadSources]);
 

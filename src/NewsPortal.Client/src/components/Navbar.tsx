@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import LanguageToggle from './LanguageToggle';
+
 import NotificationPreferences from './NotificationPreferences';
 import { signalRService } from '../services/SignalRService';
 import { Avatar } from '../utils/avatars';
@@ -366,8 +366,6 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             </svg>
                         )}
                     </button>
-
-                    <LanguageToggle />
 
                     {!isAuthenticated && (
                         <button

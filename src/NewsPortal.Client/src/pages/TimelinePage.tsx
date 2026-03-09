@@ -20,7 +20,7 @@ const TimelinePage = () => {
         const fetchAll = async () => {
             try {
                 const [srcs, cats, highlights] = await Promise.all([
-                    NewsSourceService.getAll(),
+                    NewsSourceService.getActive(),
                     newsApi.getCategories(),
                     newsApi.getDailyHighlights(FETCH_DAYS),
                 ])
