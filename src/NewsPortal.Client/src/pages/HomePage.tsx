@@ -11,6 +11,7 @@ import type { NewsSource } from '../types/NewsSource'
 import { getNotificationPrefs } from '../components/NotificationPreferences'
 import { getBanglaDate, getBengaliCalendarDate, getHijriDate, getSession, getBanglaRitu, toBanglaDigits } from '../utils/dateLocale'
 import { useAuth } from '../context/AuthContext'
+import WeatherWidget from '../components/WeatherWidget'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
@@ -134,33 +135,38 @@ const HomePage = () => {
       <main className="flex-1 overflow-y-auto p-4 lg:p-8">
         <div className="mb-6">
           {/* Header */}
-          <div className="flex items-start gap-2 sm:gap-4 mb-4">
-            <span className="text-4xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight">
-                {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">{authSession?.username || 'পাঠক'}</span>
-              </h1>
-              <p className="text-xs sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
-                <span className="text-white/80">আজ</span>
-                <span className="text-emerald-400">{bengaliDate}</span>
-                <span className="text-white/20">•</span>
-                <span className="text-amber-400">{hijriDate}</span>
-                <span className="text-white/20">•</span>
-                <span className="text-sky-400">{banglaDate}</span>
-              </p>
-              <p className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
-                <span>{ritu.emoji}</span>
-                <span className="text-white/60">ঋতু পরিক্রমায়</span>
-                <span className="text-pink-400 font-bold">{ritu.name}</span>
-              </p>
-              <p className="text-secondary text-xs sm:text-sm font-medium flex items-center">
-                {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
-                  <>
-                    সর্বমোট <span className="text-accent font-bold text-sm sm:text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
-                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
-                  </>
-                )}
-              </p>
+          <div className="flex items-start justify-between gap-2 sm:gap-4 mb-4">
+            <div className="flex items-start gap-2 sm:gap-4">
+              <span className="text-4xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
+              <div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight">
+                  {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">{authSession?.username || 'পাঠক'}</span>
+                </h1>
+                <p className="text-xs sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
+                  <span className="text-white/80">আজ</span>
+                  <span className="text-emerald-400">{bengaliDate}</span>
+                  <span className="text-white/20">•</span>
+                  <span className="text-amber-400">{hijriDate}</span>
+                  <span className="text-white/20">•</span>
+                  <span className="text-sky-400">{banglaDate}</span>
+                </p>
+                <p className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
+                  <span>{ritu.emoji}</span>
+                  <span className="text-white/60">ঋতু পরিক্রমায়</span>
+                  <span className="text-pink-400 font-bold">{ritu.name}</span>
+                </p>
+                <p className="text-secondary text-xs sm:text-sm font-medium flex items-center">
+                  {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
+                    <>
+                      সর্বমোট <span className="text-accent font-bold text-sm sm:text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
+                      <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:block shrink-0 w-44">
+              <WeatherWidget />
             </div>
           </div>
 

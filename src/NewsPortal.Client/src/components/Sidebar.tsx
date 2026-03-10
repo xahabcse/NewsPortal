@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
 
-import WeatherWidget from './WeatherWidget'
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
 import { newsApi, type Category } from '../services/api'
@@ -300,10 +299,6 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     <nav className="flex flex-col gap-2">
                         <ReadingHistory />
                     </nav>
-
-
-
-                    <WeatherWidget />
                 </div>
 
                 {/* Admin Section */}
