@@ -175,17 +175,38 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Enable CORS with restricted methods and headers
+// Allow configured origins + any local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewsPortalPolicy", policy =>
     {
         policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
+              .SetIsOriginAllowed(origin =>
+              {
+                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                  {
+                      var host = uri.Host;
+                      // Allow localhost variants
+                      if (host is "localhost" or "127.0.0.1") return true;
+                      // Allow private network IPs (LAN access)
+                      if (System.Net.IPAddress.TryParse(host, out var ip))
+                      {
+                          var bytes = ip.GetAddressBytes();
+                          if (bytes.Length == 4)
+                          {
+                              return bytes[0] == 10 ||                                    // 10.x.x.x
+                                     (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || // 172.16-31.x.x
+                                     (bytes[0] == 192 && bytes[1] == 168);                 // 192.168.x.x
+                          }
+                      }
+                  }
+                  return false;
+              })
               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
               .WithHeaders("Content-Type", "Authorization", "Accept", "X-Requested-With")
               .WithExposedHeaders("X-Pagination")
-              .AllowCredentials()
-              .SetIsOriginAllowedToAllowWildcardSubdomains();
+              .AllowCredentials();
     });
 });
 

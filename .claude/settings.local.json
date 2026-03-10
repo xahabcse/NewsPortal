@@ -30,7 +30,8 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet ef database update:*)",
       "Bash(dotnet ef migrations script:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(ipconfig)"
     ]
   }
 }
