@@ -17,7 +17,14 @@ public static class DependencyInjection
         services.AddHttpClient<IScrapingService, ScrapingService>()
             .ConfigureHttpClient(client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(30); // 30 second timeout for scraping requests
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+        // Configure HttpClient for ContentScraperService (lazy content fetching)
+        services.AddHttpClient<IContentScraperService, ContentScraperService>()
+            .ConfigureHttpClient(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
             });
 
         services.AddScoped<IRssFeedService, RssFeedService>();

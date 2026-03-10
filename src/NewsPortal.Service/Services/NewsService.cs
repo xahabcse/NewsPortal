@@ -31,17 +31,20 @@ public class NewsService : INewsService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cache;
     private readonly IImageStorageService _imageStorage;
+    private readonly IContentScraperService _contentScraper;
     private readonly ILogger<NewsService> _logger;
 
     public NewsService(
         IUnitOfWork unitOfWork,
         ICacheService cache,
         IImageStorageService imageStorage,
+        IContentScraperService contentScraper,
         ILogger<NewsService> logger)
     {
         _unitOfWork = unitOfWork;
         _cache = cache;
         _imageStorage = imageStorage;
+        _contentScraper = contentScraper;
         _logger = logger;
     }
 
@@ -137,6 +140,37 @@ public class NewsService : INewsService
                 return null;
             }
 
+            // Lazy content fetching: if content is missing, scrape it from source URL
+            if (IsContentMissing(dto.Content) && !string.IsNullOrWhiteSpace(dto.SourceUrl))
+            {
+                _logger.LogInformation("Content missing for article {Slug}, attempting lazy scrape from {Url}", slug, dto.SourceUrl);
+
+                var scrapedContent = await _contentScraper.ScrapeFullContentAsync(dto.SourceUrl);
+
+                if (!string.IsNullOrWhiteSpace(scrapedContent))
+                {
+                    // Update the article in DB
+                    var article = await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                    if (article != null)
+                    {
+                        article.Content = scrapedContent;
+                        article.PlainText = StripHtml(scrapedContent);
+                        await _unitOfWork.NewsArticles.UpdateAsync(article);
+                        await _unitOfWork.SaveChangesAsync();
+
+                        // Update the DTO and invalidate cache
+                        dto.Content = scrapedContent;
+                        await _cache.RemoveAsync(cacheKey);
+
+                        _logger.LogInformation("Successfully lazy-fetched and saved content for article {Slug}", slug);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Lazy scrape returned no content for article {Slug}", slug);
+                }
+            }
+
             // Increment view count asynchronously with proper error handling
             _ = Task.Run(async () =>
             {
@@ -157,6 +191,12 @@ public class NewsService : INewsService
             _logger.LogError(ex, "Error occurred while getting news detail for slug: {Slug}", slug);
             throw;
         }
+    }
+
+    private static bool IsContentMissing(string? content)
+    {
+        return string.IsNullOrWhiteSpace(content)
+            || content == "No content available";
     }
 
     public async Task<IEnumerable<NewsArticleListDto>> GetFeaturedNewsAsync(int count)

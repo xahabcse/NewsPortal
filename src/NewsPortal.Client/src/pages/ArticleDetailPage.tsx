@@ -390,7 +390,7 @@ const ArticleDetailPage = () => {
             )}
 
             {/* Article Content */}
-            {article.content ? (
+            {article.content && article.content !== 'No content available' ? (
                 <article className="prose prose-invert prose-lg max-w-none">
                     <div
                         className={`text-white/90 leading-relaxed space-y-4 transition-all ${
@@ -401,7 +401,14 @@ const ArticleDetailPage = () => {
                 </article>
             ) : (
                 <div className="text-center p-8 bg-white/5 rounded-2xl border border-glass-border">
-                    <p className="text-secondary">Full content not available. Read the original article at the source.</p>
+                    <p className="text-secondary">
+                        সম্পূর্ণ নিবন্ধ লোড করা সম্ভব হয়নি।{' '}
+                        {article.sourceUrl && (
+                            <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                                মূল উৎস থেকে পড়ুন
+                            </a>
+                        )}
+                    </p>
                 </div>
             )}
 
