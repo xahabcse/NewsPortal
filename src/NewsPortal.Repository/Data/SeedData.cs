@@ -31,58 +31,113 @@ public static class SeedData
         }
 
         // Seed News Sources
-        if (!await context.NewsSources.AnyAsync())
+        var allSeedSources = new List<NewsSource>
         {
-            var sources = new List<NewsSource>
+            // Bangladeshi Sources
+            new()
             {
-                new()
-                {
-                    Name = "Prothom Alo",
-                    Slug = "prothom-alo",
-                    BaseUrl = "https://www.prothomalo.com",
-                    RssFeedUrl = "https://www.prothomalo.com/feed",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 5
-                },
-                new()
-                {
-                    Name = "Bangla Tribune",
-                    Slug = "bangla-tribune",
-                    BaseUrl = "https://www.banglatribune.com",
-                    RssFeedUrl = "https://www.banglatribune.com/feed/",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 5
-                },
-                new()
-                {
-                    Name = "Bangladesh Sangbad Sangstha (BSS)",
-                    Slug = "bss",
-                    BaseUrl = "https://www.bssnews.net",
-                    RssFeedUrl = "https://www.bssnews.net/rss/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 5
-                },
-                new()
-                {
-                    Name = "The Dhaka Post",
-                    Slug = "the-dhaka-post",
-                    BaseUrl = "https://www.thedhakapost.com",
-                    RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 5
-                },
-                new()
-                {
-                    Name = "Daily Star (English)",
-                    Slug = "daily-star",
-                    BaseUrl = "https://www.thedailystar.net",
-                    RssFeedUrl = "https://www.thedailystar.net/frontpage/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 5
-                }
-            };
+                Name = "Prothom Alo",
+                Slug = "prothom-alo",
+                BaseUrl = "https://www.prothomalo.com",
+                RssFeedUrl = "https://www.prothomalo.com/feed",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Bangla Tribune",
+                Slug = "bangla-tribune",
+                BaseUrl = "https://www.banglatribune.com",
+                RssFeedUrl = "https://www.banglatribune.com/feed/",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Bangladesh Sangbad Sangstha (BSS)",
+                Slug = "bss",
+                BaseUrl = "https://www.bssnews.net",
+                RssFeedUrl = "https://www.bssnews.net/rss/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "The Dhaka Post",
+                Slug = "the-dhaka-post",
+                BaseUrl = "https://www.thedhakapost.com",
+                RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Daily Star (English)",
+                Slug = "daily-star",
+                BaseUrl = "https://www.thedailystar.net",
+                RssFeedUrl = "https://www.thedailystar.net/frontpage/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            // International Sources
+            new()
+            {
+                Name = "BBC News",
+                Slug = "bbc-news",
+                BaseUrl = "https://www.bbc.com/news",
+                RssFeedUrl = "http://feeds.bbci.co.uk/news/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "CNN International",
+                Slug = "cnn",
+                BaseUrl = "https://edition.cnn.com",
+                RssFeedUrl = "http://rss.cnn.com/rss/edition.rss",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "Al Jazeera English",
+                Slug = "al-jazeera",
+                BaseUrl = "https://www.aljazeera.com",
+                RssFeedUrl = "https://www.aljazeera.com/xml/rss/all.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "NPR News",
+                Slug = "npr-news",
+                BaseUrl = "https://www.npr.org",
+                RssFeedUrl = "https://feeds.npr.org/1001/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "Hindustan Times",
+                Slug = "hindustan-times",
+                BaseUrl = "https://www.hindustantimes.com",
+                RssFeedUrl = "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            }
+        };
 
-            await context.NewsSources.AddRangeAsync(sources);
+        var existingSlugs = await context.NewsSources
+            .Select(s => s.Slug)
+            .ToListAsync();
+
+        var newSources = allSeedSources
+            .Where(s => !existingSlugs.Contains(s.Slug))
+            .ToList();
+
+        if (newSources.Any())
+        {
+            await context.NewsSources.AddRangeAsync(newSources);
             await context.SaveChangesAsync();
         }
 
