@@ -100,7 +100,7 @@
             },
             "targets": [
                 {
-                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                    "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\"}[5m])) / scalar(machine_cpu_cores) * 100",
                     "legendFormat": "CPU %",
                     "refId": "A"
                 }
@@ -187,17 +187,22 @@
             },
             "targets": [
                 {
-                    "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
-                    "legendFormat": "Used",
+                    "expr": "machine_memory_bytes - container_memory_working_set_bytes{id=\"/\"}",
+                    "legendFormat": "Used (approx)",
                     "refId": "A"
                 },
                 {
-                    "expr": "node_memory_MemAvailable_bytes",
-                    "legendFormat": "Left",
+                    "expr": "container_memory_working_set_bytes{id=\"/\"}",
+                    "legendFormat": "Container Working Set",
                     "refId": "B"
+                },
+                {
+                    "expr": "machine_memory_bytes",
+                    "legendFormat": "Total",
+                    "refId": "C"
                 }
             ],
-            "title": "RAM Used vs Left",
+            "title": "RAM Usage",
             "type": "timeseries"
         },
         {
@@ -279,17 +284,17 @@
             },
             "targets": [
                 {
-                    "expr": "node_filesystem_size_bytes{mountpoint=\"/host\"} - node_filesystem_avail_bytes{mountpoint=\"/host\"}",
+                    "expr": "container_fs_usage_bytes{device=~\"/dev/sd.*\",id=\"/\"}",
                     "legendFormat": "Used",
                     "refId": "A"
                 },
                 {
-                    "expr": "node_filesystem_avail_bytes{mountpoint=\"/host\"}",
-                    "legendFormat": "Left",
+                    "expr": "container_fs_limit_bytes{device=~\"/dev/sd.*\",id=\"/\"} - container_fs_usage_bytes{device=~\"/dev/sd.*\",id=\"/\"}",
+                    "legendFormat": "Free",
                     "refId": "B"
                 }
             ],
-            "title": "Storage Used vs Left",
+            "title": "Storage Used vs Free",
             "type": "timeseries"
         },
         {
