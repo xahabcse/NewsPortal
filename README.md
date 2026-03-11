@@ -1,8 +1,8 @@
 # NewsPortal
 
-A full-featured news aggregation portal built with React + ASP.NET Core 8.0. Fetches, categorizes, and displays news from multiple sources with AI-powered features.
+A full-featured news aggregation portal built with React + ASP.NET Core 9.0. Fetches, categorizes, and displays news from multiple sources with AI-powered features.
 
-**Stack:** React 18 + TypeScript + Vite | ASP.NET Core 8.0 | PostgreSQL + MongoDB + Redis | Docker
+**Stack:** React 18 + TypeScript + Vite | ASP.NET Core 9.0 | PostgreSQL + MongoDB + Redis | Docker
 
 ---
 
@@ -11,7 +11,7 @@ A full-featured news aggregation portal built with React + ASP.NET Core 8.0. Fet
 ### Prerequisites
 
 - Docker Desktop (or Docker Engine + Compose V2 on Linux)
-- .NET 8.0 SDK (for local development)
+- .NET 9.0 SDK (for local development)
 - Node.js 20.x (for frontend development)
 
 ### Option 1: Docker (Full Stack)
@@ -59,8 +59,8 @@ User Browser <--> React Frontend <--> ASP.NET Core API <--> PostgreSQL / MongoDB
 | Service      | Image          | Purpose                          |
 | ------------ | -------------- | -------------------------------- |
 | `web`        | React + Nginx  | Frontend SPA                     |
-| `api`        | .NET 8         | REST API                         |
-| `mcpserver`  | .NET 8         | Background news fetching (Hangfire) |
+| `api`        | .NET 9         | REST API                         |
+| `mcpserver`  | .NET 9         | Background news fetching (Hangfire) |
 | `postgres`   | PostgreSQL 15  | Relational data                  |
 | `mongodb`    | MongoDB 4.4    | Image storage (GridFS)           |
 | `redis`      | Redis 7        | Caching                          |
@@ -94,12 +94,16 @@ NewsPortal/
 
 ### Authentication
 
-| Method | Endpoint                       | Description     |
-| ------ | ------------------------------ | --------------- |
-| POST   | `/api/v1/auth/login`           | Login           |
-| POST   | `/api/v1/auth/register`        | Register        |
-| GET    | `/api/v1/auth/me`              | Current user    |
-| POST   | `/api/v1/auth/change-password` | Change password |
+| Method | Endpoint                       | Description          |
+| ------ | ------------------------------ | -------------------- |
+| POST   | `/api/v1/auth/login`           | Login (JWT)          |
+| POST   | `/api/v1/auth/register`        | Register             |
+| POST   | `/api/v1/auth/google`          | Google OAuth login   |
+| GET    | `/api/v1/auth/me`              | Current user         |
+| POST   | `/api/v1/auth/change-password` | Change password      |
+
+**Roles:** SuperAdmin, Admin, Editor, Reader
+**Seed users:** `superadmin/superadmin`, `admin/admin1`, `editor/editor`, `reader/reader`
 
 ### News
 
@@ -147,18 +151,25 @@ NewsPortal/
 ### Reader
 
 - Infinite scroll news feed with category filtering
-- Article detail with reading time, related articles
+- Article detail with reading time, related articles, lazy-loaded comments
 - Full-text search with date/source/category filters
+- Advanced multi-filter bar (source, category, date range)
 - Trending articles, bookmarks, reading history
+- Daily news timeline page with category-based grouping
 - Dark/Light theme toggle
-- Text-to-Speech (Web Speech API)
+- Text-to-Speech with Bengali voice fallback (Web Speech API)
 - Keyboard shortcuts (j/k navigate, o open, b bookmark, ? help)
 - PWA support (installable, offline capable)
-- Bilingual UI (English / Bengali)
+- Mobile responsive design (360px–430px viewports optimized)
+- Dynamic Bangla greeting with Bengali, Hijri, and Gregorian calendar dates
+- Weather widget (Dhaka) in greeting section
+- User profile with bio, emoji avatars, and public profile page
+- Collapsible sidebar with semantic icons
 
 ### AI-Powered
 
-- Article summarization (TF-IDF extractive, bullet/paragraph modes)
+- Article summarization via Google Gemini 2.5 Flash
+- Lazy content scraping — full article fetched on first view from source URL
 - Auto-categorization (keyword-based classifier)
 - Multi-language translation (6 languages via MyMemory API)
 - Comment sentiment analysis with visual badge
@@ -174,10 +185,12 @@ NewsPortal/
 
 - Dashboard with charts (Recharts)
 - Article CRUD management with bulk auto-categorize
-- Content analytics dashboard (6 chart types)
-- User management, category management
+- Content analytics dashboard (6 chart types, full-width layout)
+- User management (Admin+ access), category management
 - Fetch log viewer, news source management
 - News ticker / breaking news banner
+- System tool links (Seq, Grafana, etc.)
+- LAN access support (dynamic CORS for private network IPs)
 
 ---
 
@@ -280,4 +293,4 @@ docker compose exec redis redis-cli ping                   # Redis
 
 This project is for educational and portfolio purposes.
 
-**Last Updated:** March 1, 2026
+**Last Updated:** March 11, 2026
