@@ -420,10 +420,10 @@ const AdminDashboard = () => {
 
                             {/* System Tool Links */}
                             <div className="border-t border-glass-border my-2 pt-2">
-                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-2">System Tools (IP: 192.168.0.109)</p>
+                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-2">System Tools ({window.location.hostname})</p>
                                 <div className="grid grid-cols-1 gap-2">
                                     <a
-                                        href="http://192.168.0.109:8080/swagger"
+                                        href={`http://${window.location.hostname}:8080/swagger`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -439,7 +439,7 @@ const AdminDashboard = () => {
                                         </div>
                                     </a>
                                     <a
-                                        href="http://192.168.0.109:8081"
+                                        href={`http://${window.location.hostname}:8081`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -455,7 +455,7 @@ const AdminDashboard = () => {
                                     </a>
                                     <div className="grid grid-cols-2 gap-2">
                                         <a
-                                            href="http://192.168.0.109:3001"
+                                            href={`http://${window.location.hostname}:3001`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -468,7 +468,7 @@ const AdminDashboard = () => {
                                             <div className="text-xs font-medium text-white">Grafana</div>
                                         </a>
                                         <a
-                                            href="http://192.168.0.109:9090"
+                                            href={`http://${window.location.hostname}:9090`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
