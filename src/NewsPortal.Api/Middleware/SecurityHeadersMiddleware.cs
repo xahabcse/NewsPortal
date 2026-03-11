@@ -26,12 +26,24 @@ public class SecurityHeadersMiddleware
         // Permissions-Policy: Controls which browser features can be used
         context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
 
-        // Content-Security-Policy: Prevents XSS and other code injection attacks
-        // For API, we use a restrictive policy since we don't serve HTML
-        context.Response.Headers["Content-Security-Policy"] =
-            "default-src 'none'; " +
-            "frame-ancestors 'none'; " +
-            "base-uri 'self'";
+        // Content-Security-Policy: Relaxed for Swagger UI, restrictive for API
+        var path = context.Request.Path.Value ?? "";
+        if (path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Headers["Content-Security-Policy"] =
+                "default-src 'self'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "img-src 'self' data:; " +
+                "font-src 'self' data:";
+        }
+        else
+        {
+            context.Response.Headers["Content-Security-Policy"] =
+                "default-src 'none'; " +
+                "frame-ancestors 'none'; " +
+                "base-uri 'self'";
+        }
 
         // Strict-Transport-Security (HSTS): Forces HTTPS connections
         // Only add HSTS in production to avoid development issues
