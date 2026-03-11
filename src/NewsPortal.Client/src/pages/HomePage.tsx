@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import SEO from '../components/SEO'
 import NewsCard from '../components/NewsCard'
-import ArticlePopup from '../components/ArticlePopup'
 import SkeletonCard from '../components/SkeletonCard'
 import NewsFilterBar, { defaultFilters, filtersToParams, hasActiveFilters } from '../components/NewsFilterBar'
 import type { ActiveFilters } from '../components/NewsFilterBar'
@@ -29,7 +28,6 @@ const HomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const observerTarget = useRef<HTMLDivElement>(null)
-  const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null)
   const [feedMode, setFeedMode] = useState<'all' | 'foryou'>('all')
 
   const userCategorySlugs = getNotificationPrefs().categories
@@ -248,7 +246,7 @@ const HomePage = () => {
                   thumbnailUrl={item.thumbnailUrl}
                   slug={item.slug}
                   sourceUrl={item.sourceUrl}
-                  onCardClick={() => setPopupArticle(item)}
+                  articleId={item.id}
                 />
               ))}
             </div>
@@ -296,21 +294,6 @@ const HomePage = () => {
         </div>
       </main>
 
-      {popupArticle && (
-        <ArticlePopup
-          isOpen={!!popupArticle}
-          onClose={() => setPopupArticle(null)}
-          title={popupArticle.title}
-          summary={popupArticle.summary}
-          categoryName={popupArticle.categoryName}
-          sourceName={popupArticle.sourceName}
-          publishedAt={popupArticle.publishedAt}
-          thumbnailUrl={popupArticle.thumbnailUrl}
-          sourceUrl={popupArticle.sourceUrl}
-          slug={popupArticle.slug}
-          articleId={popupArticle.id}
-        />
-      )}
     </>
   )
 }
