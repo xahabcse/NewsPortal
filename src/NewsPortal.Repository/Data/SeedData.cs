@@ -124,6 +124,15 @@ public static class SeedData
                 RssFeedUrl = "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml",
                 FetchMethod = FetchMethod.Rss,
                 FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "The Guardian",
+                Slug = "the-guardian",
+                BaseUrl = "https://www.theguardian.com",
+                ApiEndpoint = "https://content.guardianapis.com/search",
+                FetchMethod = FetchMethod.Api,
+                FetchIntervalMinutes = 10
             }
         };
 
