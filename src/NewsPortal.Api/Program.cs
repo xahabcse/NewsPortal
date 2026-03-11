@@ -253,17 +253,14 @@ else
     app.UseHsts();
 }
 
-// Enable Swagger UI only in Development and Staging environments
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+// Enable Swagger UI in all environments
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
-        options.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root (http://localhost:port/)
-        options.DocumentTitle = "NewsPortal API Documentation";
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+    options.RoutePrefix = "swagger";
+    options.DocumentTitle = "NewsPortal API Documentation";
+});
 
 // Add request logging
 app.UseSerilogRequestLogging();
