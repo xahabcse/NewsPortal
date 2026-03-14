@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NewsPortal.Service.Helpers;
 using NewsPortal.Core.Constants;
@@ -33,19 +34,22 @@ public class NewsService : INewsService
     private readonly IImageStorageService _imageStorage;
     private readonly IContentScraperService _contentScraper;
     private readonly ILogger<NewsService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public NewsService(
         IUnitOfWork unitOfWork,
         ICacheService cache,
         IImageStorageService imageStorage,
         IContentScraperService contentScraper,
-        ILogger<NewsService> logger)
+        ILogger<NewsService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _unitOfWork = unitOfWork;
         _cache = cache;
         _imageStorage = imageStorage;
         _contentScraper = contentScraper;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<PagedResultDto<NewsArticleListDto>> GetLatestNewsAsync(int page, int pageSize)
@@ -171,12 +175,14 @@ public class NewsService : INewsService
                 }
             }
 
-            // Increment view count asynchronously with proper error handling
+            // Increment view count in a separate DI scope to avoid disposed DbContext
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
+                    using var scope = _scopeFactory.CreateScope();
+                    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    await unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
                 }
                 catch (Exception ex)
                 {

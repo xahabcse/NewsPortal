@@ -380,8 +380,8 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
-            {/* Summary */}
-            {article.summary && (
+            {/* Summary - only show when full content is not available */}
+            {article.summary && (!article.content || article.content === 'No content available') && (
                 <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-glass-border">
                     <p className="text-lg text-white/90 leading-relaxed">
                         {article.summary}
