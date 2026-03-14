@@ -7,13 +7,16 @@ interface AuthContextValue {
     session: AuthSession | null;
     isAuthenticated: boolean;
     role: string;
+    authProvider: string;
     canManageSources: boolean;
     canCreateSources: boolean;
     canEditSources: boolean;
     canDeleteSources: boolean;
     canFetchSources: boolean;
     sourcePermissionMessage: string;
+    updateAvatarId: (avatarId: number) => void;
     login: (username: string, password: string) => Promise<void>;
+    googleLogin: (credential: string) => Promise<void>;
     logout: () => void;
 }
 
@@ -60,6 +63,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(newSession);
     }, []);
 
+    const googleLogin = useCallback(async (credential: string) => {
+        const newSession = await AuthService.googleLogin(credential);
+        authStorage.set(newSession);
+        setSession(newSession);
+    }, []);
+
+    const updateAvatarId = useCallback((avatarId: number) => {
+        setSession(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, avatarId };
+            authStorage.set(updated);
+            return updated;
+        });
+    }, []);
+
     useEffect(() => {
         if (!session) return;
 
@@ -100,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         isAuthenticated: !!session,
         role: getRole(session),
+        authProvider: session?.authProvider ?? 'Local',
         canManageSources: hasManageRole(session),
         canCreateSources: session?.role === 'Admin' || session?.role === 'SuperAdmin',
         canEditSources: session?.role === 'Admin' || session?.role === 'Editor' || session?.role === 'SuperAdmin',
@@ -114,9 +133,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     : session.role === 'Editor'
                         ? 'Editor mode. You can test, edit, and fetch channels. Create/Delete requires Admin.'
                         : 'Read-only mode. Your role does not have channel management permissions.',
+        updateAvatarId,
         login,
+        googleLogin,
         logout
-    }), [session, login, logout]);
+    }), [session, updateAvatarId, login, googleLogin, logout]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

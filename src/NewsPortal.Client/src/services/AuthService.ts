@@ -21,6 +21,8 @@ export interface AuthSession {
     username: string;
     email: string;
     role: string;
+    authProvider: string;
+    avatarId: number;
     expiresAt: string;
 }
 
@@ -32,6 +34,11 @@ interface LoginRequest {
 export const AuthService = {
     login: async (request: LoginRequest): Promise<AuthSession> => {
         const response = await axios.post<AuthSession>(`${API_URL}/auth/login`, request);
+        return response.data;
+    },
+
+    googleLogin: async (credential: string): Promise<AuthSession> => {
+        const response = await axios.post<AuthSession>(`${API_URL}/auth/google`, { credential });
         return response.data;
     },
 

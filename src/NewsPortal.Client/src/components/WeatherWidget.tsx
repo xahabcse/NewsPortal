@@ -108,7 +108,7 @@ const WeatherWidget = () => {
                                 type="text"
                                 value={editValue}
                                 onChange={e => setEditValue(e.target.value)}
-                                className="w-20 bg-white/10 border border-glass-border rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-blue-400"
+                                className="w-28 bg-white/10 border border-glass-border rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-blue-400"
                                 autoFocus
                                 onBlur={handleCitySubmit}
                             />

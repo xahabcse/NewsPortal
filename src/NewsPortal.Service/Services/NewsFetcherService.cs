@@ -178,8 +178,8 @@ public class NewsFetcherService : INewsFetcherService
         var articles = new List<CreateNewsArticleDto>();
         var apiKey = source.ApiKey;
         var url = string.IsNullOrEmpty(apiKey)
-            ? $"{source.ApiEndpoint}?page-size=20"
-            : $"{source.ApiEndpoint}?page-size=20&api-key={apiKey}";
+            ? $"{source.ApiEndpoint}?page-size=20&show-fields=trailText,body,thumbnail&api-key=test"
+            : $"{source.ApiEndpoint}?page-size=20&show-fields=trailText,body,thumbnail&api-key={apiKey}";
 
         using var httpClient = new HttpClient();
         var response = await httpClient.GetStringAsync(url);
@@ -191,14 +191,24 @@ public class NewsFetcherService : INewsFetcherService
 
         foreach (var item in contentArray.EnumerateArray())
         {
-            var fields = item.GetProperty("fields");
+            string? summary = null;
+            string? content = null;
+            string? imageUrl = null;
+
+            if (item.TryGetProperty("fields", out var fields))
+            {
+                summary = fields.TryGetProperty("trailText", out var trail) ? trail.GetString() : null;
+                content = fields.TryGetProperty("body", out var body) ? body.GetString() : null;
+                imageUrl = fields.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null;
+            }
+
             articles.Add(new CreateNewsArticleDto
             {
                 Title = item.GetProperty("webTitle").GetString() ?? "",
-                Summary = fields.TryGetProperty("trailText", out var trail) ? trail.GetString() : "",
-                Content = fields.TryGetProperty("body", out var body) ? body.GetString() : "",
+                Summary = summary,
+                Content = content,
                 SourceUrl = item.GetProperty("webUrl").GetString() ?? "",
-                OriginalImageUrl = fields.TryGetProperty("thumbnail", out var thumb) ? thumb.GetString() : null,
+                OriginalImageUrl = imageUrl,
                 PublishedAt = DateTimeOffset.TryParse(item.GetProperty("webPublicationDate").GetString(), out var date) ? date.DateTime : DateTime.UtcNow,
                 SourceId = source.Id
             });

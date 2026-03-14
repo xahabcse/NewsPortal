@@ -15,6 +15,7 @@ import TrendingPage from './pages/TrendingPage'
 import BookmarksPage from './pages/BookmarksPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
+import UserProfilePage from './pages/UserProfilePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import FetchLogPage from './pages/admin/FetchLogPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
@@ -22,6 +23,8 @@ import UserManagementPage from './pages/admin/UserManagementPage'
 import ArticleManagementPage from './pages/admin/ArticleManagementPage'
 import ContentAnalyticsPage from './pages/admin/ContentAnalyticsPage'
 import TimelinePage from './pages/TimelinePage'
+import LoginPage from './pages/LoginPage'
+import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import BackToTop from './components/BackToTop'
@@ -59,22 +62,30 @@ function App() {
                   <NewsTicker />
                   <div className="mt-16 flex-1 flex flex-col">
                     <Routes>
+                      {/* Public routes — home, login, register only */}
                       <Route path="/" element={<HomePage />} />
-                      <Route path="/search" element={<SearchResultsPage />} />
-                      <Route path="/timeline" element={<TimelinePage />} />
-                      <Route path="/trending" element={<TrendingPage />} />
-                      <Route path="/bookmarks" element={<BookmarksPage />} />
-                      <Route path="/news-sources" element={<NewsSourcesPage />} />
-                      <Route path="/news/:slug" element={<ArticleDetailPage />} />
-                      <Route path="/category/:slug" element={<CategoryPage />} />
+                      <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                      <Route path="/admin/fetch-logs" element={<FetchLogPage />} />
-                      <Route path="/admin/categories" element={<CategoriesPage />} />
-                      <Route path="/admin/articles" element={<ArticleManagementPage />} />
-                      <Route path="/admin/users" element={<UserManagementPage />} />
-                      <Route path="/admin/analytics" element={<ContentAnalyticsPage />} />
+
+                      {/* Content routes — any authenticated user (Reader+) */}
+                      <Route path="/search" element={<ProtectedRoute><SearchResultsPage /></ProtectedRoute>} />
+                      <Route path="/timeline" element={<ProtectedRoute><TimelinePage /></ProtectedRoute>} />
+                      <Route path="/trending" element={<ProtectedRoute><TrendingPage /></ProtectedRoute>} />
+                      <Route path="/news-sources" element={<ProtectedRoute><NewsSourcesPage /></ProtectedRoute>} />
+                      <Route path="/news/:slug" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+                      <Route path="/category/:slug" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
+                      <Route path="/bookmarks" element={<ProtectedRoute><BookmarksPage /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                      <Route path="/user/:username" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
+
+                      {/* Admin routes — Admin or SuperAdmin */}
+                      <Route path="/admin/dashboard" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><AdminDashboard /></ProtectedRoute>} />
+                      <Route path="/admin/fetch-logs" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><FetchLogPage /></ProtectedRoute>} />
+                      <Route path="/admin/categories" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><CategoriesPage /></ProtectedRoute>} />
+                      <Route path="/admin/articles" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><ArticleManagementPage /></ProtectedRoute>} />
+                      <Route path="/admin/analytics" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><ContentAnalyticsPage /></ProtectedRoute>} />
+                      <Route path="/admin/users" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><UserManagementPage /></ProtectedRoute>} />
+
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                   </div>

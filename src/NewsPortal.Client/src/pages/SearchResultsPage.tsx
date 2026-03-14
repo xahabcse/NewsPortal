@@ -6,7 +6,6 @@ import { newsApi, type Category } from '../services/api';
 import { NewsSourceService } from '../services/NewsSourceService';
 import type { NewsSource } from '../types/NewsSource';
 import NewsCard from '../components/NewsCard';
-import ArticlePopup from '../components/ArticlePopup';
 
 interface NewsArticle {
     id: number;
@@ -40,7 +39,6 @@ const SearchResultsPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null);
 
     // Filters
     const [showFilters, setShowFilters] = useState(false);
@@ -390,7 +388,7 @@ const SearchResultsPage = () => {
                                 thumbnailUrl={article.thumbnailUrl}
                                 slug={article.slug}
                                 sourceUrl={article.sourceUrl}
-                                onCardClick={() => setPopupArticle(article)}
+                                articleId={article.id}
                             />
                         ))}
                     </div>
@@ -421,22 +419,6 @@ const SearchResultsPage = () => {
                     )}
                 </>
             )}
-        {/* Article Popup */}
-        {popupArticle && (
-            <ArticlePopup
-                isOpen={!!popupArticle}
-                onClose={() => setPopupArticle(null)}
-                title={popupArticle.title}
-                summary={popupArticle.summary}
-                categoryName={popupArticle.categoryName}
-                sourceName={popupArticle.sourceName}
-                publishedAt={popupArticle.publishedAt}
-                thumbnailUrl={popupArticle.thumbnailUrl}
-                sourceUrl={popupArticle.sourceUrl}
-                slug={popupArticle.slug}
-                articleId={popupArticle.id}
-            />
-        )}
         </div>
     );
 };

@@ -28,3 +28,8 @@ public interface IScrapingService
     Task<string?> ExtractAttributeAsync(string url, string selector, string attribute);
     Task<IEnumerable<string>> ExtractLinksAsync(string url, string selector);
 }
+
+public interface IContentScraperService
+{
+    Task<string?> ScrapeFullContentAsync(string url);
+}

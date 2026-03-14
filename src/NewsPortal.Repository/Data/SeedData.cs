@@ -31,122 +31,176 @@ public static class SeedData
         }
 
         // Seed News Sources
-        if (!await context.NewsSources.AnyAsync())
+        var allSeedSources = new List<NewsSource>
         {
-            var sources = new List<NewsSource>
+            // Bangladeshi Sources
+            new()
             {
-                new()
-                {
-                    Name = "Prothom Alo",
-                    Slug = "prothom-alo",
-                    BaseUrl = "https://www.prothomalo.com",
-                    RssFeedUrl = "https://www.prothomalo.com/feed",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "bdnews24",
-                    Slug = "bdnews24",
-                    BaseUrl = "https://bdnews24.com",
-                    RssFeedUrl = "https://bdnews24.com/?widgetName=rssfeed&widgetId=1150&getXmlFeed=true",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Bangla Tribune",
-                    Slug = "bangla-tribune",
-                    BaseUrl = "https://www.banglatribune.com",
-                    RssFeedUrl = "https://www.banglatribune.com/feed/", // Standard WordPress feed
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Jagonews24",
-                    Slug = "jagonews24",
-                    BaseUrl = "https://www.jagonews24.com",
-                    RssFeedUrl = "https://www.jagonews24.com/rss/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Sun News Bangladesh",
-                    Slug = "sun-news-bangladesh",
-                    BaseUrl = "https://www.sunnews24x7.com",
-                    RssFeedUrl = "https://en.sunnews24x7.com/rss",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Bangladesh Sangbad Sangstha (BSS)",
-                    Slug = "bss",
-                    BaseUrl = "https://www.bssnews.net",
-                    RssFeedUrl = "https://www.bssnews.net/rss/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "The Dhaka Post",
-                    Slug = "the-dhaka-post",
-                    BaseUrl = "https://www.thedhakapost.com",
-                    RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                },
-                new()
-                {
-                    Name = "Daily Star (English)",
-                    Slug = "daily-star",
-                    BaseUrl = "https://www.thedailystar.net",
-                    RssFeedUrl = "https://www.thedailystar.net/rss.xml",
-                    FetchMethod = FetchMethod.Rss,
-                    FetchIntervalMinutes = 30
-                }
-            };
+                Name = "Prothom Alo",
+                Slug = "prothom-alo",
+                BaseUrl = "https://www.prothomalo.com",
+                RssFeedUrl = "https://www.prothomalo.com/feed",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Bangla Tribune",
+                Slug = "bangla-tribune",
+                BaseUrl = "https://www.banglatribune.com",
+                RssFeedUrl = "https://www.banglatribune.com/feed/",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Bangladesh Sangbad Sangstha (BSS)",
+                Slug = "bss",
+                BaseUrl = "https://www.bssnews.net",
+                RssFeedUrl = "https://www.bssnews.net/rss/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "The Dhaka Post",
+                Slug = "the-dhaka-post",
+                BaseUrl = "https://www.thedhakapost.com",
+                RssFeedUrl = "https://www.thedhakapost.com/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            new()
+            {
+                Name = "Daily Star (English)",
+                Slug = "daily-star",
+                BaseUrl = "https://www.thedailystar.net",
+                RssFeedUrl = "https://www.thedailystar.net/frontpage/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 5
+            },
+            // International Sources
+            new()
+            {
+                Name = "BBC News",
+                Slug = "bbc-news",
+                BaseUrl = "https://www.bbc.com/news",
+                RssFeedUrl = "http://feeds.bbci.co.uk/news/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "CNN International",
+                Slug = "cnn",
+                BaseUrl = "https://edition.cnn.com",
+                RssFeedUrl = "http://rss.cnn.com/rss/edition.rss",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "Al Jazeera English",
+                Slug = "al-jazeera",
+                BaseUrl = "https://www.aljazeera.com",
+                RssFeedUrl = "https://www.aljazeera.com/xml/rss/all.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "NPR News",
+                Slug = "npr-news",
+                BaseUrl = "https://www.npr.org",
+                RssFeedUrl = "https://feeds.npr.org/1001/rss.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "Hindustan Times",
+                Slug = "hindustan-times",
+                BaseUrl = "https://www.hindustantimes.com",
+                RssFeedUrl = "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml",
+                FetchMethod = FetchMethod.Rss,
+                FetchIntervalMinutes = 10
+            },
+            new()
+            {
+                Name = "The Guardian",
+                Slug = "the-guardian",
+                BaseUrl = "https://www.theguardian.com",
+                ApiEndpoint = "https://content.guardianapis.com/search",
+                FetchMethod = FetchMethod.Api,
+                FetchIntervalMinutes = 10
+            }
+        };
 
-            await context.NewsSources.AddRangeAsync(sources);
+        var existingSlugs = await context.NewsSources
+            .Select(s => s.Slug)
+            .ToListAsync();
+
+        var newSources = allSeedSources
+            .Where(s => !existingSlugs.Contains(s.Slug))
+            .ToList();
+
+        if (newSources.Any())
+        {
+            await context.NewsSources.AddRangeAsync(newSources);
             await context.SaveChangesAsync();
         }
 
-        // Seed Super Admin User (created on first application run)
+        // Seed one user per role (created on first application run)
         if (!await context.Users.AnyAsync())
         {
-            // Create Super Admin
-            var superAdminUser = new User
+            var seedUsers = new List<User>
             {
-                Username = "superadmin",
-                Email = "superadmin@newsportal.com",
-                PasswordHash = PasswordHelper.HashPassword("superadmin"),
-                FirstName = "Super",
-                LastName = "Admin",
-                Role = UserRole.SuperAdmin,
-                IsActive = true
+                new() {
+                    Username = "superadmin",
+                    Email = "superadmin@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("superadmin"),
+                    FirstName = "Super",
+                    LastName = "Admin",
+                    Role = UserRole.SuperAdmin,
+                    IsActive = true
+                },
+                new() {
+                    Username = "admin",
+                    Email = "admin@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("admin1"),
+                    FirstName = "System",
+                    LastName = "Admin",
+                    Role = UserRole.Admin,
+                    IsActive = true
+                },
+                new() {
+                    Username = "editor",
+                    Email = "editor@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("editor"),
+                    FirstName = "News",
+                    LastName = "Editor",
+                    Role = UserRole.Editor,
+                    IsActive = true
+                },
+                new() {
+                    Username = "reader",
+                    Email = "reader@newsportal.com",
+                    PasswordHash = PasswordHelper.HashPassword("reader"),
+                    FirstName = "Regular",
+                    LastName = "Reader",
+                    Role = UserRole.Reader,
+                    IsActive = true
+                },
             };
 
-            // Create default Admin
-            var adminUser = new User
-            {
-                Username = "admin",
-                Email = "admin@newsportal.com",
-                PasswordHash = PasswordHelper.HashPassword("Admin@123"),
-                FirstName = "System",
-                LastName = "Admin",
-                Role = UserRole.Admin,
-                IsActive = true
-            };
-
-            await context.Users.AddAsync(superAdminUser);
-            await context.Users.AddAsync(adminUser);
+            await context.Users.AddRangeAsync(seedUsers);
             await context.SaveChangesAsync();
-            
+
             Console.WriteLine("=== Default users created ===");
-            Console.WriteLine("Super Admin: username=superadmin, password=superadmin");
-            Console.WriteLine("Admin: username=admin, password=Admin@123");
+            Console.WriteLine("SuperAdmin : username=superadmin  password=superadmin");
+            Console.WriteLine("Admin      : username=admin        password=admin1");
+            Console.WriteLine("Editor     : username=editor       password=editor");
+            Console.WriteLine("Reader     : username=reader       password=reader");
         }
     }
 }

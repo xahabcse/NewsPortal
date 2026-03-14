@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import NewsCard from '../components/NewsCard';
-import ArticlePopup from '../components/ArticlePopup';
 
 interface NewsArticle {
     id: number;
@@ -23,7 +22,6 @@ const TrendingPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [timeRange, setTimeRange] = useState(24); // hours
-    const [popupArticle, setPopupArticle] = useState<NewsArticle | null>(null);
 
     useEffect(() => {
         const fetchTrending = async () => {
@@ -66,10 +64,10 @@ const TrendingPage = () => {
                 title="Trending News - Most Viewed Articles"
                 description="Discover the most popular and trending news articles. See what everyone is reading right now."
             />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
             {/* Header */}
             <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
@@ -211,7 +209,7 @@ const TrendingPage = () => {
                                     thumbnailUrl={article.thumbnailUrl}
                                     slug={article.slug}
                                     sourceUrl={article.sourceUrl}
-                                    onCardClick={() => setPopupArticle(article)}
+                                    articleId={article.id}
                                 />
                             </div>
                         ))}
@@ -227,22 +225,6 @@ const TrendingPage = () => {
             )}
         </div>
 
-        {/* Article Popup */}
-        {popupArticle && (
-            <ArticlePopup
-                isOpen={!!popupArticle}
-                onClose={() => setPopupArticle(null)}
-                title={popupArticle.title}
-                summary={popupArticle.summary}
-                categoryName={popupArticle.categoryName}
-                sourceName={popupArticle.sourceName}
-                publishedAt={popupArticle.publishedAt}
-                thumbnailUrl={popupArticle.thumbnailUrl}
-                sourceUrl={popupArticle.sourceUrl}
-                slug={popupArticle.slug}
-                articleId={popupArticle.id}
-            />
-        )}
         </>
     );
 };

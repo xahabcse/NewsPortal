@@ -31,7 +31,8 @@ public interface INewsArticleRepository : IRepository<NewsArticle>
     Task<bool> ExistsBySourceUrlAsync(string sourceUrl);
     Task<bool> ExistsByCanonicalUrlAsync(int sourceId, string canonicalUrl);
     Task<IEnumerable<string>> GetRecentTitlesBySourceAsync(int sourceId, DateTime since);
-    Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days);
+    Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int days);
+    Task<(IEnumerable<NewsArticle> Items, int Total)> GetFilteredAsync(NewsPortal.Core.DTOs.NewsFilterQuery filter);
 }
 
 public interface ICategoryRepository : IRepository<Category>
@@ -44,6 +45,7 @@ public interface INewsSourceRepository : IRepository<NewsSource>
 {
     Task<NewsSource?> GetBySlugAsync(string slug);
     Task<IEnumerable<NewsSource>> GetActiveSourcesAsync();
+    Task<IEnumerable<NewsSource>> GetAllSourcesIncludingDisabledAsync();
     Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync();
     Task<NewsSource?> GetWithScrapingConfigAsync(int id);
     Task UpdateLastFetchedAsync(int id);

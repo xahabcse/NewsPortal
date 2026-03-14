@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
@@ -144,18 +146,67 @@ builder.Services.AddSwaggerGen(options =>
 // News fetching now handled exclusively by Hangfire recurring job in McpServer (every 15 min)
 // builder.Services.AddHostedService<NewsPortal.API.BackgroundServices.NewsFetchBackgroundService>();
 
+// Rate limiting — 10 login attempts per minute per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("LoginPolicy", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+            }
+        )
+    );
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Too many login attempts. Please wait a moment and try again.\"}",
+            token
+        );
+    };
+});
+
 // Enable CORS with restricted methods and headers
+// Allow configured origins + any local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewsPortalPolicy", policy =>
     {
         policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
+              .SetIsOriginAllowed(origin =>
+              {
+                  if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                  {
+                      var host = uri.Host;
+                      // Allow localhost variants
+                      if (host is "localhost" or "127.0.0.1") return true;
+                      // Allow private network IPs (LAN access)
+                      if (System.Net.IPAddress.TryParse(host, out var ip))
+                      {
+                          var bytes = ip.GetAddressBytes();
+                          if (bytes.Length == 4)
+                          {
+                              return bytes[0] == 10 ||                                    // 10.x.x.x
+                                     (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || // 172.16-31.x.x
+                                     (bytes[0] == 192 && bytes[1] == 168);                 // 192.168.x.x
+                          }
+                      }
+                  }
+                  return false;
+              })
               .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
               .WithHeaders("Content-Type", "Authorization", "Accept", "X-Requested-With")
               .WithExposedHeaders("X-Pagination")
-              .AllowCredentials()
-              .SetIsOriginAllowedToAllowWildcardSubdomains();
+              .AllowCredentials();
     });
 });
 
@@ -202,17 +253,14 @@ else
     app.UseHsts();
 }
 
-// Enable Swagger UI only in Development and Staging environments
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+// Enable Swagger UI in all environments
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
-        options.RoutePrefix = string.Empty; // Serve Swagger UI at the app's root (http://localhost:port/)
-        options.DocumentTitle = "NewsPortal API Documentation";
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+    options.RoutePrefix = "swagger";
+    options.DocumentTitle = "NewsPortal API Documentation";
+});
 
 // Add request logging
 app.UseSerilogRequestLogging();
@@ -220,6 +268,7 @@ app.UseSerilogRequestLogging();
 // Add Prometheus metrics
 app.UseHttpMetrics();
 
+app.UseRateLimiter();
 app.UseCors("NewsPortalPolicy");
 
 // Add authentication and authorization middleware

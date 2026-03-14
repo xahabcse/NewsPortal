@@ -34,12 +34,20 @@ public class RegisterDto
     public string ConfirmPassword { get; set; } = string.Empty;
 }
 
+public class GoogleLoginDto
+{
+    [Required(ErrorMessage = "Google credential is required")]
+    public string Credential { get; set; } = string.Empty;
+}
+
 public class AuthResponseDto
 {
     public string Token { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string AuthProvider { get; set; } = "Local";
+    public int AvatarId { get; set; } = 1;
     public DateTime ExpiresAt { get; set; }
 }
 
@@ -66,6 +74,8 @@ public class UserDto
     public bool IsActive { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? Bio { get; set; }
+    public int AvatarId { get; set; } = 1;
 }
 
 public class UpdateUserDto
@@ -81,10 +91,19 @@ public class UpdateUserDto
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Role is required")]
-    [RegularExpression(@"^(SuperAdmin|Admin|Editor|Viewer)$", ErrorMessage = "Invalid role")]
-    public string Role { get; set; } = UserRole.Viewer;
+    [RegularExpression(@"^(SuperAdmin|Admin|Editor|Reader|Viewer)$", ErrorMessage = "Invalid role")]
+    public string Role { get; set; } = UserRole.Reader;
 
     public bool IsActive { get; set; } = true;
+}
+
+public class UpdateProfileDto
+{
+    [StringLength(255, ErrorMessage = "Bio cannot exceed 255 characters")]
+    public string? Bio { get; set; }
+
+    [Range(1, 10, ErrorMessage = "Avatar must be between 1 and 10")]
+    public int AvatarId { get; set; } = 1;
 }
 
 public class CreateUserDto
@@ -104,8 +123,8 @@ public class CreateUserDto
     public string Password { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Role is required")]
-    [RegularExpression(@"^(SuperAdmin|Admin|Editor|Viewer)$", ErrorMessage = "Invalid role")]
-    public string Role { get; set; } = UserRole.Viewer;
+    [RegularExpression(@"^(SuperAdmin|Admin|Editor|Reader|Viewer)$", ErrorMessage = "Invalid role")]
+    public string Role { get; set; } = UserRole.Reader;
 
     public bool IsActive { get; set; } = true;
 }

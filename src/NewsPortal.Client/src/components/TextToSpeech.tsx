@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 
 interface TextToSpeechProps {
     text: string;
@@ -22,10 +23,54 @@ const TextToSpeech = ({ text, title }: TextToSpeechProps) => {
         return (title ? title + '. ' : '') + cleaned;
     }, [text, title]);
 
-    const detectLanguage = useCallback((): string => {
-        const bengaliRegex = /[\u0980-\u09FF]/;
-        return bengaliRegex.test(text) ? 'bn-BD' : 'en-US';
+    const isBengali = useCallback((): boolean => {
+        return /[\u0980-\u09FF]/.test(text);
     }, [text]);
+
+    const findBestVoice = useCallback((): SpeechSynthesisVoice | null => {
+        const voices = speechSynthesis.getVoices();
+        const bengali = isBengali();
+
+        if (bengali) {
+            // Try Bengali voices first
+            const bnVoice = voices.find(v => v.lang.startsWith('bn'));
+            if (bnVoice) return bnVoice;
+            // Try Hindi as fallback (similar script support)
+            const hiVoice = voices.find(v => v.lang.startsWith('hi'));
+            if (hiVoice) return hiVoice;
+        }
+
+        // English or final fallback
+        const enVoice = voices.find(v => v.lang.startsWith('en'));
+        return enVoice || null;
+    }, [isBengali]);
+
+    const createUtterance = useCallback((rate: number): SpeechSynthesisUtterance => {
+        const content = cleanText();
+        const utterance = new SpeechSynthesisUtterance(content);
+
+        const voice = findBestVoice();
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+        } else {
+            utterance.lang = isBengali() ? 'bn-BD' : 'en-US';
+        }
+
+        utterance.rate = rate;
+        utterance.onend = () => { setIsPlaying(false); setIsPaused(false); };
+        utterance.onerror = (e) => {
+            setIsPlaying(false);
+            setIsPaused(false);
+            if (e.error !== 'canceled') {
+                toast.error(isBengali()
+                    ? 'Bengali voice not available on this device'
+                    : 'Text-to-speech failed');
+            }
+        };
+
+        return utterance;
+    }, [cleanText, findBestVoice, isBengali]);
 
     const play = () => {
         if (isPaused) {
@@ -35,21 +80,39 @@ const TextToSpeech = ({ text, title }: TextToSpeechProps) => {
             return;
         }
 
+        const content = cleanText();
+        if (!content.trim()) {
+            toast.error('No content available to read');
+            return;
+        }
+
         speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(cleanText());
-        utterance.lang = detectLanguage();
-        utterance.rate = speed;
-        utterance.onend = () => {
-            setIsPlaying(false);
+
+        // Voices may load async — wait briefly if empty
+        const voices = speechSynthesis.getVoices();
+        if (voices.length === 0) {
+            speechSynthesis.onvoiceschanged = () => {
+                speechSynthesis.onvoiceschanged = null;
+                const utterance = createUtterance(speed);
+                speechSynthesis.speak(utterance);
+                setIsPlaying(true);
+                setIsPaused(false);
+            };
+            // Fallback if onvoiceschanged never fires
+            setTimeout(() => {
+                if (!isPlaying) {
+                    const utterance = createUtterance(speed);
+                    speechSynthesis.speak(utterance);
+                    setIsPlaying(true);
+                    setIsPaused(false);
+                }
+            }, 300);
+        } else {
+            const utterance = createUtterance(speed);
+            speechSynthesis.speak(utterance);
+            setIsPlaying(true);
             setIsPaused(false);
-        };
-        utterance.onerror = () => {
-            setIsPlaying(false);
-            setIsPaused(false);
-        };
-        speechSynthesis.speak(utterance);
-        setIsPlaying(true);
-        setIsPaused(false);
+        }
     };
 
     const pause = () => {
@@ -69,11 +132,7 @@ const TextToSpeech = ({ text, title }: TextToSpeechProps) => {
         if (isPlaying || isPaused) {
             speechSynthesis.cancel();
             setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(cleanText());
-                utterance.lang = detectLanguage();
-                utterance.rate = newSpeed;
-                utterance.onend = () => { setIsPlaying(false); setIsPaused(false); };
-                utterance.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+                const utterance = createUtterance(newSpeed);
                 speechSynthesis.speak(utterance);
                 setIsPlaying(true);
                 setIsPaused(false);

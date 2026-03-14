@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, type FC } from 'react';
 import toast from 'react-hot-toast';
 
@@ -19,9 +19,9 @@ interface NewsCardProps {
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
-    <div className="w-full h-full bg-gradient-to-br from-accent/20 via-purple-500/10 to-background flex flex-col items-center justify-center gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-accent/15 border border-accent/20 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+    <div className="w-full h-full bg-gradient-to-br from-accent/20 via-purple-500/10 to-background flex flex-col items-center justify-center gap-2">
+        <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-accent/15 border border-accent/20 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                 <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8l-4 4v14a2 2 0 0 0 2 2z" />
                 <path d="M14 2v4a2 2 0 0 0 2 2h4" />
                 <line x1="10" y1="12" x2="10" y2="18" />
@@ -29,7 +29,7 @@ const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
                 <line x1="10" y1="15" x2="14" y2="15" />
             </svg>
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-secondary/50">{category}</span>
+        <span className="text-[9px] md:text-[10px] font-semibold uppercase tracking-widest text-secondary/50">{category}</span>
     </div>
 );
 
@@ -48,6 +48,7 @@ const NewsCard: FC<NewsCardProps> = ({
     showBookmark = false,
     onCardClick
 }) => {
+    const navigate = useNavigate();
     const [imgFailed, setImgFailed] = useState(false);
     const [bookmarked, setBookmarked] = useState(isBookmarked);
     const showImage = thumbnailUrl && !imgFailed;
@@ -63,6 +64,14 @@ const NewsCard: FC<NewsCardProps> = ({
         }
     };
 
+    const handleCardClick = () => {
+        if (onCardClick) {
+            onCardClick();
+        } else {
+            navigate(`/news/${slug}`);
+        }
+    };
+
     const formattedDate = new Date(publishedAt).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -72,8 +81,12 @@ const NewsCard: FC<NewsCardProps> = ({
     const readingTime = summary ? Math.max(1, Math.ceil(summary.split(/\s+/).length / 200)) : 1;
 
     return (
-        <div className="group glass-morphism border border-glass-border rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-col h-full">
-            <div className="relative h-48 overflow-hidden">
+        <div
+            onClick={handleCardClick}
+            className="group glass-morphism border border-glass-border rounded-xl md:rounded-2xl overflow-hidden hover:border-accent/30 transition-all duration-300 flex flex-row md:flex-col md:h-full cursor-pointer"
+        >
+            {/* Image — square on mobile, full-width banner on desktop */}
+            <div className="relative w-28 h-28 shrink-0 md:w-full md:h-48 overflow-hidden">
                 {showImage ? (
                     <img
                         src={thumbnailUrl}
@@ -84,19 +97,22 @@ const NewsCard: FC<NewsCardProps> = ({
                 ) : (
                     <ImagePlaceholder category={category} />
                 )}
-                <div className="absolute top-4 left-4 bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded backdrop-blur-md">
+
+                {/* Category badge — desktop only (overlaid on image) */}
+                <div className="hidden md:block absolute top-4 left-4 bg-accent/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded backdrop-blur-md">
                     {category}
                 </div>
+
                 {showBookmark && articleId && (
                     <button
                         onClick={handleBookmarkClick}
-                        className="absolute top-4 right-4 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                        className="absolute top-2 right-2 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
                         title={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
+                            width="14"
+                            height="14"
                             viewBox="0 0 24 24"
                             fill={bookmarked ? 'currentColor' : 'none'}
                             stroke="currentColor"
@@ -111,40 +127,40 @@ const NewsCard: FC<NewsCardProps> = ({
                 )}
             </div>
 
-            <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-center gap-2 text-[11px] text-secondary font-medium mb-3">
-                    <span>{sourceName}</span>
-                    <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
-                    <span>{formattedDate}</span>
-                    <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
-                    <span>{readingTime} min read</span>
-                </div>
+            {/* Content */}
+            <div className="p-3 md:p-6 flex flex-col flex-1 min-w-0">
+                {/* Category badge — mobile only (inline text) */}
+                <span className="md:hidden inline-block bg-accent/20 text-accent text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded mb-1.5 w-fit">
+                    {category}
+                </span>
 
-                <h3 className="text-lg font-bold text-white mb-3 group-hover:text-accent transition-colors line-clamp-2">
+                {/* Title */}
+                <h3 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-3 group-hover:text-accent transition-colors line-clamp-2 leading-snug">
                     {title}
                 </h3>
 
-                <p className="text-sm text-secondary line-clamp-3 mb-6">
+                {/* Meta info */}
+                <div className="flex items-center gap-1.5 text-[10px] md:text-[11px] text-secondary font-medium flex-wrap">
+                    <span className="truncate max-w-[90px] md:max-w-none">{sourceName}</span>
+                    <span className="w-1 h-1 rounded-full bg-secondary/30 shrink-0"></span>
+                    <span className="shrink-0">{formattedDate}</span>
+                    <span className="hidden md:inline w-1 h-1 rounded-full bg-secondary/30"></span>
+                    <span className="hidden md:inline">{readingTime} min read</span>
+                </div>
+
+                {/* Summary — desktop only */}
+                <p className="hidden md:block text-sm text-secondary line-clamp-3 mt-3 mb-6">
                     {summary || 'No summary available'}
                 </p>
 
-                {onCardClick ? (
-                    <button
-                        onClick={(e) => { e.preventDefault(); onCardClick(); }}
-                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all cursor-pointer bg-transparent border-none p-0"
-                    >
-                        READ MORE
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                    </button>
-                ) : (
-                    <Link
-                        to={`/news/${slug}`}
-                        className="mt-auto flex items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all"
-                    >
-                        READ MORE
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                    </Link>
-                )}
+                {/* Read more — desktop only */}
+                <span className="hidden md:flex mt-auto items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all">
+                    READ MORE
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </span>
             </div>
         </div>
     );

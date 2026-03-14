@@ -132,21 +132,67 @@ public class NewsArticleRepository : Repository<NewsArticle>, INewsArticleReposi
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int[] categoryIds, int days)
+    public async Task<(IEnumerable<NewsArticle> Items, int Total)> GetFilteredAsync(NewsPortal.Core.DTOs.NewsFilterQuery filter)
+    {
+        var query = _dbSet
+            .Include(x => x.Source)
+            .Include(x => x.Category)
+            .Where(x => x.IsActive)
+            .AsQueryable();
+
+        if (filter.SourceIds.Length > 0)
+            query = query.Where(x => filter.SourceIds.Contains(x.SourceId));
+
+        if (filter.CategoryIds.Length > 0)
+            query = query.Where(x => x.CategoryId.HasValue && filter.CategoryIds.Contains(x.CategoryId.Value));
+
+        if (!string.IsNullOrEmpty(filter.DateFrom) &&
+            DateTime.TryParse(filter.DateFrom, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var fromDate))
+        {
+            var fromUtc = DateTime.SpecifyKind(fromDate, DateTimeKind.Utc);
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) >= fromUtc);
+        }
+
+        if (!string.IsNullOrEmpty(filter.DateTo) &&
+            DateTime.TryParse(filter.DateTo, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var toDate))
+        {
+            var toUtc = DateTime.SpecifyKind(toDate.AddDays(1), DateTimeKind.Utc);
+            query = query.Where(x => (x.PublishedAt ?? x.FetchedAt) < toUtc);
+        }
+
+        if (filter.HasThumbnail)
+            query = query.Where(x => x.OriginalImageUrl != null && x.OriginalImageUrl != "");
+
+        query = filter.SortBy switch
+        {
+            "oldest"    => query.OrderBy(x => x.PublishedAt ?? x.FetchedAt),
+            "mostviewed" => query.OrderByDescending(x => x.ViewCount).ThenByDescending(x => x.PublishedAt ?? x.FetchedAt),
+            _           => query.OrderByDescending(x => x.PublishedAt ?? x.FetchedAt)
+        };
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<IEnumerable<NewsArticle>> GetTopArticlePerCategoryPerDayAsync(int days)
     {
         var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
 
-        var candidates = await _dbSet
+        return await _dbSet
             .Include(x => x.Source)
             .Include(x => x.Category)
             .Where(x => x.IsActive
                 && x.CategoryId.HasValue
-                && categoryIds.Contains(x.CategoryId.Value)
                 && (x.PublishedAt ?? x.FetchedAt) >= since)
             .OrderByDescending(x => x.ViewCount)
             .ThenByDescending(x => x.PublishedAt ?? x.FetchedAt)
             .ToListAsync();
-
-        return candidates;
     }
 }

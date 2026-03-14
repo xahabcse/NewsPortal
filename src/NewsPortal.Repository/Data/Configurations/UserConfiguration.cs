@@ -35,13 +35,25 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.Role)
             .IsRequired()
             .HasMaxLength(20)
-            .HasDefaultValue(UserRole.Viewer);
+            .HasDefaultValue(UserRole.Reader);
+
+        builder.Property(x => x.AuthProvider)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("Local");
 
         builder.Property(x => x.IsActive)
             .HasDefaultValue(true);
 
         builder.Property(x => x.LastLoginAt)
             .IsRequired(false);
+
+        builder.Property(x => x.Bio)
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        builder.Property(x => x.AvatarId)
+            .HasDefaultValue(1);
 
         // Indexes
         builder.HasIndex(x => x.Username).IsUnique();

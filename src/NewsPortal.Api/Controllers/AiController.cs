@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Core.Interfaces;
@@ -11,14 +12,17 @@ namespace NewsPortal.Api.Controllers;
 public class AiController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly string? _geminiApiKey;
+    private static readonly HttpClient GeminiClient = new() { Timeout = TimeSpan.FromSeconds(20) };
 
-    public AiController(IUnitOfWork unitOfWork)
+    public AiController(IUnitOfWork unitOfWork, IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
+        _geminiApiKey = configuration["Gemini:ApiKey"];
     }
 
     /// <summary>
-    /// Generate an extractive summary of an article using TF-IDF sentence scoring.
+    /// Generate a summary of an article using Google Gemini AI (with TF-IDF fallback).
     /// </summary>
     [HttpPost("summarize/{articleId}")]
     public async Task<IActionResult> SummarizeArticle(int articleId, [FromQuery] int sentences = 3, [FromQuery] string mode = "paragraph")
@@ -28,40 +32,30 @@ public class AiController : ControllerBase
 
         var text = article.PlainText ?? article.Content ?? article.Summary;
         if (string.IsNullOrWhiteSpace(text))
-            return Ok(new { summary = article.Summary ?? "No content available to summarize.", bullets = Array.Empty<string>() });
+            return Ok(new { summary = article.Summary ?? "No content available to summarize.", bullets = Array.Empty<string>(), source = "none" });
 
         // Strip HTML tags for clean text processing
         var cleanText = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", " ");
         cleanText = System.Text.RegularExpressions.Regex.Replace(cleanText, @"\s+", " ").Trim();
 
-        var allSentences = SplitSentences(cleanText);
-        if (allSentences.Count <= sentences)
+        // Try Gemini AI first, fallback to TF-IDF
+        if (!string.IsNullOrWhiteSpace(_geminiApiKey))
         {
-            return Ok(new
+            var geminiResult = await TryGeminiSummarize(cleanText, sentences);
+            if (geminiResult != null)
             {
-                summary = cleanText,
-                bullets = allSentences,
-                sentenceCount = allSentences.Count
-            });
+                return Ok(new
+                {
+                    summary = geminiResult.Summary,
+                    bullets = geminiResult.Bullets,
+                    sentenceCount = geminiResult.Bullets.Count,
+                    source = "gemini"
+                });
+            }
         }
 
-        // TF-IDF extractive summarization
-        var scored = ScoreSentences(allSentences);
-        var topSentences = scored
-            .OrderByDescending(s => s.Score)
-            .Take(sentences)
-            .OrderBy(s => s.Index) // Preserve original order
-            .ToList();
-
-        var summaryText = string.Join(" ", topSentences.Select(s => s.Sentence.Trim()));
-        var bullets = topSentences.Select(s => s.Sentence.Trim()).ToList();
-
-        return Ok(new
-        {
-            summary = summaryText,
-            bullets,
-            sentenceCount = allSentences.Count
-        });
+        // Fallback: TF-IDF extractive summarization
+        return Ok(TfIdfSummarize(cleanText, sentences));
     }
 
     /// <summary>
@@ -192,6 +186,92 @@ public class AiController : ControllerBase
     }
 
     #region Private Helpers
+
+    private async Task<GeminiSummaryResult?> TryGeminiSummarize(string cleanText, int sentences)
+    {
+        try
+        {
+            // Truncate to ~4000 chars to stay within token limits
+            var inputText = cleanText.Length > 4000 ? cleanText[..4000] + "..." : cleanText;
+
+            var requestBody = new
+            {
+                system_instruction = new
+                {
+                    parts = new { text = $"You are a professional news summarizer. Given a news article, produce a concise summary of {sentences} key sentences. Write in the same language as the article. Return ONLY the summary text, no headers or labels." }
+                },
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new[] { new { text = $"Summarize the following article:\n\n{inputText}" } }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.3,
+                    maxOutputTokens = 512
+                }
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_geminiApiKey}";
+            var response = await GeminiClient.PostAsync(url, content);
+
+            if (!response.IsSuccessStatusCode) return null;
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(responseJson);
+
+            var summaryText = doc.RootElement
+                .GetProperty("candidates")[0]
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString();
+
+            if (string.IsNullOrWhiteSpace(summaryText)) return null;
+
+            var bullets = SplitSentences(summaryText);
+            if (bullets.Count == 0) bullets = [summaryText];
+
+            return new GeminiSummaryResult { Summary = summaryText.Trim(), Bullets = bullets };
+        }
+        catch
+        {
+            return null; // Graceful fallback to TF-IDF
+        }
+    }
+
+    private static object TfIdfSummarize(string cleanText, int sentences)
+    {
+        var allSentences = SplitSentences(cleanText);
+        if (allSentences.Count <= sentences)
+        {
+            return new { summary = cleanText, bullets = allSentences, sentenceCount = allSentences.Count, source = "tfidf" };
+        }
+
+        var scored = ScoreSentences(allSentences);
+        var topSentences = scored
+            .OrderByDescending(s => s.Score)
+            .Take(sentences)
+            .OrderBy(s => s.Index)
+            .ToList();
+
+        var summaryText = string.Join(" ", topSentences.Select(s => s.Sentence.Trim()));
+        var bullets = topSentences.Select(s => s.Sentence.Trim()).ToList();
+
+        return new { summary = summaryText, bullets, sentenceCount = allSentences.Count, source = "tfidf" };
+    }
+
+    private sealed class GeminiSummaryResult
+    {
+        public string Summary { get; set; } = "";
+        public List<string> Bullets { get; set; } = [];
+    }
 
     private static List<string> SplitSentences(string text)
     {

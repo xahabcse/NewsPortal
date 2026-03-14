@@ -1,8 +1,10 @@
 # Build stage
 FROM node:20-alpine AS build
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 WORKDIR /app
 COPY src/NewsPortal.Client/package*.json ./
-RUN npm install
+RUN npm ci
 COPY src/NewsPortal.Client/ ./
 RUN npm run build
 

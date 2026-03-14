@@ -123,7 +123,7 @@ const ShareButton = ({ title, url, summary }: ShareButtonProps) => {
             </button>
 
             {showDropdown && (
-                <div className="absolute right-0 mt-2 w-52 glass-morphism border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+                <div className="absolute right-0 mt-2 w-48 sm:w-52 max-w-[calc(100vw-1rem)] glass-morphism border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in">
                     <div className="py-1">
                         <button
                             onClick={copyLink}

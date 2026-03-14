@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NewsPortal.Service.Services;
 using NewsPortal.Core.DTOs;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace NewsPortal.API.Controllers;
 
@@ -27,6 +28,13 @@ public class NewsController : ControllerBase
         [FromQuery][Range(1, 100)] int pageSize = 10)
     {
         var result = await _newsService.GetLatestNewsAsync(page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("filter")]
+    public async Task<IActionResult> GetFilteredNews([FromQuery] NewsFilterQuery filter)
+    {
+        var result = await _newsService.GetFilteredNewsAsync(filter);
         return Ok(result);
     }
 

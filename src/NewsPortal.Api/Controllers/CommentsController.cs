@@ -110,6 +110,7 @@ public class CommentsController : ControllerBase
             ArticleId = comment.ArticleId,
             UserId = comment.UserId,
             Username = comment.User.Username,
+            AvatarId = comment.User.AvatarId,
             Content = comment.IsDeleted ? "[Deleted]" : comment.Content,
             CreatedAt = comment.CreatedAt,
             ParentId = comment.ParentId,

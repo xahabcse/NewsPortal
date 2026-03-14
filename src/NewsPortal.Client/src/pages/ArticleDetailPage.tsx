@@ -123,7 +123,7 @@ const ArticleDetailPage = () => {
 
     if (loading) {
         return (
-            <div className="p-8 max-w-4xl mx-auto">
+            <div className="p-4 sm:p-8 max-w-4xl mx-auto">
                 <div className="animate-pulse space-y-6">
                     <div className="h-4 bg-white/10 rounded w-24"></div>
                     <div className="h-10 bg-white/10 rounded w-3/4"></div>
@@ -141,7 +141,7 @@ const ArticleDetailPage = () => {
 
     if (error || !article) {
         return (
-            <div className="p-8 max-w-4xl mx-auto">
+            <div className="p-4 sm:p-8 max-w-4xl mx-auto">
                 <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
                     <h2 className="text-2xl font-bold text-white mb-2">Article Not Found</h2>
                     <p className="text-secondary text-sm mb-6">{error || 'The article you\'re looking for doesn\'t exist or has been removed.'}</p>
@@ -231,7 +231,7 @@ const ArticleDetailPage = () => {
                 </script>
             </Helmet>
 
-            <div className="p-8 max-w-4xl mx-auto">
+            <div className="p-4 sm:p-8 max-w-4xl mx-auto">
             {/* Back Button */}
             <button
                 onClick={() => navigate(-1)}
@@ -259,7 +259,7 @@ const ArticleDetailPage = () => {
                 </h1>
 
                 {/* Meta Information */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-secondary">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-secondary">
                     {article.sourceName && (
                         <span className="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -302,7 +302,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* Action Buttons: Reactions + Share + Listen */}
-                <div className="flex items-center gap-3 mt-4 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 mt-4 flex-wrap">
                     <ArticleReactions articleId={article.id} />
                     <ShareButton
                         title={article.title}
@@ -326,12 +326,41 @@ const ArticleDetailPage = () => {
                     />
                 </div>
 
-                {/* AI Features: Summarize + Translate */}
-                <div className="flex flex-col gap-2 mt-3">
-                    <div className="flex items-start gap-3 flex-wrap">
-                        <SummarizeButton articleId={article.id} />
-                        <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
-                    </div>
+                {/* AI Features + Read Original + Font Size */}
+                <div className="flex items-center gap-2 sm:gap-3 mt-3 flex-wrap">
+                    <SummarizeButton articleId={article.id} />
+                    <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
+                    {article.sourceUrl && (
+                        <a
+                            href={article.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all border bg-white/5 border-glass-border text-secondary hover:text-white hover:bg-white/10"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            Read Original
+                        </a>
+                    )}
+                    {article.content && (
+                        <div className="flex items-center gap-1 sm:gap-2 ml-auto" data-testid="font-size-control">
+                            <span className="text-xs text-secondary mr-1">Font:</span>
+                            {(['small', 'medium', 'large'] as const).map(size => (
+                                <button
+                                    key={size}
+                                    onClick={() => { setFontSize(size); localStorage.setItem('newsportal-fontsize', size); }}
+                                    className={`px-2 py-1 rounded text-xs border transition-colors ${
+                                        fontSize === size ? 'bg-accent/20 border-accent/40 text-white' : 'bg-white/5 border-glass-border text-secondary hover:text-white'
+                                    }`}
+                                >
+                                    {size === 'small' ? 'A' : size === 'medium' ? 'A+' : 'A++'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -351,8 +380,8 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
-            {/* Summary */}
-            {article.summary && (
+            {/* Summary - only show when full content is not available */}
+            {article.summary && (!article.content || article.content === 'No content available') && (
                 <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-glass-border">
                     <p className="text-lg text-white/90 leading-relaxed">
                         {article.summary}
@@ -360,26 +389,8 @@ const ArticleDetailPage = () => {
                 </div>
             )}
 
-            {/* Font Size Control */}
-            {article.content && (
-                <div className="flex items-center gap-2 mb-4" data-testid="font-size-control">
-                    <span className="text-xs text-secondary mr-1">Font:</span>
-                    {(['small', 'medium', 'large'] as const).map(size => (
-                        <button
-                            key={size}
-                            onClick={() => { setFontSize(size); localStorage.setItem('newsportal-fontsize', size); }}
-                            className={`px-2 py-1 rounded text-xs border transition-colors ${
-                                fontSize === size ? 'bg-accent/20 border-accent/40 text-white' : 'bg-white/5 border-glass-border text-secondary hover:text-white'
-                            }`}
-                        >
-                            {size === 'small' ? 'A' : size === 'medium' ? 'A+' : 'A++'}
-                        </button>
-                    ))}
-                </div>
-            )}
-
             {/* Article Content */}
-            {article.content ? (
+            {article.content && article.content !== 'No content available' ? (
                 <article className="prose prose-invert prose-lg max-w-none">
                     <div
                         className={`text-white/90 leading-relaxed space-y-4 transition-all ${
@@ -390,28 +401,23 @@ const ArticleDetailPage = () => {
                 </article>
             ) : (
                 <div className="text-center p-8 bg-white/5 rounded-2xl border border-glass-border">
-                    <p className="text-secondary">Full content not available. Read the original article at the source.</p>
+                    <p className="text-secondary">
+                        সম্পূর্ণ নিবন্ধ লোড করা সম্ভব হয়নি।{' '}
+                        {article.sourceUrl && (
+                            <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                                মূল উৎস থেকে পড়ুন
+                            </a>
+                        )}
+                    </p>
                 </div>
             )}
 
-            {/* Source Link */}
-            {article.sourceUrl && (
-                <div className="mt-8 pt-8 border-t border-glass-border">
-                    <a
-                        href={article.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-accent hover:text-accent/80 transition-colors font-medium"
-                    >
-                        Read Original Article
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                    </a>
-                </div>
-            )}
+            {/* Sentiment + Comments */}
+            <div className="mt-8">
+                <SentimentBadge articleId={article.id} />
+            </div>
+
+            <CommentsSection />
 
             {/* Related Articles */}
             {relatedArticles.length > 0 && (
@@ -433,14 +439,6 @@ const ArticleDetailPage = () => {
                     </div>
                 </div>
             )}
-
-            {/* Comment Sentiment Analysis */}
-            <div className="mt-8">
-                <SentimentBadge articleId={article.id} />
-            </div>
-
-            {/* Comments Section */}
-            <CommentsSection />
         </div>
         </>
     );

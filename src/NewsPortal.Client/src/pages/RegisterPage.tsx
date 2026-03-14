@@ -3,9 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import axios from 'axios';
 import { axiosInstance } from '../services/axiosInstance';
+import { useAuth } from '../context/AuthContext';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const RegisterPage = () => {
     const navigate = useNavigate();
+    const { isAuthenticated, googleLogin } = useAuth();
+
+    // Already logged in — redirect
+    if (isAuthenticated) {
+        navigate('/', { replace: true });
+        return null;
+    }
+
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -99,6 +109,19 @@ const RegisterPage = () => {
             } else {
                 setGeneralError('Registration failed');
             }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleGoogleCredential = async (credential: string) => {
+        setGeneralError('');
+        setSubmitting(true);
+        try {
+            await googleLogin(credential);
+            navigate('/', { replace: true });
+        } catch {
+            setGeneralError('Google sign-in failed. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -204,6 +227,12 @@ const RegisterPage = () => {
                                 {submitting ? 'Creating Account...' : 'Create Account'}
                             </button>
                         </form>
+
+                        {/* Google sign-in */}
+                        <div className="mt-4 pt-4 border-t border-glass-border">
+                            <p className="text-xs text-secondary text-center mb-3">Or sign up with</p>
+                            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
+                        </div>
 
                         {/* Login Link */}
                         <div className="mt-6 text-center">

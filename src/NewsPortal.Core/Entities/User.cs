@@ -5,16 +5,20 @@ public class User : BaseEntity
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty; // Optional
-    public string LastName { get; set; } = string.Empty;  // Optional
-    public string Role { get; set; } = UserRole.Viewer; // SuperAdmin, Admin, Editor, Viewer
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Role { get; set; } = UserRole.Reader; // SuperAdmin, Admin, Editor, Reader
+    public string AuthProvider { get; set; } = "Local"; // "Local" or "Google"
     public DateTime? LastLoginAt { get; set; }
+    public string? Bio { get; set; }
+    public int AvatarId { get; set; } = 1; // 1-10 seed avatars
 }
 
 public static class UserRole
 {
-    public const string SuperAdmin = "SuperAdmin";  // Can manage users
-    public const string Admin = "Admin";            // Full system access
-    public const string Editor = "Editor";          // Can edit/fetch news
-    public const string Viewer = "Viewer";          // Read-only
+    public const string SuperAdmin = "SuperAdmin";  // All access
+    public const string Admin = "Admin";            // Full system + user management
+    public const string Editor = "Editor";          // Edit/fetch news sources
+    public const string Reader = "Reader";          // Default — browse content when logged in
+    public const string Viewer = "Viewer";          // Legacy alias for Reader (existing users)
 }

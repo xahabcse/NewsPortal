@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ReadingHistory from './ReadingHistory'
 
-import WeatherWidget from './WeatherWidget'
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
 import { newsApi, type Category } from '../services/api'
@@ -129,9 +128,9 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
         // Width: icon-only on desktop when collapsed, full-width otherwise
         isCollapsed ? 'w-64 lg:w-16' : 'w-64',
         // Padding: compact on desktop when collapsed, normal otherwise
-        isCollapsed ? 'p-6 lg:p-2' : 'p-6',
+        isCollapsed ? 'p-4 sm:p-6 lg:p-2' : 'p-4 sm:p-6',
         // Gap: compact on desktop when collapsed, normal otherwise
-        isCollapsed ? 'gap-6 lg:gap-2' : 'gap-6',
+        isCollapsed ? 'gap-4 sm:gap-6 lg:gap-2' : 'gap-4 sm:gap-6',
         // Visibility: on mobile hide off-screen by default, show when isOpen.
         // On desktop (lg+) always visible regardless of isOpen.
         isOpen ? 'translate-x-0' : '-translate-x-full',
@@ -300,10 +299,6 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     <nav className="flex flex-col gap-2">
                         <ReadingHistory />
                     </nav>
-
-
-
-                    <WeatherWidget />
                 </div>
 
                 {/* Admin Section */}
@@ -353,10 +348,10 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     </nav>
                 )}
 
-                {/* Super Admin Section */}
-                {role === 'SuperAdmin' && (
+                {/* Admin Section */}
+                {(role === 'Admin' || role === 'SuperAdmin') && (
                     <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
-                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Super Admin</div>
+                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Admin</div>
 
                         <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="User Management">
                             <span className="shrink-0"><IconUsers /></span>

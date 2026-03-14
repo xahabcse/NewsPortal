@@ -374,7 +374,9 @@ export default function NewsSourcesPage() {
 
     const loadSources = useCallback(async () => {
         try {
-            const data = await NewsSourceService.getAll();
+            const data = canManageSources
+                ? await NewsSourceService.getAll()
+                : await NewsSourceService.getActive();
             setSources(data);
             setError(null);
         } catch (err) {
@@ -382,7 +384,7 @@ export default function NewsSourcesPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [canManageSources]);
 
     useEffect(() => { void loadSources(); }, [loadSources]);
 
@@ -396,10 +398,18 @@ export default function NewsSourcesPage() {
     });
 
     const handleSave = async (form: CreateNewsSourceDto, id: number | null) => {
+        // Convert empty strings to undefined for optional URL fields to pass [Url] validation
+        const sanitized: CreateNewsSourceDto = {
+            ...form,
+            logoUrl: form.logoUrl?.trim() || undefined,
+            rssFeedUrl: form.rssFeedUrl?.trim() || undefined,
+            apiEndpoint: form.apiEndpoint?.trim() || undefined,
+            apiKey: form.apiKey?.trim() || undefined,
+        };
         if (id != null) {
-            await NewsSourceService.update(id, form);
+            await NewsSourceService.update(id, sanitized);
         } else {
-            await NewsSourceService.create(form);
+            await NewsSourceService.create(sanitized);
         }
         setModalOpen(false);
         setEditingSource(null);

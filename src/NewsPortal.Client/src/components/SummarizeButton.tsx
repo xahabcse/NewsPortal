@@ -28,7 +28,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
     };
 
     return (
-        <div className="w-full">
+        <div>
             <div className="flex items-center gap-2">
                 <button
                     onClick={handleSummarize}

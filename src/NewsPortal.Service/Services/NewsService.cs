@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NewsPortal.Service.Helpers;
 using NewsPortal.Core.Constants;
@@ -23,6 +24,7 @@ public interface INewsService
     Task<IEnumerable<NewsArticleListDto>> GetRelatedNewsAsync(string slug, int count);
     Task<int> GetArticlesCountTodayAsync();
     Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7);
+    Task<PagedResultDto<NewsArticleListDto>> GetFilteredNewsAsync(NewsFilterQuery filter);
 }
 
 public class NewsService : INewsService
@@ -30,18 +32,24 @@ public class NewsService : INewsService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cache;
     private readonly IImageStorageService _imageStorage;
+    private readonly IContentScraperService _contentScraper;
     private readonly ILogger<NewsService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public NewsService(
         IUnitOfWork unitOfWork,
         ICacheService cache,
         IImageStorageService imageStorage,
-        ILogger<NewsService> logger)
+        IContentScraperService contentScraper,
+        ILogger<NewsService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _unitOfWork = unitOfWork;
         _cache = cache;
         _imageStorage = imageStorage;
+        _contentScraper = contentScraper;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<PagedResultDto<NewsArticleListDto>> GetLatestNewsAsync(int page, int pageSize)
@@ -136,12 +144,45 @@ public class NewsService : INewsService
                 return null;
             }
 
-            // Increment view count asynchronously with proper error handling
+            // Lazy content fetching: if content is missing, scrape it from source URL
+            if (IsContentMissing(dto.Content) && !string.IsNullOrWhiteSpace(dto.SourceUrl))
+            {
+                _logger.LogInformation("Content missing for article {Slug}, attempting lazy scrape from {Url}", slug, dto.SourceUrl);
+
+                var scrapedContent = await _contentScraper.ScrapeFullContentAsync(dto.SourceUrl);
+
+                if (!string.IsNullOrWhiteSpace(scrapedContent))
+                {
+                    // Update the article in DB
+                    var article = await _unitOfWork.NewsArticles.GetBySlugAsync(slug);
+                    if (article != null)
+                    {
+                        article.Content = scrapedContent;
+                        article.PlainText = StripHtml(scrapedContent);
+                        await _unitOfWork.NewsArticles.UpdateAsync(article);
+                        await _unitOfWork.SaveChangesAsync();
+
+                        // Update the DTO and invalidate cache
+                        dto.Content = scrapedContent;
+                        await _cache.RemoveAsync(cacheKey);
+
+                        _logger.LogInformation("Successfully lazy-fetched and saved content for article {Slug}", slug);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Lazy scrape returned no content for article {Slug}", slug);
+                }
+            }
+
+            // Increment view count in a separate DI scope to avoid disposed DbContext
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
+                    using var scope = _scopeFactory.CreateScope();
+                    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    await unitOfWork.NewsArticles.IncrementViewCountAsync(dto.Id);
                 }
                 catch (Exception ex)
                 {
@@ -156,6 +197,12 @@ public class NewsService : INewsService
             _logger.LogError(ex, "Error occurred while getting news detail for slug: {Slug}", slug);
             throw;
         }
+    }
+
+    private static bool IsContentMissing(string? content)
+    {
+        return string.IsNullOrWhiteSpace(content)
+            || content == "No content available";
     }
 
     public async Task<IEnumerable<NewsArticleListDto>> GetFeaturedNewsAsync(int count)
@@ -290,9 +337,10 @@ public class NewsService : INewsService
         await _unitOfWork.NewsArticles.AddAsync(article);
         await _unitOfWork.SaveChangesAsync();
 
-        // Clear related list/search caches (keys include pagination/count suffixes)
+        // Clear related list/search/category caches
         await _cache.RemoveByPatternAsync("news:*");
         await _cache.RemoveByPatternAsync("search:*");
+        await _cache.RemoveByPatternAsync("categories:*");
 
         AppMetrics.TotalNewsArticles.Inc();
 
@@ -458,7 +506,8 @@ public class NewsService : INewsService
             {
                 await _cache.RemoveByPatternAsync("news:*");
                 await _cache.RemoveByPatternAsync("search:*");
-                
+                await _cache.RemoveByPatternAsync("categories:*");
+
                 AppMetrics.TotalNewsArticles.Inc(result.ImportedCount);
             }
 
@@ -472,69 +521,93 @@ public class NewsService : INewsService
         }
     }
 
+    public async Task<PagedResultDto<NewsArticleListDto>> GetFilteredNewsAsync(NewsFilterQuery filter)
+    {
+        var (articles, total) = await _unitOfWork.NewsArticles.GetFilteredAsync(filter);
+
+        return new PagedResultDto<NewsArticleListDto>
+        {
+            Items = articles.Select(MapToListDto).ToList(),
+            TotalCount = total,
+            Page = filter.Page,
+            PageSize = filter.PageSize
+        };
+    }
+
     public async Task<IEnumerable<DailyHighlightDto>> GetDailyHighlightsAsync(int days = 7)
     {
         var cacheKey = $"{CacheKeys.DailyHighlights}:{days}";
 
         return await _cache.GetOrSetAsync(cacheKey, async () =>
         {
-            var categoryIds = new[] { 1, 2 }; // National, International
+            // Fetch all categorized articles across ALL categories for the last N days
             var allCandidates = await _unitOfWork.NewsArticles
-                .GetTopArticlePerCategoryPerDayAsync(categoryIds, days);
+                .GetTopArticlePerCategoryPerDayAsync(days);
 
-            // Group candidates by date + category, sorted by rank (ViewCount desc, PublishedAt desc)
-            var grouped = allCandidates
-                .GroupBy(a => new
-                {
-                    Date = (a.PublishedAt ?? a.FetchedAt).Date,
-                    CategoryId = a.CategoryId!.Value
-                })
-                .OrderByDescending(g => g.Key.Date)
-                .ThenBy(g => g.Key.CategoryId);
+            const int maxPerCategoryPerDay = 3;
 
-            // Track already-used titles for deduplication across all days
-            var usedTitles = new List<string>();
-            var selectedArticles = new List<(DateTime Date, NewsArticle Article)>();
+            // Group by date, then within each day group by category
+            var byDate = allCandidates
+                .GroupBy(a => (a.PublishedAt ?? a.FetchedAt).Date)
+                .OrderByDescending(g => g.Key);
 
-            foreach (var group in grouped)
+            var result = new List<DailyHighlightDto>();
+
+            foreach (var dayGroup in byDate)
             {
-                // Pick the first article in this group that is NOT similar to any already-used title
-                var picked = group.FirstOrDefault(a =>
-                    !TitleSimilarityHelper.FindNearDuplicates(a.Title, usedTitles, 0.7).Any());
+                // Dedup titles within this day only (reset per day)
+                var usedTitles = new List<string>();
+                var selectedArticles = new List<NewsArticle>();
 
-                if (picked != null)
+                // Group by category within the day, maintain category sort order
+                var byCategory = dayGroup
+                    .GroupBy(a => a.CategoryId!.Value)
+                    .OrderBy(g => g.Key);
+
+                foreach (var catGroup in byCategory)
                 {
-                    usedTitles.Add(picked.Title);
-                    selectedArticles.Add((group.Key.Date, picked));
+                    var picked = 0;
+                    foreach (var article in catGroup)
+                    {
+                        if (picked >= maxPerCategoryPerDay) break;
+                        if (!TitleSimilarityHelper.FindNearDuplicates(article.Title, usedTitles, 0.85).Any())
+                        {
+                            usedTitles.Add(article.Title);
+                            selectedArticles.Add(article);
+                            picked++;
+                        }
+                    }
+                }
+
+                if (selectedArticles.Count > 0)
+                {
+                    result.Add(new DailyHighlightDto
+                    {
+                        Date = dayGroup.Key,
+                        Highlights = selectedArticles.Select(x => new CategoryHighlightDto
+                        {
+                            CategoryId = x.CategoryId!.Value,
+                            CategoryName = x.Category?.Name ?? "Unknown",
+                            CategoryNameBn = x.Category?.NameBn ?? "",
+                            CategorySlug = x.Category?.Slug ?? "",
+                            CategoryIcon = x.Category?.Icon,
+                            CategoryColor = x.Category?.Color,
+                            ArticleId = x.Id,
+                            Title = x.Title,
+                            Slug = x.Slug,
+                            Summary = x.Summary,
+                            SourceId = x.SourceId,
+                            SourceName = x.Source?.Name ?? "Unknown Source",
+                            PublishedAt = x.PublishedAt,
+                            ViewCount = x.ViewCount
+                        })
+                        .OrderBy(h => h.CategoryId)
+                        .ToList()
+                    });
                 }
             }
 
-            return selectedArticles
-                .GroupBy(x => x.Date)
-                .OrderByDescending(g => g.Key)
-                .Select(g => new DailyHighlightDto
-                {
-                    Date = g.Key,
-                    Highlights = g.Select(x => new CategoryHighlightDto
-                    {
-                        CategoryId = x.Article.CategoryId!.Value,
-                        CategoryName = x.Article.Category?.Name ?? "Unknown",
-                        CategoryNameBn = x.Article.Category?.NameBn ?? "",
-                        CategorySlug = x.Article.Category?.Slug ?? "",
-                        CategoryIcon = x.Article.Category?.Icon,
-                        CategoryColor = x.Article.Category?.Color,
-                        ArticleId = x.Article.Id,
-                        Title = x.Article.Title,
-                        Slug = x.Article.Slug,
-                        Summary = x.Article.Summary,
-                        SourceName = x.Article.Source?.Name ?? "Unknown Source",
-                        PublishedAt = x.Article.PublishedAt,
-                        ViewCount = x.Article.ViewCount
-                    })
-                    .OrderBy(h => h.CategoryId)
-                    .ToList()
-                })
-                .ToList();
+            return result;
         }, CacheDurations.Medium);
     }
 

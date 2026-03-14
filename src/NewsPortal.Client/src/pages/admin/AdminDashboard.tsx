@@ -85,8 +85,8 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-4 sm:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {Array.from({ length: 8 }).map((_, idx) => (
                         <div key={idx} className="glass-morphism border border-glass-border rounded-2xl p-6 animate-pulse">
                             <div className="h-4 bg-white/10 rounded w-24 mb-4"></div>
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
 
     if (error) {
         return (
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
                     <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
@@ -136,41 +136,41 @@ const AdminDashboard = () => {
                 title="Admin Dashboard"
                 description="NewsPortal administration dashboard with system statistics and operational metrics."
             />
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+                <div className="mb-4 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
                     <p className="text-secondary text-sm">System overview and operational metrics</p>
                 </div>
 
                 {/* Overview Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Sources</div>
-                        <div className="text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
                         <div className="text-xs text-secondary/70">News sources configured</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Articles</div>
-                        <div className="text-3xl font-bold text-emerald-400 mb-1">{stats.totalArticles.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-emerald-400 mb-1">{stats.totalArticles.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Articles in database</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Articles Today</div>
-                        <div className="text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Fetched in last 24h</div>
                     </div>
-                    <div className="glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Users</div>
-                        <div className="text-3xl font-bold text-orange-400 mb-1">{stats.totalUsers.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-orange-400 mb-1">{stats.totalUsers.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Registered users</div>
                     </div>
                 </div>
 
                 {/* Charts Row 1: Daily Articles + Source Health */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
                     {/* Daily Articles Trend */}
-                    <div className="lg:col-span-2 glass-morphism border border-glass-border rounded-2xl p-6">
+                    <div className="lg:col-span-2 glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <h2 className="text-lg font-bold text-white mb-4">Articles Published (Last 7 Days)</h2>
                         {chartStats?.dailyArticles && chartStats.dailyArticles.length > 0 ? (
                             <ResponsiveContainer width="100%" height={250}>
@@ -420,10 +420,10 @@ const AdminDashboard = () => {
 
                             {/* System Tool Links */}
                             <div className="border-t border-glass-border my-2 pt-2">
-                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-2">System Tools (IP: 192.168.0.109)</p>
+                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-2">System Tools ({window.location.hostname})</p>
                                 <div className="grid grid-cols-1 gap-2">
                                     <a
-                                        href="http://192.168.0.109:8080/swagger"
+                                        href={`http://${window.location.hostname}:8080/swagger`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -439,7 +439,7 @@ const AdminDashboard = () => {
                                         </div>
                                     </a>
                                     <a
-                                        href="http://192.168.0.109:8081"
+                                        href={`http://${window.location.hostname}:8081`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -455,7 +455,7 @@ const AdminDashboard = () => {
                                     </a>
                                     <div className="grid grid-cols-2 gap-2">
                                         <a
-                                            href="http://192.168.0.109:3001"
+                                            href={`http://${window.location.hostname}:3001`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
@@ -468,7 +468,7 @@ const AdminDashboard = () => {
                                             <div className="text-xs font-medium text-white">Grafana</div>
                                         </a>
                                         <a
-                                            href="http://192.168.0.109:9090"
+                                            href={`http://${window.location.hostname}:9090`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-2 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"

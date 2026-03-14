@@ -26,6 +26,15 @@ public class NewsSourceRepository : Repository<NewsSource>, INewsSourceRepositor
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<NewsSource>> GetAllSourcesIncludingDisabledAsync()
+    {
+        return await _dbSet
+            .Include(x => x.ScrapingConfig)
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .ToListAsync();
+    }
+
     public async Task<Dictionary<int, int>> GetActiveSourcesWithArticleCountsAsync()
     {
         // Efficient single query using GroupJoin to get article counts

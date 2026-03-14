@@ -28,6 +28,7 @@ public class CacheCleanupJob : ICacheCleanupJob
             // Clear old cache entries
             await _cacheService.RemoveByPatternAsync("news:*");
             await _cacheService.RemoveByPatternAsync("search:*");
+            await _cacheService.RemoveByPatternAsync("categories:*");
 
             _logger.LogInformation("Cache cleanup completed");
         }
