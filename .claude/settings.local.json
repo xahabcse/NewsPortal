@@ -31,7 +31,10 @@
       "Bash(dotnet ef database update:*)",
       "Bash(dotnet ef migrations script:*)",
       "Bash(netstat:*)",
-      "Bash(ipconfig)"
+      "Bash(ipconfig)",
+      "Bash(Test-Path \"D:\\\\Exp-Work\\\\NewsPortal\\\\.claude\\\\CLAUDE.md\")",
+      "Bash(xargs -I {} basename {})",
+      "Bash(npm run *)"
     ]
   }
 }
