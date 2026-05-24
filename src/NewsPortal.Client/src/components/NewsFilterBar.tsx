@@ -220,11 +220,11 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
 
     return (
         <div ref={barRef} className="relative">
-            {/* Filter buttons row */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Filter buttons row — horizontally scroll on mobile, wrap on sm+ for cleanliness */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto sm:flex-wrap pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
                 {/* Sources button */}
-                <div className="relative">
+                <div className="relative shrink-0">
                     <button
                         onClick={() => toggle('sources')}
                         className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${open === 'sources' || filters.sourceIds.length > 0
@@ -425,7 +425,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 {/* Has thumbnail toggle */}
                 <button
                     onClick={() => set({ hasThumbnail: !filters.hasThumbnail })}
-                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${filters.hasThumbnail
+                    className={`shrink-0 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${filters.hasThumbnail
                         ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
                         : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                 >
@@ -437,7 +437,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 {activeCount > 0 && (
                     <button
                         onClick={clearAll}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-red-400/80 hover:text-red-400 bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-colors"
+                        className="shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-red-400/80 hover:text-red-400 bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         Clear all ({activeCount})

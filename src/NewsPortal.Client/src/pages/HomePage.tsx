@@ -130,17 +130,17 @@ const HomePage = () => {
         title="Latest News & Headlines"
         description="Stay updated with the latest headlines from trusted news sources worldwide. Real-time news aggregation with smart categorization."
       />
-      <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
         <div className="mb-6">
           {/* Header */}
           <div className="flex items-start justify-between gap-2 sm:gap-4 mb-4">
-            <div className="flex items-start gap-2 sm:gap-4">
-              <span className="text-4xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg">{session.emoji}</span>
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight">
+            <div className="flex items-start gap-2 sm:gap-4 min-w-0 flex-1">
+              <span className="text-3xl sm:text-6xl leading-none mt-1 select-none drop-shadow-lg shrink-0">{session.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-4xl font-extrabold text-white mb-1.5 tracking-tight leading-tight break-words">
                   {session.greeting}, <span className="bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">{authSession?.username || 'পাঠক'}</span>
                 </h1>
-                <p className="text-xs sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
+                <p className="text-[11px] sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
                   <span className="text-white/80">আজ</span>
                   <span className="text-emerald-400">{bengaliDate}</span>
                   <span className="text-white/20">•</span>
@@ -148,12 +148,12 @@ const HomePage = () => {
                   <span className="text-white/20">•</span>
                   <span className="text-sky-400">{banglaDate}</span>
                 </p>
-                <p className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
+                <p className="text-[11px] sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
                   <span>{ritu.emoji}</span>
                   <span className="text-white/60">ঋতু পরিক্রমায়</span>
                   <span className="text-pink-400 font-bold">{ritu.name}</span>
                 </p>
-                <p className="text-secondary text-xs sm:text-sm font-medium flex items-center">
+                <p className="text-secondary text-[11px] sm:text-sm font-medium flex items-center flex-wrap">
                   {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
                     <>
                       সর্বমোট <span className="text-accent font-bold text-sm sm:text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য

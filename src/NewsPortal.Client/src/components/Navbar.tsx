@@ -106,29 +106,29 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
 
     return (
         <>
-            <header className={`fixed top-0 right-0 left-0 ${isSidebarCollapsed ? 'lg:left-16' : 'lg:left-64'} h-16 glass-morphism border-b border-glass-border z-10 flex items-center justify-between px-4 lg:px-8 transition-[left] duration-300`}>
-                <div className="flex items-center gap-4 flex-1 max-w-xl">
-                    {/* Hamburger Menu Button - Mobile Only */}
+            <header className={`fixed top-0 right-0 left-0 ${isSidebarCollapsed ? 'lg:left-16' : 'lg:left-64'} h-14 sm:h-16 glass-morphism border-b border-glass-border z-10 flex items-center justify-between gap-2 px-2 sm:px-4 lg:px-8 transition-[left] duration-300`}>
+                <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 max-w-xl">
+                    {/* Hamburger Menu Button - Mobile/Tablet Only */}
                     <button
                         onClick={onMenuClick}
-                        className="lg:hidden text-secondary hover:text-white transition-colors p-2"
+                        className="lg:hidden text-secondary hover:text-white transition-colors p-2 -ml-1 shrink-0 rounded-lg hover:bg-white/5"
                         aria-label="Open menu"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="3" y1="12" x2="21" y2="12"></line>
                             <line x1="3" y1="6" x2="21" y2="6"></line>
                             <line x1="3" y1="18" x2="21" y2="18"></line>
                         </svg>
                     </button>
-                    <div className="relative w-full">
+                    <div className="relative w-full min-w-0">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            placeholder="Search news..."
-                            className="w-full bg-white/5 border border-glass-border rounded-lg py-2 pl-3 pr-8 sm:pl-4 sm:pr-14 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                            placeholder="Search..."
+                            className="w-full bg-white/5 border border-glass-border rounded-lg py-1.5 sm:py-2 pl-3 pr-9 sm:pl-4 sm:pr-14 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                         />
-                        <div className="absolute right-2 sm:right-3 top-2 flex items-center gap-1.5">
+                        <div className="absolute right-2 sm:right-3 top-1.5 sm:top-2 flex items-center gap-1.5">
                             <span className="hidden sm:inline-block text-[10px] bg-white/10 border border-glass-border px-1.5 py-0.5 rounded text-secondary/70 font-mono">/</span>
                             <div className="text-secondary">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -137,7 +137,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-1 sm:gap-3 lg:gap-4 shrink-0">
                     {/* Notification Bell */}
                     <div className="relative" ref={notificationRef}>
                         <button
@@ -244,19 +244,19 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         )}
                     </div>
 
-                    {/* User Menu */}
+                    {/* User Menu — avatar only on mobile, full block on sm+ */}
                     <div className="relative" ref={userMenuRef}>
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
-                            className="flex items-center gap-2 pl-2 sm:pl-6 border-l border-glass-border hover:bg-white/5 rounded-lg px-2 sm:px-3 py-1.5 transition-colors"
+                            className="flex items-center gap-2 sm:pl-3 lg:pl-6 sm:border-l sm:border-glass-border hover:bg-white/5 rounded-lg px-1 sm:px-3 py-1.5 transition-colors"
                             aria-label="User menu"
                         >
-                            <div className="text-right hidden sm:block">
+                            <div className="text-right hidden md:block">
                                 <div className="text-sm font-medium text-white">{displayName}</div>
                                 <div className="text-xs text-secondary">{displayRole}</div>
                             </div>
                             <Avatar id={session?.avatarId || 1} size="md" />
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary hidden sm:block">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary hidden md:block">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
@@ -370,7 +370,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     {!isAuthenticated && (
                         <button
                             onClick={() => navigate('/login')}
-                            className="px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-sm text-white hover:bg-accent/30 transition-colors"
+                            className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-xs sm:text-sm text-white hover:bg-accent/30 transition-colors whitespace-nowrap"
                         >
                             Sign In
                         </button>

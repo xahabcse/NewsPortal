@@ -60,7 +60,7 @@ function App() {
                   <Navbar onMenuClick={() => setSidebarOpen(true)} isSidebarCollapsed={sidebarCollapsed} />
 
                   <NewsTicker />
-                  <div className="mt-16 flex-1 flex flex-col">
+                  <div className="mt-14 sm:mt-16 flex-1 flex flex-col">
                     <Routes>
                       {/* Public routes — home, login, register only */}
                       <Route path="/" element={<HomePage />} />

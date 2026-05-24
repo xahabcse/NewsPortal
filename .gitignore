@@ -106,3 +106,10 @@ backups/
 *.tmp
 *.temp
 ~$*
+
+# Playwright MCP screenshots and traces (local dev only)
+.playwright-mcp/
+*.png
+*-mobile-*.png
+*-tablet-*.png
+*-desktop-*.png
