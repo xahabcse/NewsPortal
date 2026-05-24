@@ -1,25 +1,5 @@
-// Standard response envelope — matches the legacy ASP.NET Core API shape so
-// the React client can swap VITE_API_BASE_URL between stacks transparently.
-
-export type ApiSuccess<T> = {
-  success: true;
-  data: T;
-  message?: string;
-};
-
-export type ApiError = {
-  success: false;
-  message: string;
-  errors?: Record<string, string[]>;
-};
-
-export function successResult<T>(data: T, message?: string): ApiSuccess<T> {
-  return message ? { success: true, data, message } : { success: true, data };
-}
-
-export function errorResult(message: string, errors?: Record<string, string[]>): ApiError {
-  return errors ? { success: false, message, errors } : { success: false, message };
-}
+// Response shape helpers — match the legacy ASP.NET Core API exactly so the
+// React client can talk to either backend without code changes.
 
 export type PagedResult<T> = {
   items: T[];
@@ -27,14 +7,24 @@ export type PagedResult<T> = {
   page: number;
   pageSize: number;
   totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 };
 
-export function pagedResult<T>(items: T[], totalCount: number, page: number, pageSize: number): PagedResult<T> {
+export function paged<T>(items: T[], totalCount: number, page: number, pageSize: number): PagedResult<T> {
+  const totalPages = pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
   return {
     items,
     totalCount,
     page,
     pageSize,
-    totalPages: pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPreviousPage: page > 1,
   };
+}
+
+/** Simple error JSON — matches the .NET API style of `{ message }`. */
+export function errMsg(message: string) {
+  return { message };
 }

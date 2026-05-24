@@ -1,7 +1,7 @@
 import { jwt, sign, verify } from 'hono/jwt';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Env } from './env';
-import { errorResult } from './response';
+import { errMsg } from './response';
 
 export type JwtPayload = {
   sub: string;          // user id (string)
@@ -38,7 +38,7 @@ export function requireRole(minRole: 'Reader' | 'Editor' | 'Admin' | 'SuperAdmin
   return async (c, next) => {
     const role = c.get('role');
     if (!role || (ROLE_RANK[role] ?? 0) < ROLE_RANK[minRole]) {
-      return c.json(errorResult('Insufficient permissions'), 403);
+      return c.json(errMsg('Insufficient permissions'), 403);
     }
     await next();
   };

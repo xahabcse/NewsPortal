@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/env';
-import { errorResult, pagedResult, successResult } from '../lib/response';
-import { paginate, nowIso, type Row } from '../lib/db';
-import { cacheKeys, cacheOrCompute } from '../lib/cache';
+import { paged, errMsg } from '../lib/response';
+import { nowIso, paginate, type Row } from '../lib/db';
+import { cacheKeys, cacheOrCompute, cacheInvalidatePrefix } from '../lib/cache';
 
 export const newsRoutes = new Hono<Env>();
 
 // ----------------------------------------------------------------------------
-// Article row shape & mapping
+// Article row shape & mapping  — matches the legacy .NET DTO field-for-field.
 // ----------------------------------------------------------------------------
 type ArticleRow = {
   id: number;
@@ -31,7 +31,6 @@ type ArticleRow = {
   created_at: string;
   updated_at: string | null;
   is_active: number;
-  // Joined columns
   source_name?: string | null;
   source_slug?: string | null;
   source_logo_url?: string | null;
@@ -43,6 +42,7 @@ type ArticleRow = {
 };
 
 function mapArticle(row: ArticleRow) {
+  // Flat shape used by NewsArticle list cards in the React client.
   return {
     id: row.id,
     title: row.title,
@@ -53,9 +53,8 @@ function mapArticle(row: ArticleRow) {
     plainText: row.plain_text,
     sourceUrl: row.source_url,
     originalImageUrl: row.original_image_url,
-    imageUrl: row.original_image_url, // alias used by frontend
-    mongoImageId: row.mongo_image_id,
-    mongoThumbId: row.mongo_thumb_id,
+    thumbnailUrl: row.original_image_url, // frontend's NewsArticle.thumbnailUrl
+    imageUrl: row.original_image_url,
     author: row.author,
     publishedAt: row.published_at,
     fetchedAt: row.fetched_at,
@@ -63,27 +62,16 @@ function mapArticle(row: ArticleRow) {
     isFeatured: row.is_featured === 1,
     sourceId: row.source_id,
     categoryId: row.category_id,
+    sourceName: row.source_name ?? null,
+    sourceSlug: row.source_slug ?? null,
+    sourceLogoUrl: row.source_logo_url ?? null,
+    categoryName: row.category_name ?? null,
+    categoryNameBn: row.category_name_bn ?? null,
+    categorySlug: row.category_slug ?? null,
+    categoryIcon: row.category_icon ?? null,
+    categoryColor: row.category_color ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    isActive: row.is_active === 1,
-    source: row.source_name
-      ? {
-          id: row.source_id,
-          name: row.source_name,
-          slug: row.source_slug,
-          logoUrl: row.source_logo_url,
-        }
-      : null,
-    category: row.category_name
-      ? {
-          id: row.category_id,
-          name: row.category_name,
-          nameBn: row.category_name_bn,
-          slug: row.category_slug,
-          icon: row.category_icon,
-          color: row.category_color,
-        }
-      : null,
   };
 }
 
@@ -114,20 +102,16 @@ newsRoutes.get('/latest', async (c) => {
            WHERE a.is_active = 1
            ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.id DESC
            LIMIT ? OFFSET ?`
-        )
-          .bind(size, offset)
-          .all<ArticleRow>(),
+        ).bind(size, offset).all<ArticleRow>(),
         c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1').first<{ count: number }>(),
       ]);
-
       const items = (rows.results ?? []).map(mapArticle);
-      const totalCount = countRow?.count ?? 0;
-      return pagedResult(items, totalCount, page, size);
+      return paged(items, countRow?.count ?? 0, page, size);
     },
     { ttlSeconds: 120 }
   );
 
-  return c.json(successResult(result));
+  return c.json(result);
 });
 
 // ----------------------------------------------------------------------------
@@ -135,17 +119,13 @@ newsRoutes.get('/latest', async (c) => {
 // ----------------------------------------------------------------------------
 newsRoutes.get('/featured', async (c) => {
   const count = Math.min(100, Math.max(1, parseInt(c.req.query('count') ?? '5') || 5));
-
   const rows = await c.env.DB.prepare(
     `${ARTICLE_SELECT}
      WHERE a.is_active = 1 AND a.is_featured = 1
      ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
      LIMIT ?`
-  )
-    .bind(count)
-    .all<ArticleRow>();
-
-  return c.json(successResult((rows.results ?? []).map(mapArticle)));
+  ).bind(count).all<ArticleRow>();
+  return c.json((rows.results ?? []).map(mapArticle));
 });
 
 // ----------------------------------------------------------------------------
@@ -156,9 +136,8 @@ newsRoutes.get('/category/:slug', async (c) => {
   const { page, size, offset } = paginate(c.req.query('page'), c.req.query('pageSize'));
 
   const category = await c.env.DB.prepare('SELECT id FROM categories WHERE slug = ? AND is_active = 1 LIMIT 1')
-    .bind(slug)
-    .first<{ id: number }>();
-  if (!category) return c.json(errorResult('Category not found'), 404);
+    .bind(slug).first<{ id: number }>();
+  if (!category) return c.json(errMsg('Category not found'), 404);
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(
@@ -166,15 +145,12 @@ newsRoutes.get('/category/:slug', async (c) => {
        WHERE a.is_active = 1 AND a.category_id = ?
        ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
        LIMIT ? OFFSET ?`
-    )
-      .bind(category.id, size, offset)
-      .all<ArticleRow>(),
+    ).bind(category.id, size, offset).all<ArticleRow>(),
     c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND category_id = ?')
-      .bind(category.id)
-      .first<{ count: number }>(),
+      .bind(category.id).first<{ count: number }>(),
   ]);
 
-  return c.json(successResult(pagedResult((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size)));
+  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
 });
 
 // ----------------------------------------------------------------------------
@@ -185,9 +161,8 @@ newsRoutes.get('/source/:slug', async (c) => {
   const { page, size, offset } = paginate(c.req.query('page'), c.req.query('pageSize'));
 
   const source = await c.env.DB.prepare('SELECT id FROM news_sources WHERE slug = ? AND is_active = 1 LIMIT 1')
-    .bind(slug)
-    .first<{ id: number }>();
-  if (!source) return c.json(errorResult('Source not found'), 404);
+    .bind(slug).first<{ id: number }>();
+  if (!source) return c.json(errMsg('Source not found'), 404);
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(
@@ -195,15 +170,12 @@ newsRoutes.get('/source/:slug', async (c) => {
        WHERE a.is_active = 1 AND a.source_id = ?
        ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
        LIMIT ? OFFSET ?`
-    )
-      .bind(source.id, size, offset)
-      .all<ArticleRow>(),
+    ).bind(source.id, size, offset).all<ArticleRow>(),
     c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND source_id = ?')
-      .bind(source.id)
-      .first<{ count: number }>(),
+      .bind(source.id).first<{ count: number }>(),
   ]);
 
-  return c.json(successResult(pagedResult((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size)));
+  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
 });
 
 // ----------------------------------------------------------------------------
@@ -224,15 +196,12 @@ newsRoutes.get('/trending', async (c) => {
            AND COALESCE(a.published_at, a.fetched_at) >= ?
          ORDER BY a.view_count DESC, COALESCE(a.published_at, a.fetched_at) DESC
          LIMIT ?`
-      )
-        .bind(cutoff, count)
-        .all<ArticleRow>();
+      ).bind(cutoff, count).all<ArticleRow>();
       return (rows.results ?? []).map(mapArticle);
     },
     { ttlSeconds: 300 }
   );
-
-  return c.json(successResult(result));
+  return c.json(result);
 });
 
 // ----------------------------------------------------------------------------
@@ -245,8 +214,7 @@ newsRoutes.get('/categories', async (c) => {
     async () => {
       const rows = await c.env.DB.prepare(
         `SELECT id, name, name_bn, slug, description, icon, color, sort_order
-         FROM categories
-         WHERE is_active = 1
+         FROM categories WHERE is_active = 1
          ORDER BY sort_order ASC, id ASC`
       ).all<Row>();
       return (rows.results ?? []).map((r) => ({
@@ -262,7 +230,63 @@ newsRoutes.get('/categories', async (c) => {
     },
     { ttlSeconds: 600 }
   );
-  return c.json(successResult(result));
+  return c.json(result);
+});
+
+// ----------------------------------------------------------------------------
+// GET /filter — multi-filter homepage feed
+// Query: sourceIds[], categoryIds[], dateFrom, dateTo, sortBy, hasThumbnail, page, pageSize
+// ----------------------------------------------------------------------------
+newsRoutes.get('/filter', async (c) => {
+  const url = new URL(c.req.url);
+  const sourceIds = url.searchParams.getAll('sourceIds').map((v) => parseInt(v)).filter((n) => !isNaN(n));
+  const categoryIds = url.searchParams.getAll('categoryIds').map((v) => parseInt(v)).filter((n) => !isNaN(n));
+  const dateFrom = url.searchParams.get('dateFrom');
+  const dateTo = url.searchParams.get('dateTo');
+  const sortBy = url.searchParams.get('sortBy') ?? 'newest';
+  const hasThumbnail = url.searchParams.get('hasThumbnail') === 'true';
+  const { page, size, offset } = paginate(url.searchParams.get('page') ?? undefined, url.searchParams.get('pageSize') ?? undefined);
+
+  const where: string[] = ['a.is_active = 1'];
+  const binds: any[] = [];
+
+  if (sourceIds.length) {
+    where.push(`a.source_id IN (${sourceIds.map(() => '?').join(',')})`);
+    binds.push(...sourceIds);
+  }
+  if (categoryIds.length) {
+    where.push(`a.category_id IN (${categoryIds.map(() => '?').join(',')})`);
+    binds.push(...categoryIds);
+  }
+  if (dateFrom) {
+    where.push('COALESCE(a.published_at, a.fetched_at) >= ?');
+    binds.push(dateFrom);
+  }
+  if (dateTo) {
+    where.push('COALESCE(a.published_at, a.fetched_at) <= ?');
+    binds.push(dateTo);
+  }
+  if (hasThumbnail) {
+    where.push('a.original_image_url IS NOT NULL');
+  }
+
+  const orderSql =
+    sortBy === 'oldest'
+      ? 'ORDER BY COALESCE(a.published_at, a.fetched_at) ASC'
+      : sortBy === 'mostviewed'
+        ? 'ORDER BY a.view_count DESC, COALESCE(a.published_at, a.fetched_at) DESC'
+        : 'ORDER BY COALESCE(a.published_at, a.fetched_at) DESC';
+
+  const whereSql = where.join(' AND ');
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(`${ARTICLE_SELECT} WHERE ${whereSql} ${orderSql} LIMIT ? OFFSET ?`)
+      .bind(...binds, size, offset).all<ArticleRow>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as count FROM news_articles a WHERE ${whereSql}`)
+      .bind(...binds).first<{ count: number }>(),
+  ]);
+
+  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
 });
 
 // ----------------------------------------------------------------------------
@@ -318,34 +342,100 @@ newsRoutes.post('/search', async (c) => {
 
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(`${ARTICLE_SELECT} WHERE ${whereSql} ${orderSql} LIMIT ? OFFSET ?`)
-      .bind(...binds, size, offset)
-      .all<ArticleRow>(),
+      .bind(...binds, size, offset).all<ArticleRow>(),
     c.env.DB.prepare(`SELECT COUNT(*) as count FROM news_articles a WHERE ${whereSql}`)
-      .bind(...binds)
-      .first<{ count: number }>(),
+      .bind(...binds).first<{ count: number }>(),
   ]);
 
-  return c.json(successResult(pagedResult((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size)));
+  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
+});
+
+// ----------------------------------------------------------------------------
+// GET /daily-highlights?days=7
+// ----------------------------------------------------------------------------
+newsRoutes.get('/daily-highlights', async (c) => {
+  const days = Math.min(30, Math.max(1, parseInt(c.req.query('days') ?? '7') || 7));
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  // Per-category top article per day. Heavy query but capped at 30 days × 10 categories.
+  const rows = await c.env.DB.prepare(
+    `${ARTICLE_SELECT}
+     WHERE a.is_active = 1
+       AND COALESCE(a.published_at, a.fetched_at) >= ?
+     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.view_count DESC
+     LIMIT 500`
+  ).bind(cutoff).all<ArticleRow>();
+
+  // Group into { date, highlights: [{ categoryId, ..., articleId, ... }] }
+  const byDay: Record<string, any[]> = {};
+  const seenCategoryPerDay: Record<string, Set<number>> = {};
+  for (const r of rows.results ?? []) {
+    const ts = r.published_at ?? r.fetched_at;
+    const date = ts.slice(0, 10);
+    if (!byDay[date]) {
+      byDay[date] = [];
+      seenCategoryPerDay[date] = new Set();
+    }
+    if (r.category_id == null || seenCategoryPerDay[date].has(r.category_id)) continue;
+    seenCategoryPerDay[date].add(r.category_id);
+    byDay[date].push({
+      categoryId: r.category_id,
+      categoryName: r.category_name ?? '',
+      categoryNameBn: r.category_name_bn ?? '',
+      categorySlug: r.category_slug ?? '',
+      categoryIcon: r.category_icon ?? null,
+      categoryColor: r.category_color ?? null,
+      articleId: r.id,
+      title: r.title,
+      slug: r.slug,
+      summary: r.summary,
+      sourceId: r.source_id,
+      sourceName: r.source_name ?? '',
+      publishedAt: r.published_at,
+      viewCount: r.view_count,
+    });
+  }
+
+  const result = Object.entries(byDay)
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .map(([date, highlights]) => ({ date, highlights }));
+
+  return c.json(result);
+});
+
+// ----------------------------------------------------------------------------
+// GET /stats/today
+// ----------------------------------------------------------------------------
+newsRoutes.get('/stats/today', async (c) => {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const row = await c.env.DB.prepare(
+    'SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND fetched_at >= ?'
+  ).bind(startOfDay.toISOString()).first<{ count: number }>();
+  return c.json({ count: row?.count ?? 0, timestamp: nowIso() });
 });
 
 // ----------------------------------------------------------------------------
 // GET /:slug — article detail (also bumps view_count async)
+// IMPORTANT: keep this AFTER all static prefixes so it doesn't shadow them.
 // ----------------------------------------------------------------------------
 newsRoutes.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
+  // Reject reserved single-segment paths so we don't accidentally hit them here.
+  if (['latest', 'featured', 'trending', 'categories', 'filter', 'search', 'daily-highlights', 'stats'].includes(slug)) {
+    return c.json(errMsg('Not found'), 404);
+  }
 
   const row = await c.env.DB.prepare(`${ARTICLE_SELECT} WHERE a.slug = ? AND a.is_active = 1 LIMIT 1`)
-    .bind(slug)
-    .first<ArticleRow>();
+    .bind(slug).first<ArticleRow>();
 
-  if (!row) return c.json(errorResult('Article not found'), 404);
+  if (!row) return c.json(errMsg('Article not found'), 404);
 
-  // Fire-and-forget view-count bump.
   c.executionCtx.waitUntil(
     c.env.DB.prepare('UPDATE news_articles SET view_count = view_count + 1 WHERE id = ?').bind(row.id).run()
   );
 
-  return c.json(successResult(mapArticle(row)));
+  return c.json(mapArticle(row));
 });
 
 // ----------------------------------------------------------------------------
@@ -357,60 +447,29 @@ newsRoutes.get('/:slug/related', async (c) => {
 
   const article = await c.env.DB.prepare(
     'SELECT id, category_id, source_id FROM news_articles WHERE slug = ? AND is_active = 1 LIMIT 1'
-  )
-    .bind(slug)
-    .first<{ id: number; category_id: number | null; source_id: number }>();
+  ).bind(slug).first<{ id: number; category_id: number | null; source_id: number }>();
 
-  if (!article) return c.json(errorResult('Article not found'), 404);
+  if (!article) return c.json(errMsg('Article not found'), 404);
 
-  // Prefer same-category articles; fall back to same-source.
   const rows = await c.env.DB.prepare(
     `${ARTICLE_SELECT}
-     WHERE a.is_active = 1
-       AND a.id <> ?
+     WHERE a.is_active = 1 AND a.id <> ?
        AND (a.category_id = ? OR a.source_id = ?)
      ORDER BY
        CASE WHEN a.category_id = ? THEN 0 ELSE 1 END,
        COALESCE(a.published_at, a.fetched_at) DESC
      LIMIT ?`
-  )
-    .bind(article.id, article.category_id, article.source_id, article.category_id, count)
-    .all<ArticleRow>();
+  ).bind(article.id, article.category_id, article.source_id, article.category_id, count).all<ArticleRow>();
 
-  return c.json(successResult((rows.results ?? []).map(mapArticle)));
+  return c.json((rows.results ?? []).map(mapArticle));
 });
 
 // ----------------------------------------------------------------------------
-// GET /stats/today
+// POST /invalidate-cache — internal, called after writes
 // ----------------------------------------------------------------------------
-newsRoutes.get('/stats/today', async (c) => {
-  const startOfDay = new Date();
-  startOfDay.setUTCHours(0, 0, 0, 0);
-  const row = await c.env.DB.prepare(
-    'SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND fetched_at >= ?'
-  )
-    .bind(startOfDay.toISOString())
-    .first<{ count: number }>();
-
-  return c.json(successResult({ count: row?.count ?? 0, timestamp: nowIso() }));
-});
-
-// ----------------------------------------------------------------------------
-// GET /daily-highlights?days=7
-// ----------------------------------------------------------------------------
-newsRoutes.get('/daily-highlights', async (c) => {
-  const days = Math.min(30, Math.max(1, parseInt(c.req.query('days') ?? '7') || 7));
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-
-  const rows = await c.env.DB.prepare(
-    `${ARTICLE_SELECT}
-     WHERE a.is_active = 1
-       AND COALESCE(a.published_at, a.fetched_at) >= ?
-     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.view_count DESC
-     LIMIT 200`
-  )
-    .bind(cutoff)
-    .all<ArticleRow>();
-
-  return c.json(successResult((rows.results ?? []).map(mapArticle)));
-});
+export async function invalidateNewsCache(env: Env['Bindings']) {
+  await Promise.all([
+    cacheInvalidatePrefix(env.CACHE_KV, 'news:'),
+    cacheInvalidatePrefix(env.CACHE_KV, 'categories:'),
+  ]);
+}

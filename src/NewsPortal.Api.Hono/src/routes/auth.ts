@@ -1,16 +1,15 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/env';
-import { errorResult, successResult } from '../lib/response';
+import { errMsg } from '../lib/response';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { issueToken, requireAuth } from '../lib/auth';
-import { nowIso, type Row } from '../lib/db';
+import { nowIso } from '../lib/db';
 
 export const authRoutes = new Hono<Env>();
 
 // ----------------------------------------------------------------------------
-// Helpers
+// DB shapes & helpers
 // ----------------------------------------------------------------------------
-
 type UserRow = {
   id: number;
   username: string;
@@ -45,52 +44,64 @@ function toUserDto(row: UserRow) {
   };
 }
 
-async function findUserByUsernameOrEmail(env: Env['Bindings'], usernameOrEmail: string): Promise<UserRow | null> {
-  return await env.DB.prepare(
-    'SELECT * FROM users WHERE (username = ?1 OR email = ?1) AND is_active = 1 LIMIT 1'
-  )
-    .bind(usernameOrEmail)
-    .first<UserRow>();
+/** AuthSession shape used by the React client's AuthService. */
+function toAuthSession(row: UserRow, token: string) {
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  return {
+    token,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    authProvider: row.auth_provider,
+    avatarId: row.avatar_id,
+    expiresAt,
+    // Extra fields the frontend may use:
+    userId: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    bio: row.bio,
+  };
 }
 
-async function findUserById(env: Env['Bindings'], id: number): Promise<UserRow | null> {
-  return await env.DB.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(id).first<UserRow>();
+async function findUser(env: Env['Bindings'], idOrName: string | number): Promise<UserRow | null> {
+  if (typeof idOrName === 'number') {
+    return env.DB.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(idOrName).first<UserRow>();
+  }
+  return env.DB.prepare(
+    'SELECT * FROM users WHERE (username = ?1 OR email = ?1) AND is_active = 1 LIMIT 1'
+  ).bind(idOrName).first<UserRow>();
 }
 
 // ----------------------------------------------------------------------------
-// POST /login
+// POST /login   body: { username, password }
 // ----------------------------------------------------------------------------
 authRoutes.post('/login', async (c) => {
-  const body = await c.req.json<{ usernameOrEmail?: string; username?: string; password?: string }>();
-  const identifier = (body.usernameOrEmail ?? body.username ?? '').trim();
+  const body = await c.req.json<{ username?: string; usernameOrEmail?: string; password?: string }>();
+  const identifier = (body.username ?? body.usernameOrEmail ?? '').trim();
   const password = body.password ?? '';
 
   if (!identifier || !password) {
-    return c.json(errorResult('Username/email and password are required'), 400);
+    return c.json(errMsg('Username/email and password are required'), 400);
   }
 
-  const user = await findUserByUsernameOrEmail(c.env, identifier);
-  if (!user) return c.json(errorResult('Invalid username or password'), 401);
+  const user = await findUser(c.env, identifier);
+  if (!user) return c.json(errMsg('Invalid username or password'), 401);
 
   const ok = await verifyPassword(password, user.password_hash);
-  if (!ok) return c.json(errorResult('Invalid username or password'), 401);
+  if (!ok) return c.json(errMsg('Invalid username or password'), 401);
 
   await c.env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').bind(nowIso(), user.id).run();
 
   const token = await issueToken(c, { id: user.id, username: user.username, email: user.email, role: user.role });
-  return c.json(successResult({ token, user: toUserDto(user) }));
+  return c.json(toAuthSession(user, token));
 });
 
 // ----------------------------------------------------------------------------
-// POST /register
+// POST /register  body: { username, email, password, firstName, lastName }
 // ----------------------------------------------------------------------------
 authRoutes.post('/register', async (c) => {
   const body = await c.req.json<{
-    username?: string;
-    email?: string;
-    password?: string;
-    firstName?: string;
-    lastName?: string;
+    username?: string; email?: string; password?: string; firstName?: string; lastName?: string;
   }>();
 
   const username = (body.username ?? '').trim();
@@ -100,18 +111,15 @@ authRoutes.post('/register', async (c) => {
   const lastName = (body.lastName ?? '').trim();
 
   if (!username || !email || !password || !firstName || !lastName) {
-    return c.json(errorResult('All fields are required'), 400);
+    return c.json(errMsg('All fields are required'), 400);
   }
   if (password.length < 6) {
-    return c.json(errorResult('Password must be at least 6 characters'), 400);
+    return c.json(errMsg('Password must be at least 6 characters'), 400);
   }
 
   const existing = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1 OR email = ?2 LIMIT 1')
-    .bind(username, email)
-    .first();
-  if (existing) {
-    return c.json(errorResult('Username or email already exists'), 409);
-  }
+    .bind(username, email).first();
+  if (existing) return c.json(errMsg('Username or email already exists'), 409);
 
   const passwordHash = await hashPassword(password);
   const now = nowIso();
@@ -119,68 +127,62 @@ authRoutes.post('/register', async (c) => {
   const result = await c.env.DB.prepare(
     `INSERT INTO users (username, email, password_hash, first_name, last_name, role, auth_provider, avatar_id, created_at, is_active)
      VALUES (?, ?, ?, ?, ?, 'Reader', 'Local', 1, ?, 1)`
-  )
-    .bind(username, email, passwordHash, firstName, lastName, now)
-    .run();
+  ).bind(username, email, passwordHash, firstName, lastName, now).run();
 
-  const created = await findUserById(c.env, Number(result.meta.last_row_id));
-  if (!created) return c.json(errorResult('Registration failed'), 500);
+  const created = await findUser(c.env, Number(result.meta.last_row_id));
+  if (!created) return c.json(errMsg('Registration failed'), 500);
 
   const token = await issueToken(c, { id: created.id, username: created.username, email: created.email, role: created.role });
-  return c.json(successResult({ token, user: toUserDto(created) }, 'Registered successfully'), 201);
+  return c.json(toAuthSession(created, token), 201);
 });
 
 // ----------------------------------------------------------------------------
-// GET /me
+// GET /me — current user profile (full UserDto)
 // ----------------------------------------------------------------------------
 authRoutes.get('/me', requireAuth, async (c) => {
-  const userId = c.get('userId') as number | undefined;
-  if (!userId) return c.json(errorResult('Unauthorized'), 401);
-
-  const user = await findUserById(c.env, userId);
-  if (!user) return c.json(errorResult('User not found'), 404);
-
-  return c.json(successResult(toUserDto(user)));
+  const userId = c.get('userId');
+  if (!userId) return c.json(errMsg('Unauthorized'), 401);
+  const user = await findUser(c.env, userId);
+  if (!user) return c.json(errMsg('User not found'), 404);
+  return c.json(toUserDto(user));
 });
 
 // ----------------------------------------------------------------------------
 // GET /validate
 // ----------------------------------------------------------------------------
 authRoutes.get('/validate', requireAuth, async (c) => {
-  const username = (c.get('userId') as number | undefined)?.toString();
-  return c.json(successResult({ valid: true, user: username }));
+  return c.json({ valid: true, user: c.get('userId') });
 });
 
 // ----------------------------------------------------------------------------
 // POST /change-password
 // ----------------------------------------------------------------------------
 authRoutes.post('/change-password', requireAuth, async (c) => {
-  const userId = c.get('userId') as number | undefined;
-  if (!userId) return c.json(errorResult('Unauthorized'), 401);
+  const userId = c.get('userId');
+  if (!userId) return c.json(errMsg('Unauthorized'), 401);
 
   const body = await c.req.json<{ currentPassword?: string; newPassword?: string }>();
   const currentPassword = body.currentPassword ?? '';
   const newPassword = body.newPassword ?? '';
 
   if (!currentPassword || !newPassword) {
-    return c.json(errorResult('Both currentPassword and newPassword are required'), 400);
+    return c.json(errMsg('Both currentPassword and newPassword are required'), 400);
   }
   if (newPassword.length < 6) {
-    return c.json(errorResult('New password must be at least 6 characters'), 400);
+    return c.json(errMsg('New password must be at least 6 characters'), 400);
   }
 
-  const user = await findUserById(c.env, userId);
-  if (!user) return c.json(errorResult('User not found'), 404);
+  const user = await findUser(c.env, userId);
+  if (!user) return c.json(errMsg('User not found'), 404);
 
   const ok = await verifyPassword(currentPassword, user.password_hash);
-  if (!ok) return c.json(errorResult('Current password is incorrect'), 400);
+  if (!ok) return c.json(errMsg('Current password is incorrect'), 400);
 
   const newHash = await hashPassword(newPassword);
   await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
-    .bind(newHash, nowIso(), userId)
-    .run();
+    .bind(newHash, nowIso(), userId).run();
 
-  return c.json(successResult(true, 'Password changed successfully'));
+  return c.json({ message: 'Password changed successfully' });
 });
 
 // ----------------------------------------------------------------------------
@@ -189,11 +191,10 @@ authRoutes.post('/change-password', requireAuth, async (c) => {
 authRoutes.post('/google', async (c) => {
   const body = await c.req.json<{ credential?: string }>();
   const credential = body.credential ?? '';
-  if (!credential) return c.json(errorResult('credential is required'), 400);
+  if (!credential) return c.json(errMsg('credential is required'), 400);
 
-  // Verify the ID token via Google's tokeninfo endpoint.
   const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
-  if (!resp.ok) return c.json(errorResult('Google authentication failed'), 401);
+  if (!resp.ok) return c.json(errMsg('Google authentication failed'), 401);
 
   const payload = (await resp.json()) as {
     aud?: string;
@@ -201,19 +202,17 @@ authRoutes.post('/google', async (c) => {
     email_verified?: string | boolean;
     given_name?: string;
     family_name?: string;
-    sub?: string;
   };
 
-  if (!payload.email || !payload.aud) return c.json(errorResult('Google authentication failed'), 401);
+  if (!payload.email || !payload.aud) return c.json(errMsg('Google authentication failed'), 401);
   if (payload.aud !== c.env.GOOGLE_CLIENT_ID) {
-    return c.json(errorResult('Token audience mismatch'), 401);
+    return c.json(errMsg('Token audience mismatch'), 401);
   }
 
-  const email = payload.email.toLowerCase();
   const verified = payload.email_verified === true || payload.email_verified === 'true';
-  if (!verified) return c.json(errorResult('Google email is not verified'), 401);
+  if (!verified) return c.json(errMsg('Google email is not verified'), 401);
 
-  // Find or create user.
+  const email = payload.email.toLowerCase();
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ? LIMIT 1').bind(email).first<UserRow>();
 
   if (!user) {
@@ -221,44 +220,38 @@ authRoutes.post('/google', async (c) => {
     const firstName = payload.given_name ?? 'Google';
     const lastName = payload.family_name ?? 'User';
     const now = nowIso();
-
     const result = await c.env.DB.prepare(
       `INSERT INTO users (username, email, password_hash, first_name, last_name, role, auth_provider, avatar_id, created_at, is_active)
        VALUES (?, ?, '', ?, ?, 'Reader', 'Google', 1, ?, 1)`
-    )
-      .bind(username, email, firstName, lastName, now)
-      .run();
-
-    user = await findUserById(c.env, Number(result.meta.last_row_id));
+    ).bind(username, email, firstName, lastName, now).run();
+    user = await findUser(c.env, Number(result.meta.last_row_id));
   }
 
-  if (!user) return c.json(errorResult('Failed to create user'), 500);
+  if (!user) return c.json(errMsg('Failed to create user'), 500);
 
   await c.env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').bind(nowIso(), user.id).run();
 
   const token = await issueToken(c, { id: user.id, username: user.username, email: user.email, role: user.role });
-  return c.json(successResult({ token, user: toUserDto(user) }));
+  return c.json(toAuthSession(user, token));
 });
 
 // ----------------------------------------------------------------------------
-// PUT /profile — update bio + avatar
+// PUT /profile  body: { bio, avatarId }
 // ----------------------------------------------------------------------------
 authRoutes.put('/profile', requireAuth, async (c) => {
-  const userId = c.get('userId') as number | undefined;
-  if (!userId) return c.json(errorResult('Unauthorized'), 401);
+  const userId = c.get('userId');
+  if (!userId) return c.json(errMsg('Unauthorized'), 401);
 
   const body = await c.req.json<{ bio?: string | null; avatarId?: number }>();
-  const bio = body.bio ?? null;
+  const bio = body.bio?.toString().trim() ?? null;
   const avatarId = body.avatarId ?? 1;
 
   await c.env.DB.prepare('UPDATE users SET bio = ?, avatar_id = ?, updated_at = ? WHERE id = ?')
-    .bind(bio?.toString().trim() ?? null, avatarId, nowIso(), userId)
-    .run();
+    .bind(bio, avatarId, nowIso(), userId).run();
 
-  const updated = await findUserById(c.env, userId);
-  if (!updated) return c.json(errorResult('User not found'), 404);
-
-  return c.json(successResult(toUserDto(updated)));
+  const updated = await findUser(c.env, userId);
+  if (!updated) return c.json(errMsg('User not found'), 404);
+  return c.json(toUserDto(updated));
 });
 
 // ----------------------------------------------------------------------------
@@ -268,19 +261,15 @@ authRoutes.get('/user/:username', async (c) => {
   const username = c.req.param('username');
   const user = await c.env.DB.prepare(
     'SELECT * FROM users WHERE username = ? AND is_active = 1 LIMIT 1'
-  )
-    .bind(username)
-    .first<UserRow>();
+  ).bind(username).first<UserRow>();
 
-  if (!user) return c.json(errorResult('User not found'), 404);
+  if (!user) return c.json(errMsg('User not found'), 404);
 
-  return c.json(
-    successResult({
-      username: user.username,
-      bio: user.bio,
-      avatarId: user.avatar_id,
-      role: user.role,
-      createdAt: user.created_at,
-    })
-  );
+  return c.json({
+    username: user.username,
+    bio: user.bio,
+    avatarId: user.avatar_id,
+    role: user.role,
+    createdAt: user.created_at,
+  });
 });

@@ -9,11 +9,30 @@ import { feedRoutes } from './routes/feed';
 import { sitemapRoutes } from './routes/sitemap';
 import { robotsRoutes } from './routes/robots';
 
+import { bookmarksRoutes } from './routes/bookmarks';
+import { readHistoryRoutes } from './routes/read-history';
+import { reactionsRoutes } from './routes/reactions';
+import { reportsRoutes } from './routes/reports';
+import { commentsRoutes } from './routes/comments';
+
+import { newsSourcesRoutes } from './routes/news-sources';
+import { fetchJobsRoutes } from './routes/fetch-jobs';
+
+import { adminRoutes } from './routes/admin';
+import { analyticsRoutes } from './routes/analytics';
+import { userManagementRoutes } from './routes/user-management';
+import { adminArticlesRoutes } from './routes/admin-articles';
+
+import { imagesRoutes } from './routes/images';
+import { aiRoutes } from './routes/ai';
+import { sseRoutes } from './routes/sse';
+
+import { runScheduledFetch } from './jobs/fetch-news';
+
 const app = new Hono<Env>();
 
 // ----------------------------------------------------------------------------
-// CORS — same pattern as Portfolio: parse comma-separated allowlist; default
-// to '*' when no Origin header is present.
+// CORS — parse the comma-separated allowlist from CORS_ORIGINS.
 // ----------------------------------------------------------------------------
 app.use('*', async (c, next) => {
   const allowed = (c.env.CORS_ORIGINS || '')
@@ -38,24 +57,70 @@ app.use('*', async (c, next) => {
 });
 
 // ----------------------------------------------------------------------------
-// Routes — `/api/v1/...` namespace mirrors the legacy ASP.NET Core API so the
-// React client can switch backends by changing VITE_API_BASE_URL.
+// Routes — `/api/v1/...` namespace mirrors the legacy ASP.NET Core API.
 // ----------------------------------------------------------------------------
-app.route('/', healthRoutes);                 // GET /  and  GET /health
+app.route('/', healthRoutes);
+
 app.route('/api/v1/auth', authRoutes);
 app.route('/api/v1/news', newsRoutes);
 app.route('/api/v1/feed', feedRoutes);
+
+// Engagement
+app.route('/api/v1/bookmarks', bookmarksRoutes);
+app.route('/api/v1/readhistory', readHistoryRoutes);
+app.route('/api/v1/reactions', reactionsRoutes);
+app.route('/api/v1/reports', reportsRoutes);
+app.route('/api/v1/comments', commentsRoutes);
+
+// News sources & fetch jobs (frontend uses /newssources, not /news-sources)
+app.route('/api/v1/newssources', newsSourcesRoutes);
+app.route('/api/v1/fetchjobs', fetchJobsRoutes);
+
+// Admin & analytics
+app.route('/api/v1/admin', adminRoutes);
+app.route('/api/v1/analytics', analyticsRoutes);
+app.route('/api/v1/usermanagement', userManagementRoutes);
+app.route('/api/v1/adminarticles', adminArticlesRoutes);
+
+// Phase 4: images
+app.route('/api/v1/images', imagesRoutes);
+
+// Phase 5: AI
+app.route('/api/v1/ai', aiRoutes);
+
+// Phase 6: SSE realtime
+app.route('/api/v1/sse', sseRoutes);
+
+// Public, non-API routes
 app.route('/sitemap', sitemapRoutes);
 app.route('/robots.txt', robotsRoutes);
 
 // ----------------------------------------------------------------------------
-// Global error handler — returns the standard `{ success, message }` envelope.
+// Global error handling
 // ----------------------------------------------------------------------------
 app.onError((err, c) => {
   console.error('Unhandled error:', err);
-  return c.json({ success: false, message: 'Internal server error' }, 500);
+  return c.json({ message: 'Internal server error' }, 500);
 });
 
-app.notFound((c) => c.json({ success: false, message: 'Not Found' }, 404));
+app.notFound((c) => c.json({ message: 'Not Found' }, 404));
 
-export default app;
+// ----------------------------------------------------------------------------
+// Worker default export — combines the HTTP handler with the scheduled handler
+// so the Cron Trigger declared in wrangler.toml can call into our news fetcher.
+// ----------------------------------------------------------------------------
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env['Bindings'], ctx: ExecutionContext) {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const result = await runScheduledFetch(env);
+          console.log('Scheduled fetch complete:', result);
+        } catch (err) {
+          console.error('Scheduled fetch failed:', err);
+        }
+      })()
+    );
+  },
+};
