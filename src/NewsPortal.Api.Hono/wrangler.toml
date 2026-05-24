@@ -40,7 +40,7 @@ binding = "CACHE_KV"
 id = "65d4c284eb7048d9b2cea23f571c1779"
 
 # ----------------------------------------------------------------------------
-# Cron Triggers (Phase 5 — uncomment when ready)
+# Cron Triggers — runs runScheduledFetch every 15 minutes.
 # ----------------------------------------------------------------------------
-# [triggers]
-# crons = ["*/15 * * * *"]
+[triggers]
+crons = ["*/15 * * * *"]
