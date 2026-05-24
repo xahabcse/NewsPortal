@@ -82,6 +82,11 @@ appsettings.*.local.json
 **/secrets/
 *.pfx
 *.key
+.cloudflare-secrets
+.cloudflare-secrets.*
+.dev.vars
+.dev.vars.*
+.wrangler/
 
 # Logs
 logs/

@@ -1,0 +1,24 @@
+{
+  "name": "newsportal-api-hono",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "migrate:local": "wrangler d1 migrations apply newsportal --local",
+    "migrate:remote": "wrangler d1 migrations apply newsportal --remote",
+    "seed:local": "wrangler d1 execute newsportal --local --file=./seed/seed.sql",
+    "seed:remote": "wrangler d1 execute newsportal --remote --file=./seed/seed.sql"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250529.0",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.90.0"
+  }
+}
