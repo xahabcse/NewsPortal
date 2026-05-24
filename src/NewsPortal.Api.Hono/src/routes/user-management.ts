@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/env';
-import { errMsg, paged } from '../lib/response';
+import { errMsg } from '../lib/response';
 import { requireAuth, requireRole } from '../lib/auth';
-import { nowIso, paginate, type Row } from '../lib/db';
+import { nowIso, type Row } from '../lib/db';
+import { hashPassword } from '../lib/password';
 
 export const userManagementRoutes = new Hono<Env>();
 
@@ -24,9 +25,11 @@ function mapUser(r: Row) {
   };
 }
 
-// GET / — paginated user list
+// ----------------------------------------------------------------------------
+// GET / — full user list (frontend's UserManagementService.getAll expects User[])
+// Optional query params: page, pageSize, search, role
+// ----------------------------------------------------------------------------
 userManagementRoutes.get('/', async (c) => {
-  const { page, size, offset } = paginate(c.req.query('page'), c.req.query('pageSize'), 20);
   const search = (c.req.query('search') ?? '').trim();
   const role = c.req.query('role');
 
@@ -43,13 +46,10 @@ userManagementRoutes.get('/', async (c) => {
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT * FROM users ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-      .bind(...binds, size, offset).all<Row>(),
-    c.env.DB.prepare(`SELECT COUNT(*) as count FROM users ${whereSql}`).bind(...binds).first<{ count: number }>(),
-  ]);
+  const rows = await c.env.DB.prepare(`SELECT * FROM users ${whereSql} ORDER BY created_at DESC LIMIT 500`)
+    .bind(...binds).all<Row>();
 
-  return c.json(paged((rows.results ?? []).map(mapUser), countRow?.count ?? 0, page, size));
+  return c.json((rows.results ?? []).map(mapUser));
 });
 
 // GET /:id
@@ -59,6 +59,137 @@ userManagementRoutes.get('/:id', async (c) => {
   const row = await c.env.DB.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(id).first<Row>();
   if (!row) return c.json(errMsg('User not found'), 404);
   return c.json(mapUser(row));
+});
+
+// ----------------------------------------------------------------------------
+// POST / — create a new user. body: { username, email, password, role, isActive }
+// ----------------------------------------------------------------------------
+userManagementRoutes.post('/', async (c) => {
+  const body = await c.req.json<{
+    username?: string;
+    email?: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    isActive?: boolean;
+  }>();
+
+  const username = (body.username ?? '').trim();
+  const email = (body.email ?? '').trim().toLowerCase();
+  const password = body.password ?? '';
+  const role = body.role ?? 'Reader';
+
+  if (!username || !email || !password) {
+    return c.json(errMsg('username, email and password are required'), 400);
+  }
+  if (password.length < 6) return c.json(errMsg('Password must be at least 6 characters'), 400);
+  if (!['Reader', 'Viewer', 'Editor', 'Admin', 'SuperAdmin'].includes(role)) {
+    return c.json(errMsg('Invalid role'), 400);
+  }
+
+  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1 OR email = ?2 LIMIT 1')
+    .bind(username, email).first();
+  if (existing) return c.json(errMsg('Username or email already exists'), 409);
+
+  const normalizedRole = role === 'Viewer' ? 'Reader' : role;
+  const passwordHash = await hashPassword(password);
+  const now = nowIso();
+
+  const result = await c.env.DB.prepare(
+    `INSERT INTO users (username, email, password_hash, first_name, last_name, role, auth_provider, avatar_id, created_at, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, 'Local', 1, ?, ?)`
+  ).bind(
+    username,
+    email,
+    passwordHash,
+    (body.firstName ?? username).trim(),
+    (body.lastName ?? '').trim() || ' ',
+    normalizedRole,
+    now,
+    body.isActive === false ? 0 : 1
+  ).run();
+
+  const created = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
+    .bind(Number(result.meta.last_row_id)).first<Row>();
+  return c.json(mapUser(created!), 201);
+});
+
+// ----------------------------------------------------------------------------
+// PUT /:id — update username, email, role, isActive
+// ----------------------------------------------------------------------------
+userManagementRoutes.put('/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+
+  const body = await c.req.json<{
+    username?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    isActive?: boolean;
+  }>();
+
+  const username = (body.username ?? '').trim();
+  const email = (body.email ?? '').trim().toLowerCase();
+  const role = body.role ?? null;
+  if (role && !['Reader', 'Viewer', 'Editor', 'Admin', 'SuperAdmin'].includes(role)) {
+    return c.json(errMsg('Invalid role'), 400);
+  }
+  const normalizedRole = role === 'Viewer' ? 'Reader' : role;
+
+  await c.env.DB.prepare(
+    `UPDATE users SET
+       username = COALESCE(NULLIF(?, ''), username),
+       email = COALESCE(NULLIF(?, ''), email),
+       first_name = COALESCE(NULLIF(?, ''), first_name),
+       last_name = COALESCE(NULLIF(?, ''), last_name),
+       role = COALESCE(?, role),
+       is_active = COALESCE(?, is_active),
+       updated_at = ?
+     WHERE id = ?`
+  ).bind(
+    username,
+    email,
+    (body.firstName ?? '').trim(),
+    (body.lastName ?? '').trim(),
+    normalizedRole,
+    body.isActive === undefined ? null : body.isActive ? 1 : 0,
+    nowIso(),
+    id
+  ).run();
+
+  const updated = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<Row>();
+  if (!updated) return c.json(errMsg('User not found'), 404);
+  return c.json(mapUser(updated));
+});
+
+// ----------------------------------------------------------------------------
+// DELETE /:id — soft delete (sets is_active = 0)
+// ----------------------------------------------------------------------------
+userManagementRoutes.delete('/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+  await c.env.DB.prepare('UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?')
+    .bind(nowIso(), id).run();
+  return c.body(null, 204);
+});
+
+// ----------------------------------------------------------------------------
+// POST /:id/reset-password   body: { newPassword }
+// ----------------------------------------------------------------------------
+userManagementRoutes.post('/:id/reset-password', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+  const body = await c.req.json<{ newPassword?: string }>();
+  if (!body.newPassword || body.newPassword.length < 6) {
+    return c.json(errMsg('newPassword must be at least 6 characters'), 400);
+  }
+  const hash = await hashPassword(body.newPassword);
+  await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+    .bind(hash, nowIso(), id).run();
+  return c.json({ message: 'Password reset' });
 });
 
 // PUT /:id/role  body: { role }
