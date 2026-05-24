@@ -69,6 +69,14 @@ builder.Services.AddApiVersioning(options =>
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
 
+// Reject obvious placeholder values from committed appsettings files.
+if (secretKey.StartsWith("USE_ENV_VARIABLE", StringComparison.OrdinalIgnoreCase) || secretKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey is missing, placeholder, or too short. " +
+        "Set it via JwtSettings__SecretKey env var (32+ chars).");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -174,9 +182,12 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Enable CORS with restricted methods and headers
-// Allow configured origins + any local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+// CORS: configured origins always allowed. localhost + private LAN IPs are
+// allowed only outside Production (override with ALLOW_LAN_CORS=true if needed).
 var corsOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:5000";
+var allowLanCors = !builder.Environment.IsProduction()
+    || string.Equals(Environment.GetEnvironmentVariable("ALLOW_LAN_CORS"), "true", StringComparison.OrdinalIgnoreCase);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewsPortalPolicy", policy =>
@@ -184,20 +195,20 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries))
               .SetIsOriginAllowed(origin =>
               {
+                  if (!allowLanCors) return false;
+
                   if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
                   {
                       var host = uri.Host;
-                      // Allow localhost variants
                       if (host is "localhost" or "127.0.0.1") return true;
-                      // Allow private network IPs (LAN access)
                       if (System.Net.IPAddress.TryParse(host, out var ip))
                       {
                           var bytes = ip.GetAddressBytes();
                           if (bytes.Length == 4)
                           {
-                              return bytes[0] == 10 ||                                    // 10.x.x.x
-                                     (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || // 172.16-31.x.x
-                                     (bytes[0] == 192 && bytes[1] == 168);                 // 192.168.x.x
+                              return bytes[0] == 10 ||
+                                     (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                                     (bytes[0] == 192 && bytes[1] == 168);
                           }
                       }
                   }
@@ -212,9 +223,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-apply migrations and seed data
-using (var scope = app.Services.CreateScope())
+// Auto-apply migrations + seed data.
+// In a multi-instance deploy set RUN_DB_MIGRATIONS=false on all but one pod
+// (or run migrations from a dedicated init container / CI step instead).
+var runMigrations = !string.Equals(
+    Environment.GetEnvironmentVariable("RUN_DB_MIGRATIONS"), "false", StringComparison.OrdinalIgnoreCase);
+
+if (runMigrations)
 {
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     try
     {
@@ -224,13 +241,17 @@ using (var scope = app.Services.CreateScope())
         Log.Information("Migrations applied successfully.");
 
         Log.Information("Seeding database...");
-        await SeedData.SeedAsync(context);
+        await SeedData.SeedAsync(context, app.Configuration, app.Environment.IsProduction());
         Log.Information("Database seeding completed.");
     }
     catch (Exception ex)
     {
         Log.Error(ex, "An error occurred while preparing the database.");
     }
+}
+else
+{
+    Log.Information("RUN_DB_MIGRATIONS=false — skipping migrations/seeding.");
 }
 
 
@@ -253,14 +274,21 @@ else
     app.UseHsts();
 }
 
-// Enable Swagger UI in all environments
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Swagger UI exposed only outside Production to avoid leaking the API surface.
+// Set ENABLE_SWAGGER=true to force-enable in Production (e.g. behind a VPN).
+var enableSwagger = !app.Environment.IsProduction()
+    || string.Equals(Environment.GetEnvironmentVariable("ENABLE_SWAGGER"), "true", StringComparison.OrdinalIgnoreCase);
+
+if (enableSwagger)
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
-    options.RoutePrefix = "swagger";
-    options.DocumentTitle = "NewsPortal API Documentation";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "NewsPortal API Documentation";
+    });
+}
 
 // Add request logging
 app.UseSerilogRequestLogging();

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NewsPortal.Core.Entities;
 using NewsPortal.Core.Enums;
 using NewsPortal.Core.Helpers;
@@ -7,7 +8,7 @@ namespace NewsPortal.Repository.Data;
 
 public static class SeedData
 {
-    public static async Task SeedAsync(NewsPortalDbContext context)
+    public static async Task SeedAsync(NewsPortalDbContext context, IConfiguration? configuration = null, bool isProduction = false)
     {
         // Seed Categories
         if (!await context.Categories.AnyAsync())
@@ -150,15 +151,22 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // Seed one user per role (created on first application run)
+        // Seed one user per role (created on first application run).
+        // Passwords come from config / env vars (e.g. SEED_SUPERADMIN_PASSWORD).
+        // In Production, missing values throw — no weak defaults are silently created.
         if (!await context.Users.AnyAsync())
         {
+            var superPwd = ResolveSeedPassword(configuration, "SEED_SUPERADMIN_PASSWORD", "superadmin", isProduction);
+            var adminPwd = ResolveSeedPassword(configuration, "SEED_ADMIN_PASSWORD",      "admin1",     isProduction);
+            var editorPwd = ResolveSeedPassword(configuration, "SEED_EDITOR_PASSWORD",    "editor",     isProduction);
+            var readerPwd = ResolveSeedPassword(configuration, "SEED_READER_PASSWORD",    "reader",     isProduction);
+
             var seedUsers = new List<User>
             {
                 new() {
                     Username = "superadmin",
                     Email = "superadmin@newsportal.com",
-                    PasswordHash = PasswordHelper.HashPassword("superadmin"),
+                    PasswordHash = PasswordHelper.HashPassword(superPwd),
                     FirstName = "Super",
                     LastName = "Admin",
                     Role = UserRole.SuperAdmin,
@@ -167,7 +175,7 @@ public static class SeedData
                 new() {
                     Username = "admin",
                     Email = "admin@newsportal.com",
-                    PasswordHash = PasswordHelper.HashPassword("admin1"),
+                    PasswordHash = PasswordHelper.HashPassword(adminPwd),
                     FirstName = "System",
                     LastName = "Admin",
                     Role = UserRole.Admin,
@@ -176,7 +184,7 @@ public static class SeedData
                 new() {
                     Username = "editor",
                     Email = "editor@newsportal.com",
-                    PasswordHash = PasswordHelper.HashPassword("editor"),
+                    PasswordHash = PasswordHelper.HashPassword(editorPwd),
                     FirstName = "News",
                     LastName = "Editor",
                     Role = UserRole.Editor,
@@ -185,7 +193,7 @@ public static class SeedData
                 new() {
                     Username = "reader",
                     Email = "reader@newsportal.com",
-                    PasswordHash = PasswordHelper.HashPassword("reader"),
+                    PasswordHash = PasswordHelper.HashPassword(readerPwd),
                     FirstName = "Regular",
                     LastName = "Reader",
                     Role = UserRole.Reader,
@@ -196,11 +204,33 @@ public static class SeedData
             await context.Users.AddRangeAsync(seedUsers);
             await context.SaveChangesAsync();
 
-            Console.WriteLine("=== Default users created ===");
-            Console.WriteLine("SuperAdmin : username=superadmin  password=superadmin");
-            Console.WriteLine("Admin      : username=admin        password=admin1");
-            Console.WriteLine("Editor     : username=editor       password=editor");
-            Console.WriteLine("Reader     : username=reader       password=reader");
+            if (!isProduction)
+            {
+                Console.WriteLine("=== Default users created (DEVELOPMENT defaults — change before production) ===");
+                Console.WriteLine($"SuperAdmin : username=superadmin  password={superPwd}");
+                Console.WriteLine($"Admin      : username=admin        password={adminPwd}");
+                Console.WriteLine($"Editor     : username=editor       password={editorPwd}");
+                Console.WriteLine($"Reader     : username=reader       password={readerPwd}");
+            }
+            else
+            {
+                Console.WriteLine("=== Default users seeded from environment variables ===");
+            }
         }
+    }
+
+    private static string ResolveSeedPassword(IConfiguration? config, string envKey, string devDefault, bool isProduction)
+    {
+        var fromConfig = config?[envKey] ?? Environment.GetEnvironmentVariable(envKey);
+        if (!string.IsNullOrWhiteSpace(fromConfig))
+            return fromConfig;
+
+        if (isProduction)
+        {
+            throw new InvalidOperationException(
+                $"Seed password env var '{envKey}' is required in Production. Set it before first run.");
+        }
+
+        return devDefault;
     }
 }

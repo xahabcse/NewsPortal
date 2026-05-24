@@ -1,8 +1,8 @@
 # NewsPortal
 
-A full-featured news aggregation portal built with React + ASP.NET Core 9.0. Fetches, categorizes, and displays news from multiple sources with AI-powered features.
+A full-featured news aggregation portal built with React + ASP.NET Core 8.0. Fetches, categorizes, and displays news from multiple sources with AI-powered features.
 
-**Stack:** React 18 + TypeScript + Vite | ASP.NET Core 9.0 | PostgreSQL + MongoDB + Redis | Docker
+**Stack:** React 18 + TypeScript + Vite | ASP.NET Core 8.0 | PostgreSQL + MongoDB + Redis | Docker
 
 ---
 

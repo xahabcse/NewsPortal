@@ -132,6 +132,10 @@ services:
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       - Authentication__Google__ClientId=${GOOGLE_CLIENT_ID}
       - Gemini__ApiKey=${GEMINI_API_KEY}
+      - SEED_SUPERADMIN_PASSWORD=${SEED_SUPERADMIN_PASSWORD}
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD}
+      - SEED_EDITOR_PASSWORD=${SEED_EDITOR_PASSWORD}
+      - SEED_READER_PASSWORD=${SEED_READER_PASSWORD}
     ports:
       - "8080:8080"
     depends_on:
