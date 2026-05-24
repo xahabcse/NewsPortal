@@ -1,73 +1,131 @@
-# React + TypeScript + Vite
+# NewsPortal.Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 18 + TypeScript + Vite frontend for the NewsPortal aggregation platform. Mobile-responsive, dark/light themed, PWA-installable, and fully bilingual (Bangla / English).
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Layer            | Library                              | Version  |
+|------------------|--------------------------------------|----------|
+| Framework        | React                                | 18.3.1   |
+| Language         | TypeScript                           | 5.7.2    |
+| Build            | Vite                                 | 7.2.4    |
+| React plugin     | `@vitejs/plugin-react-swc`           | 4.2.2    |
+| Routing          | `react-router-dom`                   | 7.13.0   |
+| Styling          | Tailwind CSS                         | 3.4.19   |
+| HTTP             | `axios`                              | 1.13.3   |
+| Realtime         | `@microsoft/signalr`                 | 10.0.0   |
+| i18n             | `i18next` + `react-i18next`          | 25 / 16  |
+| SEO              | `react-helmet-async`                 | 2.0.5    |
+| Charts (admin)   | `recharts`                           | 3.7.0    |
+| Toasts           | `react-hot-toast`                    | 2.6.0    |
+| PWA              | `vite-plugin-pwa` + `workbox-window` | 1.2 / 7.4 |
 
-## React Compiler
+## Scripts
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install        # install deps
+npm run dev        # Vite dev server on http://localhost:5173 (proxies /api -> http://localhost:5016)
+npm run build      # type-check (tsc -b) + production bundle into dist/
+npm run preview    # serve the production bundle locally
+npm run lint       # ESLint over the project
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Local Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Install Node.js 20.x.
+2. From this directory: `npm install`.
+3. Start the API (see root [README.md](../../README.md) — `cd src/NewsPortal.Api && dotnet run`).
+4. `npm run dev` → app at <http://localhost:5173>.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+The dev server proxies `/api/*` to the backend at `http://localhost:5016` (configured in [vite.config.ts](vite.config.ts)). Override with `VITE_API_BASE_URL` if you need a different backend host.
+
+## Project Structure
+
+```text
+src/
+├── pages/                  # Top-level routed pages
+│   ├── HomePage.tsx
+│   ├── ArticleDetailPage.tsx
+│   ├── CategoryPage.tsx
+│   ├── SearchResultsPage.tsx
+│   ├── TrendingPage.tsx
+│   ├── TimelinePage.tsx
+│   ├── BookmarksPage.tsx
+│   ├── NewsSourcesPage.tsx
+│   ├── ProfilePage.tsx
+│   ├── UserProfilePage.tsx
+│   ├── LoginPage.tsx
+│   ├── RegisterPage.tsx
+│   ├── NotFoundPage.tsx
+│   └── admin/              # Role-gated admin pages
+│       ├── AdminDashboard.tsx
+│       ├── ArticleManagementPage.tsx
+│       ├── CategoriesPage.tsx
+│       ├── ContentAnalyticsPage.tsx
+│       ├── FetchLogPage.tsx
+│       └── UserManagementPage.tsx
+├── components/             # Reusable UI (NewsCard, Navbar, ShareButton, ...)
+├── context/                # AuthContext, ThemeContext
+├── services/               # axiosInstance, SignalRService, API clients
+├── i18n/                   # i18next setup + bn/en translation files
+├── types/                  # Shared TypeScript types
+├── utils/                  # Helpers (slug, date, format, ...)
+├── App.tsx                 # Routes + ProtectedRoute role gating
+└── main.tsx                # Vite entry point
 ```
+
+## Routing
+
+Public routes mount in `App.tsx`. Admin and editor routes are wrapped with `ProtectedRoute` that checks the role on `AuthContext` (`SuperAdmin`, `Admin`, `Editor`, `Reader`).
+
+| Route                    | Page                       | Access      |
+|--------------------------|----------------------------|-------------|
+| `/`                      | `HomePage`                 | Public      |
+| `/news/:slug`            | `ArticleDetailPage`        | Public      |
+| `/category/:slug`        | `CategoryPage`             | Public      |
+| `/search`                | `SearchResultsPage`        | Public      |
+| `/trending`              | `TrendingPage`             | Public      |
+| `/timeline`              | `TimelinePage`             | Public      |
+| `/sources`               | `NewsSourcesPage`          | Public      |
+| `/user/:username`        | `UserProfilePage`          | Public      |
+| `/login`, `/register`    | Auth pages                 | Public      |
+| `/bookmarks`             | `BookmarksPage`            | Reader+     |
+| `/profile`               | `ProfilePage`              | Reader+     |
+| `/admin/dashboard`       | `AdminDashboard`           | Admin+      |
+| `/admin/articles`        | `ArticleManagementPage`    | Editor+     |
+| `/admin/categories`      | `CategoriesPage`           | Editor+     |
+| `/admin/analytics`       | `ContentAnalyticsPage`     | Admin+      |
+| `/admin/fetch-log`       | `FetchLogPage`             | Admin+      |
+| `/admin/users`           | `UserManagementPage`       | Admin+      |
+
+## Cross-cutting Features
+
+- **Auth** — `AuthContext` reads JWT from `localStorage`, refreshes on mount, exposes `user`, `login`, `logout`, role helpers.
+- **Theme** — `ThemeContext` toggles a `dark` class on `<html>`; persisted in `localStorage`.
+- **Realtime** — `SignalRService` connects to the API's hub for breaking-news ticker and live admin updates; auto-reconnect built in.
+- **i18n** — `bn` (default) and `en` translation files under `src/i18n/`. Add new strings to **both** files. Detector reads `localStorage` first, then browser language.
+- **SEO** — `react-helmet-async` injects per-page `<title>`, meta, Open Graph, and Schema.org `NewsArticle` JSON-LD on article pages.
+- **PWA** — `vite-plugin-pwa` registers a service worker (autoUpdate), precaches static assets, and runtime-caches API responses (`NetworkFirst`, 24h TTL). Manifest: name "NewsPortal", theme `#8b5cf6`, standalone display.
+- **Keyboard shortcuts** — `j`/`k` navigate cards, `o` open, `b` bookmark, `s`/`?` search/help, `Esc` close.
+- **Mobile** — Tested on 360–430px viewports; collapsible sidebar with hamburger menu.
+
+## Environment Variables
+
+The frontend is config-light. The only var the build reads is:
+
+| Variable             | Default                  | Purpose                                |
+|----------------------|--------------------------|----------------------------------------|
+| `VITE_API_BASE_URL`  | `/api` (proxied in dev)  | Override API host (e.g., for previews) |
+
+For backend env vars, see the root [README.md](../../README.md#environment-variables).
+
+## Build & Deploy
+
+Production builds run inside the `web` Docker image (see [Dockerfile](Dockerfile)) which serves the static bundle behind Nginx. Build locally with `npm run build`; output lands in `dist/`.
+
+```bash
+npm run build
+# dist/ → ready to serve via Nginx, Vercel, Netlify, S3, ...
+```
+
+See the root [README.md](../../README.md) for the full Docker / production deployment workflow.

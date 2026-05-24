@@ -48,15 +48,10 @@ call :print_info "Platform: Windows (Docker Desktop)"
 
 REM Check for .env file
 if not exist ".env" (
-    call :print_warning "No .env file found. Creating from .env.example..."
-    if exist ".env.example" (
-        copy .env.example .env >nul
-        call :print_success "Created .env file"
-        call :print_warning "Please edit .env and update passwords/secrets."
-    ) else (
-        call :print_error ".env.example not found"
-        exit /b 1
-    )
+    call :print_error "No .env file found in project root."
+    echo Create a .env file with the required variables before deploying.
+    echo See README.md (Environment Variables section) for the full list.
+    exit /b 1
 ) else (
     call :print_success ".env file exists"
 )

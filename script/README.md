@@ -78,8 +78,8 @@ After running the script, you'll see these options:
 
 ## First-Time Setup
 
-1. **Run the deployment script** for your platform
-2. **Edit `.env`** when prompted (or create from `.env.example`)
+1. **Create a `.env` file** in the project root — see [README.md](../README.md#environment-variables) for the full variable list and a template
+2. **Run the deployment script** for your platform (it will fail fast if `.env` is missing)
 3. **Select Option 1** to start basic services
 4. **Select Option 2** if you want monitoring dashboards
 
@@ -224,7 +224,7 @@ NewsPortal/
 ├── docker-compose.yml              # Main services (cross-platform)
 ├── docker-compose.monitoring.yml   # Monitoring stack (Linux)
 ├── docker-compose.monitoring.windows.yml  # Monitoring stack (Windows)
-├── .env.example                    # Environment template
+├── .env                            # Environment file (you create — see README.md)
 ├── script/
 │   ├── deploy.sh                   # Bash script (Linux / Git Bash)
 │   ├── deploy.bat                  # Batch script (Windows CMD)

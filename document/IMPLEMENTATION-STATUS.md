@@ -3,7 +3,7 @@
 > **Project**: NewsPortal - News Aggregation Platform
 > **Stack**: ASP.NET Core 8.0 + React 18 + TypeScript + Vite + Tailwind CSS + PostgreSQL + MongoDB + Redis
 > **Created**: February 19, 2026
-> **Last Updated**: March 1, 2026
+> **Last Updated**: May 24, 2026
 
 ---
 
@@ -102,7 +102,7 @@
 
 | # | Feature | Status | Date | Notes |
 |---|---------|--------|------|-------|
-| 0.1 | Environment Configuration | Done | 2026-02-19 | `.env.example`, Docker env vars |
+| 0.1 | Environment Configuration | Done | 2026-02-19 | `.env` (root, git-ignored), Docker env vars — variable list inlined in `README.md` |
 | 0.2 | Docker Compose Production | Done | 2026-02-19 | `docker-compose.yml` with all services |
 | 0.3 | Nginx Production Hardening | Done | 2026-02-19 | `nginx.prod.conf` with gzip, security headers, rate limiting |
 | 0.4 | CI/CD Pipeline | Done | 2026-02-19 | GitHub Actions workflows |
@@ -214,7 +214,9 @@
 
 ## News Sources
 
-### Currently Seeded (8 Bangladeshi Sources)
+### Currently Seeded
+
+**Bangladeshi (8 RSS):**
 
 | Source | RSS URL | Status |
 |--------|---------|--------|
@@ -226,6 +228,16 @@
 | BSS | `https://www.bssnews.net/rss` | Active |
 | The Dhaka Post | `https://www.thedhakapost.com/rss.xml` | Active |
 | Daily Star | `https://www.thedailystar.net/rss` | Active |
+
+**International (idempotent seed, added 2026-05):**
+
+| Source | Type | Notes |
+|--------|------|-------|
+| The Guardian | API (Open Platform) | Requires `GUARDIAN_API_KEY`; uses custom Guardian parser in `NewsFetcherService` |
+| BBC News - World | RSS | `https://feeds.bbci.co.uk/news/world/rss.xml` |
+| BBC News - Asia | RSS | `https://feeds.bbci.co.uk/news/world/asia/rss.xml` |
+| Al Jazeera | RSS | `https://www.aljazeera.com/xml/rss/all.xml` |
+| TechCrunch | RSS | `https://techcrunch.com/feed/` |
 
 ### Recommended Additions (Tier 1 - Highly Reliable RSS)
 
@@ -283,6 +295,38 @@
 | `AddComments` | `Comment` | Applied |
 | `AddReactionsAndVotes` | `ArticleReaction`, `CommentVote` | Applied |
 | `AddArticleReports` | `ArticleReport` | Applied |
+| `AddReaderRole` | `User.Role` (Reader tier) | Applied |
+| `AddAuthProvider` | `User.AuthProvider` (Google OAuth) | Applied |
+| `AddBioAndAvatar` | `User.Bio`, `User.AvatarEmoji` | Applied |
+
+**Total: 12 migrations** (see `src/NewsPortal.Repository/Migrations/`)
+
+---
+
+## Recent Updates (March – May 2026)
+
+Tracked here so future readers know what landed after the initial phase plan. Use `git log --since=2026-03-01` for the canonical list.
+
+| Date | Area | Change |
+|------|------|--------|
+| 2026-05 | Security | Hardened seed data, restricted Swagger to Development, tightened CORS, JWT secret enforcement; fixed .NET 8 version mismatch in Dockerfiles |
+| 2026-05 | Bug fix | Fixed view-count increment error; hide summary when full content is available |
+| 2026-05 | Fetch | Added Guardian Open Platform API support + custom Guardian parser; idempotent international seed (BBC, Al Jazeera, TechCrunch, Guardian) |
+| 2026-05 | Monitoring | Redesigned Grafana dashboards (cAdvisor metrics for cross-platform support) |
+| 2026-04 | Swagger | Relaxed CSP for Swagger UI; later restricted to Development only |
+| 2026-04 | Networking | Auto-detect server IP for monitoring links and Nginx |
+| 2026-04 | Content | Lazy content scraping for articles without full content |
+| 2026-04 | UI | Removed article popup → direct navigation to detail page; moved weather widget into greeting section |
+| 2026-04 | CORS | Allow LAN users to access the app; fixed Loki config |
+| 2026-04 | UI | Mobile responsive classes for 360–430px viewports; username in greeting; 403 fix for Reader role |
+| 2026-04 | Home | Dynamic Bangla greeting with Bengali, Hijri, and Gregorian calendar dates |
+| 2026-04 | Profile | User bio, emoji avatars, public profile page |
+| 2026-04 | AI | Integrated Google Gemini 2.5 Flash for article summarization (TF-IDF kept as fallback) |
+| 2026-04 | Auth | Added `AuthProvider` field; hardened Google OAuth security |
+| 2026-04 | Cache | Invalidate categories cache on article import/create |
+| 2026-03 | Auth | Reader role + Google OAuth + route-based access control + protected routes + rate limiting |
+| 2026-03 | Filter | Advanced multi-filter bar replaces source chips; classic filter bar on timeline; DateTime Kind fix |
+| 2026-03 | Seed | One seed user per role with simple credentials |
 
 ---
 

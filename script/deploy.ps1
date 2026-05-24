@@ -62,13 +62,10 @@ function Select-Platform {
 # ---------- Ensure .env ----------
 function Ensure-Env {
     if (-not (Test-Path ".env")) {
-        Print-Warning "No .env file found. Creating from .env.example..."
-        if (Test-Path ".env.example") {
-            Copy-Item ".env.example" ".env"
-            Print-Success "Created .env - please update passwords/secrets before deploying."
-        } else {
-            Print-Error ".env.example not found"; exit 1
-        }
+        Print-Error "No .env file found in project root."
+        Print-Info  "Create a .env file with the required variables before deploying."
+        Print-Info  "See README.md (Environment Variables section) for the full list."
+        exit 1
     } else {
         Print-Success ".env file exists"
     }

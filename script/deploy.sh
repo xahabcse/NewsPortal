@@ -77,15 +77,10 @@ select_platform() {
 
 ensure_env() {
     if [ ! -f .env ]; then
-        print_warning "No .env file found. Creating from .env.example..."
-        if [ -f .env.example ]; then
-            cp .env.example .env
-            print_success "Created .env file"
-            print_warning "Please edit .env and update passwords/secrets."
-        else
-            print_error ".env.example not found"
-            exit 1
-        fi
+        print_error "No .env file found in project root."
+        print_info  "Create a .env file with the required variables before deploying."
+        print_info  "See README.md (Environment Variables section) for the full list."
+        exit 1
     else
         print_success ".env file exists"
     fi

@@ -18,21 +18,24 @@ Swagger/OpenAPI documentation has been successfully integrated into the NewsPort
 
 #### Program.cs
 - Configured Swagger services with OpenAPI information
-- Enabled Swagger middleware for all environments
-- Configured Swagger UI to serve at the application root (`/`)
+- **Swagger UI is gated** — exposed by default only outside `Production` (i.e. `Development` and `Staging`).
+  Set the env var `ENABLE_SWAGGER=true` to force-enable in Production (e.g. behind a VPN). See [Program.cs:277–291](Program.cs#L277-L291).
+- Configured Swagger UI to serve at `/swagger` (route prefix), not the application root.
 - Integrated XML comments for enhanced documentation
 
 ## Accessing Swagger UI
 
-Once the API is running, access the Swagger documentation at:
+Once the API is running in a non-Production environment, access Swagger at:
 
-**Root URL**: `http://localhost:5016/` or `https://localhost:7106/`
+**URL**: `http://localhost:5016/swagger` or `https://localhost:7106/swagger`
 
-The Swagger UI is configured to display at the application root, providing immediate access to:
+The Swagger UI provides:
 - All API endpoints
 - Request/Response schemas
 - Interactive API testing
 - XML documentation comments
+
+> **Production note:** Swagger is disabled by default in Production. To temporarily enable it (e.g. for a private debugging session), set `ENABLE_SWAGGER=true` in `.env` and restart the API.
 
 ## Building the API
 
@@ -186,19 +189,34 @@ public async Task<IActionResult> GetLatestNews(int page = 1, int pageSize = 10)
 
 ## Security Notes
 
-**Important**: The current Swagger configuration is available in all environments (Development, Staging, Production). For production deployments:
+**Status (May 2026 — security hardening commit):** Swagger UI is now disabled by default in `Production`. The current gate in [Program.cs](Program.cs) is:
 
-1. Consider restricting Swagger access:
 ```csharp
-if (app.Environment.IsDevelopment())
+var enableSwagger = !app.Environment.IsProduction()
+    || string.Equals(Environment.GetEnvironmentVariable("ENABLE_SWAGGER"), "true", StringComparison.OrdinalIgnoreCase);
+
+if (enableSwagger)
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options => { ... });
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "NewsPortal API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "NewsPortal API Documentation";
+    });
 }
 ```
 
-2. Or add authentication to Swagger UI
-3. Or serve Swagger on a different port/path with restricted access
+This means:
+
+- **Development / Staging** — Swagger always on at `/swagger`.
+- **Production** — Swagger off, unless `ENABLE_SWAGGER=true` is set explicitly (e.g. for a VPN-only debug session).
+
+Additional hardening recommendations if you re-enable in Production:
+
+1. Restrict access by IP / reverse-proxy rule (Nginx, Cloudflare).
+2. Add JWT bearer authentication to the Swagger UI itself.
+3. Serve Swagger on a non-public port behind a VPN.
 
 ## Build Verification
 
@@ -208,4 +226,4 @@ if (app.Environment.IsDevelopment())
 ✅ Swagger middleware configured
 ✅ No compilation errors
 
-**Last Verified**: 2026-01-26
+**Last Verified**: 2026-05-24

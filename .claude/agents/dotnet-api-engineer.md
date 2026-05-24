@@ -56,7 +56,7 @@ All controllers under `/api/v{version}/...`. Use `[ApiVersion("1.0")]`. Three re
 ### Config & Secrets
 - Read via `IConfiguration` only. Never hardcode connection strings, API keys, or JWT secrets.
 - Validate at startup if Production: see `Program.cs` JWT secret guard (`USE_ENV_VARIABLE` rejection + 32-char min).
-- New required secrets → also document in `.env.example` and add forwarding line in `docker-compose.yml` api service.
+- New required secrets → document in the root `README.md` Environment Variables table and add a forwarding line in `docker-compose.yml` api service.
 
 ### CORS
 - Policy `NewsPortalPolicy`. LAN dynamic origin allowed only outside Production unless `ALLOW_LAN_CORS=true`.
