@@ -212,10 +212,15 @@ newsRoutes.get('/categories', async (c) => {
     c.env.CACHE_KV,
     cacheKeys.categories(),
     async () => {
+      // Join with news_articles to compute live article counts per category.
       const rows = await c.env.DB.prepare(
-        `SELECT id, name, name_bn, slug, description, icon, color, sort_order
-         FROM categories WHERE is_active = 1
-         ORDER BY sort_order ASC, id ASC`
+        `SELECT c.id, c.name, c.name_bn, c.slug, c.description, c.icon, c.color, c.sort_order,
+                COUNT(a.id) AS article_count
+         FROM categories c
+         LEFT JOIN news_articles a ON a.category_id = c.id AND a.is_active = 1
+         WHERE c.is_active = 1
+         GROUP BY c.id
+         ORDER BY c.sort_order ASC, c.id ASC`
       ).all<Row>();
       return (rows.results ?? []).map((r) => ({
         id: r.id,
@@ -225,6 +230,7 @@ newsRoutes.get('/categories', async (c) => {
         description: r.description,
         icon: r.icon,
         color: r.color,
+        articleCount: r.article_count ?? 0,
         sortOrder: r.sort_order,
       }));
     },
