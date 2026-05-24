@@ -38,7 +38,15 @@
       "Bash(git fetch *)",
       "Bash(git rev-list *)",
       "Bash(git checkout *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(ls -la \"d:/Exp-Work/protfolio/\" 2>&1 | head -40)",
+      "Read(//d/Exp-Work/protfolio/**)",
+      "Bash(git check-ignore *)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(gh secret *)",
+      "Bash(gh run *)",
+      "Bash(grep -oE \"newsportal-api-hono\\\\.sujoncep\\\\.workers\\\\.dev[^\\\\\"\\\\\\\\\\\\\\\\]*\")"
     ]
   }
 }
