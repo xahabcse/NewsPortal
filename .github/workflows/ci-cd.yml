@@ -1,10 +1,16 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline (Docker — DISABLED)
+
+# -----------------------------------------------------------------------------
+# Docker-based .NET deployment pipeline. Production deploys now go through
+# Cloudflare Workers (deploy-api-hono.yml) and Cloudflare Pages
+# (deploy-client-pages.yml). This workflow is kept for reference and can be
+# triggered manually if the Docker stack ever needs to be redeployed.
+#
+# To re-enable automatic runs, restore the `push` and `pull_request` triggers
+# below.
+# -----------------------------------------------------------------------------
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       deploy:
