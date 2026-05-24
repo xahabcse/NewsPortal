@@ -1,7 +1,17 @@
 import axios from 'axios';
 import { authStorage } from './AuthService';
 
-const API_URL = '/api/v1';
+const getApiUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+    if (envUrl) {
+        const normalized = envUrl.replace(/\/$/, '');
+        return normalized.endsWith('/v1') ? normalized : `${normalized}/v1`;
+    }
+    if (import.meta.env.DEV) return 'http://localhost:5000/api/v1';
+    return '/api/v1';
+};
+
+const API_URL = getApiUrl();
 
 export interface User {
     id: number;
