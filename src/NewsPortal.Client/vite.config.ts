@@ -67,5 +67,18 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          'charts': ['recharts'],
+          'signalr': ['@microsoft/signalr'],
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600,
   }
 })

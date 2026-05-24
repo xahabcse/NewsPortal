@@ -1,0 +1,3 @@
+# SPA fallback — every non-asset request falls back to index.html
+# React Router handles client-side routing after that.
+/*    /index.html   200

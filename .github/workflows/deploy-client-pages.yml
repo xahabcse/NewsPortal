@@ -1,0 +1,56 @@
+name: Deploy React Client to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/NewsPortal.Client/**'
+      - '.github/workflows/deploy-client-pages.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy Client
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: src/NewsPortal.Client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/NewsPortal.Client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static site
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Ensure main is production branch
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/newsportal-client" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"production_branch":"main"}')
+          echo "Cloudflare API response status: $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ]
+        working-directory: .
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: src/NewsPortal.Client
+          command: pages deploy dist --project-name newsportal-client --branch main
