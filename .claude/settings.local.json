@@ -34,7 +34,11 @@
       "Bash(ipconfig)",
       "Bash(Test-Path \"D:\\\\Exp-Work\\\\NewsPortal\\\\.claude\\\\CLAUDE.md\")",
       "Bash(xargs -I {} basename {})",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git fetch *)",
+      "Bash(git rev-list *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)"
     ]
   }
 }
