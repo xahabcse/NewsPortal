@@ -36,3 +36,25 @@ export function withSuffix(base: string, n: number): string {
   if (base.length + suffix.length <= MAX_LEN) return base + suffix;
   return base.slice(0, MAX_LEN - suffix.length).replace(/-+$/, '') + suffix;
 }
+
+/**
+ * Deterministic short hash (FNV-1a, base36) of an input string. Same input always
+ * yields the same 7-char token, so appending it to a slug makes collisions between
+ * different articles effectively impossible — no per-insert DB probing needed.
+ */
+export function shortHash(input: string): string {
+  let hash = 0x811c9dc5; // FNV offset basis
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193); // FNV prime
+  }
+  return (hash >>> 0).toString(36).padStart(7, '0').slice(0, 7);
+}
+
+/** Build a stable, near-unique slug from a title plus a discriminator (e.g. canonical URL). */
+export function uniqueSlug(title: string, discriminator: string): string {
+  const base = makeSlug(title) || 'article';
+  const suffix = `-${shortHash(discriminator)}`;
+  if (base.length + suffix.length <= MAX_LEN) return base + suffix;
+  return base.slice(0, MAX_LEN - suffix.length).replace(/-+$/, '') + suffix;
+}

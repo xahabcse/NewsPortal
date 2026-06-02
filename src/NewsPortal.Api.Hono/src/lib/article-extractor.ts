@@ -23,6 +23,16 @@ function collapse(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
+/** Convert a code point to a string, tolerating out-of-range / malformed values. */
+function safeFromCodePoint(code: number): string {
+  if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return '';
+  try {
+    return String.fromCodePoint(code);
+  } catch {
+    return '';
+  }
+}
+
 // Minimal entity decode for streamed text() chunks (HTMLRewriter gives raw text).
 function decode(s: string): string {
   return s
@@ -37,8 +47,9 @@ function decode(s: string): string {
     .replace(/&ndash;/g, '–')
     .replace(/&lsquo;|&rsquo;/g, "'")
     .replace(/&ldquo;|&rdquo;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
+    // fromCodePoint (not fromCharCode) so astral chars like emoji decode correctly.
+    .replace(/&#(\d+);/g, (_, n) => safeFromCodePoint(parseInt(n, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => safeFromCodePoint(parseInt(n, 16)));
 }
 
 function isBadImage(url: string): boolean {
@@ -223,4 +234,65 @@ export async function extractArticleForSource(
     }
   }
   return null;
+}
+
+/**
+ * Extract a body from feed-supplied HTML (an RSS <content:encoded> payload).
+ *
+ * Pure regex over a small, already-clean fragment — no HTMLRewriter, no page
+ * fetch — so it is CPU-cheap and lets the fetcher skip the expensive article-page
+ * fetch + parse entirely when the feed already ships the full body. Returns null
+ * when the fragment yields less than MIN_CHARS so the caller can fall back.
+ */
+export function extractFromFeedHtml(html: string, baseUrl: string): ExtractResult | null {
+  if (!html) return null;
+
+  // Drop non-content blocks before reading text.
+  const cleaned = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+
+  const fragments: string[] = [];
+  const plainParts: string[] = [];
+  const images: string[] = [];
+
+  // Collect images (absolute-resolved, tracking pixels filtered out).
+  for (const m of cleaned.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = m[0];
+    const srcMatch =
+      /\bsrc=["']([^"']+)["']/i.exec(tag) ||
+      /\bdata-src=["']([^"']+)["']/i.exec(tag);
+    if (!srcMatch) continue;
+    let absolute: string;
+    try {
+      absolute = new URL(decode(srcMatch[1]), baseUrl).toString();
+    } catch {
+      continue;
+    }
+    if (isBadImage(absolute)) continue;
+    images.push(absolute);
+  }
+
+  // Collect block-level text in document order.
+  const blockRegex = /<(p|h2|h3|h4|li|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+  for (const m of cleaned.matchAll(blockRegex)) {
+    const tag = m[1].toLowerCase();
+    const text = collapse(decode(m[2].replace(/<[^>]+>/g, ' ')));
+    if (!text) continue;
+    const outTag = tag === 'li' ? 'p' : tag; // flatten list items to paragraphs
+    fragments.push(`<${outTag}>${escapeHtml(text)}</${outTag}>`);
+    plainParts.push(text);
+  }
+
+  // Fallback: no recognised block tags — treat the whole fragment as one paragraph.
+  if (fragments.length === 0) {
+    const text = collapse(decode(cleaned.replace(/<[^>]+>/g, ' ')));
+    if (text.length < MIN_CHARS) return null;
+    return { contentHtml: `<p>${escapeHtml(text)}</p>`, plainText: text, images };
+  }
+
+  const plainText = collapse(plainParts.join(' '));
+  if (plainText.length < MIN_CHARS) return null;
+  return { contentHtml: fragments.join(''), plainText, images };
 }
