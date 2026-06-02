@@ -122,3 +122,19 @@ analyticsRoutes.get('/articles/hourly', async (c) => {
   `).bind(cutoff).all<{ hour: string; count: number }>();
   return c.json((rows.results ?? []).map((r) => ({ hour: r.hour, count: r.count })));
 });
+
+// GET /engagement/hourly — comment activity by hour-of-day over the last 7 days.
+// Returns a zero-filled 0..23 series: [{ hour: number, comments: number }].
+analyticsRoutes.get('/engagement/hourly', async (c) => {
+  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString();
+  const rows = await c.env.DB.prepare(`
+    SELECT CAST(substr(created_at, 12, 2) AS INTEGER) AS hour, COUNT(*) as comments
+    FROM comments
+    WHERE is_active = 1 AND is_deleted = 0 AND created_at >= ?
+    GROUP BY hour
+  `).bind(cutoff).all<{ hour: number; comments: number }>();
+
+  const byHour = new Map((rows.results ?? []).map((r) => [r.hour, r.comments]));
+  const series = Array.from({ length: 24 }, (_, h) => ({ hour: h, comments: byHour.get(h) ?? 0 }));
+  return c.json(series);
+});

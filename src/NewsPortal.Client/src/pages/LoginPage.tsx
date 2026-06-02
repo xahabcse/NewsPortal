@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import SEO from '../components/SEO';
 import axios from 'axios';
@@ -17,17 +17,20 @@ const LoginPage = () => {
         return r.startsWith('/') ? r : '/';
     })();
 
-    // Already logged in — redirect immediately
-    if (isAuthenticated) {
-        navigate(redirectTo, { replace: true });
-        return null;
-    }
-
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Already logged in — redirect via effect (never navigate during render, and
+    // never early-return before the hooks above: that violates the Rules of Hooks
+    // and threw React error #300 when isAuthenticated flipped after login).
+    useEffect(() => {
+        if (isAuthenticated) navigate(redirectTo, { replace: true });
+    }, [isAuthenticated, redirectTo, navigate]);
+
+    if (isAuthenticated) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

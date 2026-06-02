@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import axios from 'axios';
@@ -10,12 +10,6 @@ const RegisterPage = () => {
     const navigate = useNavigate();
     const { isAuthenticated, googleLogin } = useAuth();
 
-    // Already logged in — redirect
-    if (isAuthenticated) {
-        navigate('/', { replace: true });
-        return null;
-    }
-
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -25,6 +19,13 @@ const RegisterPage = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [generalError, setGeneralError] = useState('');
+
+    // Already logged in — redirect via effect (not during render; hooks must run first).
+    useEffect(() => {
+        if (isAuthenticated) navigate('/', { replace: true });
+    }, [isAuthenticated, navigate]);
+
+    if (isAuthenticated) return null;
 
     const validate = () => {
         const newErrors: Record<string, string> = {};

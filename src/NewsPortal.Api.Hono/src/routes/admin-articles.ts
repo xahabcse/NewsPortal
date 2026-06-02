@@ -67,6 +67,28 @@ adminArticlesRoutes.get('/', async (c) => {
   return c.json(paged((rows.results ?? []).map(mapAdminArticle), countRow?.count ?? 0, page, size));
 });
 
+// GET /:id — single article with full body (used by the edit form)
+adminArticlesRoutes.get('/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+  const r = await c.env.DB.prepare(`
+    SELECT a.*, s.name AS source_name, c.name AS category_name
+    FROM news_articles a
+    INNER JOIN news_sources s ON s.id = a.source_id
+    LEFT JOIN categories c ON c.id = a.category_id
+    WHERE a.id = ? LIMIT 1
+  `).bind(id).first<Row>();
+  if (!r) return c.json(errMsg('Article not found'), 404);
+  return c.json({
+    ...mapAdminArticle(r),
+    content: r.content,
+    plainText: r.plain_text,
+    author: r.author,
+    originalImageUrl: r.original_image_url,
+    imageUrl: r.original_image_url,
+  });
+});
+
 // POST / — create a manual article
 adminArticlesRoutes.post('/', async (c) => {
   const body = await c.req.json<any>();
@@ -140,15 +162,18 @@ adminArticlesRoutes.put('/:id', async (c) => {
   return c.body(null, 204);
 });
 
-// POST /:id/feature  body: { isFeatured }
-adminArticlesRoutes.post('/:id/feature', async (c) => {
+// PUT /:id/feature — toggle featured (matches legacy .NET; client sends no body)
+adminArticlesRoutes.put('/:id/feature', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  const body = await c.req.json<{ isFeatured?: boolean }>();
+  const cur = await c.env.DB.prepare('SELECT is_featured FROM news_articles WHERE id = ? LIMIT 1')
+    .bind(id).first<{ is_featured: number }>();
+  if (!cur) return c.json(errMsg('Article not found'), 404);
+  const next = cur.is_featured === 1 ? 0 : 1;
   await c.env.DB.prepare('UPDATE news_articles SET is_featured = ?, updated_at = ? WHERE id = ?')
-    .bind(body.isFeatured ? 1 : 0, nowIso(), id).run();
+    .bind(next, nowIso(), id).run();
   await invalidateNewsCache(c.env);
-  return c.json({ message: 'Updated' });
+  return c.json({ message: 'Updated', isFeatured: next === 1 });
 });
 
 // POST /:id/hide
