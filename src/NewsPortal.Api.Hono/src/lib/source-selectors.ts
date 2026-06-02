@@ -23,6 +23,19 @@ export const GENERIC_SELECTORS: string[] = [
   'main',
 ];
 
+// Client-rendered (JS SPA) sources whose article body is NOT in the server HTML —
+// the page ships a near-empty shell and hydrates via JS, so HTMLRewriter (server-side,
+// no JS execution) can never extract a body. We skip the page fetch + extraction for
+// these entirely: it saves one subrequest AND all the HTMLRewriter CPU that would just
+// fail across the whole fallback selector list. They stay summary-only (headline + RSS
+// summary + lead image), which is the same outcome — minus the wasted work.
+export const SPA_SOURCE_SLUGS = ['bss', 'cnn', 'al-jazeera', 'npr'];
+const SPA_SOURCES = new Set(SPA_SOURCE_SLUGS);
+
+export function isSpaSource(slug: string): boolean {
+  return SPA_SOURCES.has(slug);
+}
+
 /** Resolve the ordered list of selectors to try for a given source slug. */
 export function selectorsForSource(slug: string): string[] {
   const specific = SOURCE_SELECTORS[slug];

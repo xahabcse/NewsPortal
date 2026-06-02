@@ -211,17 +211,22 @@ adminArticlesRoutes.delete('/:id', async (c) => {
 // limits; call repeatedly to drain the backlog. Returns { processed, updated, failed }.
 adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
   const { extractArticleForSource } = await import('../lib/article-extractor');
-  const limitParam = parseInt(c.req.query('limit') ?? '20');
-  const limit = isNaN(limitParam) ? 20 : Math.min(Math.max(limitParam, 1), 30);
+  const { SPA_SOURCE_SLUGS } = await import('../lib/source-selectors');
+  const limitParam = parseInt(c.req.query('limit') ?? '5');
+  // Each item is a full HTMLRewriter parse (~CPU). On the free plan (10ms CPU/invocation)
+  // keep the batch tiny; call repeatedly to drain. SPA sources are excluded (unextractable).
+  const limit = isNaN(limitParam) ? 5 : Math.min(Math.max(limitParam, 1), 6);
 
+  const spaPlaceholders = SPA_SOURCE_SLUGS.map(() => '?').join(',');
   const rows = await c.env.DB.prepare(`
     SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
     FROM news_articles a
     INNER JOIN news_sources s ON s.id = a.source_id
     WHERE a.content IS NULL AND a.source_url IS NOT NULL AND a.source_url <> ''
+      AND s.slug NOT IN (${spaPlaceholders})
     ORDER BY a.published_at DESC
     LIMIT ?
-  `).bind(limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
+  `).bind(...SPA_SOURCE_SLUGS, limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
 
   const articles = rows.results ?? [];
   let updated = 0;
