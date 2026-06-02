@@ -271,13 +271,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                                         </span>
                                         <span className="text-sm">{cat.name}</span>
                                     </span>
-                                    <span
-                                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                        style={{
-                                            backgroundColor: `${cat.color || '#6366f1'}15`,
-                                            color: cat.color || '#94a3b8'
-                                        }}
-                                    >
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/5 text-secondary border border-glass-border group-hover:bg-accent/15 group-hover:text-accent group-hover:border-accent/30 transition-colors">
                                         {cat.articleCount}
                                     </span>
                                 </div>

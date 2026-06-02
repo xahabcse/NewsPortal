@@ -23,7 +23,7 @@ const NotFoundPage = () => {
                 </div>
 
                 {/* Quick Links */}
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-8">
                     <Link
                         to="/"
                         className="p-4 bg-white/5 border border-glass-border rounded-xl hover:bg-white/10 transition-colors group"
