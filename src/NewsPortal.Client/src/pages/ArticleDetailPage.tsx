@@ -308,7 +308,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* Action Buttons: Reactions + Share + Listen */}
-                <div className="flex items-center gap-2 sm:gap-3 mt-4 flex-wrap">
+                <div className="flex items-center gap-x-2 gap-y-2 sm:gap-3 mt-4 flex-wrap">
                     <ArticleReactions articleId={article.id} />
                     <ShareButton
                         title={article.title}
@@ -333,7 +333,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* AI Features + Read Original + Font Size */}
-                <div className="flex items-center gap-2 sm:gap-3 mt-3 flex-wrap">
+                <div className="flex items-center gap-x-2 gap-y-2 sm:gap-3 mt-3 flex-wrap">
                     <SummarizeButton articleId={article.id} />
                     <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
                     {article.sourceUrl && (

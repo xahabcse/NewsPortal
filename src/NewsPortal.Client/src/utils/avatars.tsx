@@ -8,6 +8,7 @@ export interface AvatarData {
 }
 
 export const AVATARS: AvatarData[] = [
+    { id: 0, emoji: '', bg: 'from-accent to-purple-500', label: 'Initials' },
     { id: 1, emoji: '🦊', bg: 'from-orange-500 to-red-500', label: 'Fox' },
     { id: 2, emoji: '🐼', bg: 'from-gray-500 to-gray-700', label: 'Panda' },
     { id: 3, emoji: '🦁', bg: 'from-yellow-500 to-orange-500', label: 'Lion' },
@@ -50,13 +51,19 @@ export const Avatar = ({ id, size = 'md', className = '', clickable = false, use
         }
     };
 
+    // id = 0 renders the username's first initial in a solid accent circle (theme-neutral)
+    const initial = (username || '').trim().charAt(0).toUpperCase() || '?';
+    const content = avatar.id === 0
+        ? <span className="font-bold text-white">{initial}</span>
+        : avatar.emoji;
+
     return (
         <div
             onClick={clickable ? handleClick : undefined}
             className={`bg-gradient-to-tr ${avatar.bg} rounded-full flex items-center justify-center border border-white/20 shadow-lg select-none ${sizeMap[size]} ${clickable ? 'cursor-pointer hover:scale-110 transition-transform' : ''} ${className}`}
             title={clickable ? `View ${username}'s profile` : avatar.label}
         >
-            {avatar.emoji}
+            {content}
         </div>
     );
 };
@@ -82,7 +89,7 @@ export const AvatarSelector = ({ selected, onSelect }: AvatarSelectorProps) => {
                     title={avatar.label}
                 >
                     <div className={`bg-gradient-to-tr ${avatar.bg} w-12 h-12 rounded-full flex items-center justify-center text-2xl border border-white/20 shadow-lg`}>
-                        {avatar.emoji}
+                        {avatar.id === 0 ? <span className="text-white font-bold text-base">Aa</span> : avatar.emoji}
                     </div>
                     <span className="text-[10px] text-secondary">{avatar.label}</span>
                 </button>

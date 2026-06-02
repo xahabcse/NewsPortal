@@ -86,7 +86,7 @@ const AdminDashboard = () => {
     if (loading) {
         return (
             <div className="p-4 sm:p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                     {Array.from({ length: 8 }).map((_, idx) => (
                         <div key={idx} className="glass-morphism border border-glass-border rounded-2xl p-6 animate-pulse">
                             <div className="h-4 bg-white/10 rounded w-24 mb-4"></div>
@@ -144,7 +144,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Overview Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8">
                     <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Total Sources</div>
                         <div className="text-2xl sm:text-3xl font-bold text-blue-400 mb-1">{stats.totalSources}</div>
