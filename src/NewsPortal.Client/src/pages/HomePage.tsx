@@ -58,10 +58,10 @@ const HomePage = () => {
   const fetchMeta = useCallback(async () => {
     try {
       const [srcs, cats] = await Promise.all([
-        NewsSourceService.getAll(),
+        NewsSourceService.getActive(),
         newsApi.getCategories(),
       ])
-      setSources(srcs.filter(s => s.isActive))
+      setSources(srcs)
       setCategories(cats)
     } catch (err) {
       console.error('Error fetching metadata:', err)

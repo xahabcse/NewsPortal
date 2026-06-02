@@ -109,7 +109,11 @@ backups/
 
 # Playwright MCP screenshots and traces (local dev only)
 .playwright-mcp/
+audit/
 *.png
 *-mobile-*.png
 *-tablet-*.png
 *-desktop-*.png
+
+# But always include PWA icons that live in the client public/ folder
+!src/NewsPortal.Client/public/*.png
