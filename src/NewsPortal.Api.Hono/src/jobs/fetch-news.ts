@@ -29,6 +29,15 @@ type SourceRow = {
 const MAX_SOURCES_PER_RUN = 10;     // protect Worker CPU budget
 const MAX_ARTICLES_PER_SOURCE = 30;
 
+// Cloudflare caps outbound subrequests per Worker invocation (50 on the Workers
+// free plan). A single cron run loops several sources, and every RSS fetch, every
+// article-body fetch, and every Cloudinary upload is one subrequest — so the total
+// must be bounded or a later source throws "Too many subrequests" and ingests nothing.
+// We track a shared budget and degrade gracefully: once it's low we stop fetching
+// bodies / uploading images and just insert the RSS summary (backfill can fill bodies later).
+const SUBREQUEST_BUDGET = 42;       // headroom under the 50 hard cap
+type Budget = { remaining: number };
+
 export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sourcesProcessed: number; articlesNew: number }> {
   // Pick sources due for fetch: last_fetched_at NULL or older than interval.
   const sources = await env.DB.prepare(`
@@ -42,13 +51,14 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
 
   let totalNew = 0;
   let processed = 0;
+  const budget: Budget = { remaining: SUBREQUEST_BUDGET };
   for (const s of sources.results ?? []) {
     const dueAt = s.last_fetched_at
       ? new Date(s.last_fetched_at).getTime() + s.fetch_interval_minutes * 60 * 1000
       : 0;
     if (dueAt > Date.now()) continue;
 
-    const result = await fetchOneSource(env, s);
+    const result = await fetchOneSource(env, s, budget);
     totalNew += result.newCount;
     processed++;
   }
@@ -71,7 +81,8 @@ export async function fetchSourceNow(env: Env['Bindings'], sourceId: number, job
       .bind(nowIso(), jobId).run();
   }
 
-  const result = await fetchOneSource(env, s);
+  // Manual single-source fetch runs in its own invocation, so it gets a fresh budget.
+  const result = await fetchOneSource(env, s, { remaining: SUBREQUEST_BUDGET });
 
   if (jobId) {
     await env.DB.prepare(
@@ -96,13 +107,14 @@ export async function fetchSourceNow(env: Env['Bindings'], sourceId: number, job
 
 type FetchResult = { totalCount: number; newCount: number; updatedCount: number; error?: string };
 
-async function fetchOneSource(env: Env['Bindings'], s: SourceRow): Promise<FetchResult> {
+async function fetchOneSource(env: Env['Bindings'], s: SourceRow, budget: Budget): Promise<FetchResult> {
   const startTime = Date.now();
   const url = s.fetch_method === 2 ? s.api_endpoint : s.rss_feed_url;
   if (!url) return { totalCount: 0, newCount: 0, updatedCount: 0, error: 'No URL configured' };
 
   let res: Response;
   try {
+    budget.remaining--; // the feed fetch itself is one subrequest
     res = await fetch(url, { headers: { 'User-Agent': 'NewsPortalBot/1.0 (+https://news.xahabcse.me)' } });
   } catch (e: any) {
     await markFailure(env, s, e.message ?? 'Network error');
@@ -153,9 +165,14 @@ async function fetchOneSource(env: Env['Bindings'], s: SourceRow): Promise<Fetch
   const BODY_CONCURRENCY = 5;
   for (let i = 0; i < newItems.length; i += BODY_CONCURRENCY) {
     const batch = newItems.slice(i, i + BODY_CONCURRENCY);
-    // Fetch + extract bodies concurrently for the batch.
+    // Fetch + extract bodies concurrently — but only while we have subrequest budget.
+    // Beyond it, body stays null (summary-only insert); the re-extract job backfills later.
     const bodies = await Promise.all(
-      batch.map((item) => fetchArticleBody(item.link, s.slug, s.base_url))
+      batch.map((item) => {
+        if (budget.remaining <= 2) return Promise.resolve(null);
+        budget.remaining--;
+        return fetchArticleBody(item.link, s.slug, s.base_url);
+      })
     );
 
     // Insert sequentially (slug-collision check needs ordered DB reads).
@@ -176,9 +193,11 @@ async function fetchOneSource(env: Env['Bindings'], s: SourceRow): Promise<Fetch
         slug = withSuffix(baseSlug, k);
       }
 
-      // Lead image: prefer RSS image, else first body image. Lazy CDN upload, best-effort.
+      // Lead image: prefer RSS image, else first body image. Lazy CDN upload, best-effort,
+      // and only while subrequest budget allows — otherwise keep the original source URL.
       let imageUrl = item.imageUrl ?? body?.images[0] ?? null;
-      if (imageUrl) {
+      if (imageUrl && budget.remaining > 1) {
+        budget.remaining--;
         const cdn = await uploadFromUrl(env, imageUrl, `${s.slug}/${slug}`).catch(() => null);
         if (cdn) imageUrl = cdn;
       }
