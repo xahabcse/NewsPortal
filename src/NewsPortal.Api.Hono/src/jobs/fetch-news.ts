@@ -11,6 +11,7 @@ import { uploadFromUrl } from '../lib/cloudinary';
 import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource } from '../lib/article-extractor';
+import { isSpaSource, SPA_SOURCE_SLUGS } from '../lib/source-selectors';
 
 type SourceRow = {
   id: number;
@@ -26,17 +27,20 @@ type SourceRow = {
   consecutive_failures: number;
 };
 
-const MAX_SOURCES_PER_RUN = 10;     // protect Worker CPU budget
-const MAX_ARTICLES_PER_SOURCE = 30;
+const MAX_SOURCES_PER_RUN = 5;      // fewer sources/run => fewer articles => less CPU
+const MAX_ARTICLES_PER_SOURCE = 15;
 
-// Cloudflare caps outbound subrequests per Worker invocation (50 on the Workers
-// free plan). A single cron run loops several sources, and every RSS fetch, every
-// article-body fetch, and every Cloudinary upload is one subrequest — so the total
-// must be bounded or a later source throws "Too many subrequests" and ingests nothing.
-// We track a shared budget and degrade gracefully: once it's low we stop fetching
-// bodies / uploading images and just insert the RSS summary (backfill can fill bodies later).
-const SUBREQUEST_BUDGET = 42;       // headroom under the 50 hard cap
-type Budget = { remaining: number };
+// Cloudflare free plan caps each Worker invocation at 50 outbound subrequests AND
+// 10ms of ACTIVE CPU. Two separate budgets, both per-invocation:
+//  - SUBREQUEST_BUDGET: every feed fetch, body fetch, and Cloudinary upload is a
+//    subrequest. Keep the total under 50 or a later source throws "Too many subrequests".
+//  - EXTRACTION_BUDGET: each body fetch is followed by a full-page HTMLRewriter parse
+//    (the dominant CPU cost). Many extractions in one run blew past the 10ms CPU cap and
+//    the invocation was killed ("exceededResources"). Cap extractions per invocation;
+//    articles beyond the cap insert summary-only and get backfilled on later runs.
+const SUBREQUEST_BUDGET = 42;       // headroom under the 50 subrequest cap
+const EXTRACTION_BUDGET = 6;        // headroom under the 10ms CPU cap
+type Budget = { remaining: number; extractions: number };
 
 export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sourcesProcessed: number; articlesNew: number }> {
   // Pick sources due for fetch: last_fetched_at NULL or older than interval.
@@ -51,7 +55,7 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
 
   let totalNew = 0;
   let processed = 0;
-  const budget: Budget = { remaining: SUBREQUEST_BUDGET };
+  const budget: Budget = { remaining: SUBREQUEST_BUDGET, extractions: EXTRACTION_BUDGET };
   for (const s of sources.results ?? []) {
     const dueAt = s.last_fetched_at
       ? new Date(s.last_fetched_at).getTime() + s.fetch_interval_minutes * 60 * 1000
@@ -78,25 +82,30 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
  * (last 3 days) articles so we don't burn budget retrying long-dead source URLs.
  */
 async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promise<number> {
-  if (budget.remaining <= 4) return 0;
+  if (budget.remaining <= 4 || budget.extractions <= 0) return 0;
   const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
-  const limit = Math.min(budget.remaining - 2, 20);
+  const limit = Math.min(budget.remaining - 2, budget.extractions, 10);
 
+  // Exclude SPA sources — their bodies can't be extracted, so retrying them every run
+  // would just burn budget and CPU for nothing.
+  const spaPlaceholders = SPA_SOURCE_SLUGS.map(() => '?').join(',');
   const rows = await env.DB.prepare(`
     SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
     FROM news_articles a
     INNER JOIN news_sources s ON s.id = a.source_id
     WHERE a.content IS NULL AND a.is_active = 1
       AND a.source_url IS NOT NULL AND a.source_url <> ''
+      AND s.slug NOT IN (${spaPlaceholders})
       AND COALESCE(a.published_at, a.fetched_at) >= ?
     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
     LIMIT ?
-  `).bind(cutoff, limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
+  `).bind(...SPA_SOURCE_SLUGS, cutoff, limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
 
   let updated = 0;
   for (const a of rows.results ?? []) {
-    if (budget.remaining <= 2) break;
+    if (budget.remaining <= 2 || budget.extractions <= 0) break;
     budget.remaining--;
+    budget.extractions--;
     const body = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
     if (body) {
       await env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
@@ -122,7 +131,7 @@ export async function fetchSourceNow(env: Env['Bindings'], sourceId: number, job
   }
 
   // Manual single-source fetch runs in its own invocation, so it gets a fresh budget.
-  const result = await fetchOneSource(env, s, { remaining: SUBREQUEST_BUDGET });
+  const result = await fetchOneSource(env, s, { remaining: SUBREQUEST_BUDGET, extractions: EXTRACTION_BUDGET });
 
   if (jobId) {
     await env.DB.prepare(
@@ -205,12 +214,17 @@ async function fetchOneSource(env: Env['Bindings'], s: SourceRow, budget: Budget
   const BODY_CONCURRENCY = 5;
   for (let i = 0; i < newItems.length; i += BODY_CONCURRENCY) {
     const batch = newItems.slice(i, i + BODY_CONCURRENCY);
-    // Fetch + extract bodies concurrently — but only while we have subrequest budget.
-    // Beyond it, body stays null (summary-only insert); the re-extract job backfills later.
+    // Fetch + extract bodies concurrently — gated by BOTH budgets and the SPA skip.
+    //  - SPA sources never yield a server-side body, so we don't even fetch them.
+    //  - subrequest budget guards the 50/invocation cap.
+    //  - extraction budget guards the 10ms CPU cap (each extraction is a full HTMLRewriter parse).
+    // Beyond either budget, body stays null (summary-only insert); backfill fills it later.
+    const skipBody = isSpaSource(s.slug);
     const bodies = await Promise.all(
       batch.map((item) => {
-        if (budget.remaining <= 2) return Promise.resolve(null);
+        if (skipBody || budget.remaining <= 2 || budget.extractions <= 0) return Promise.resolve(null);
         budget.remaining--;
+        budget.extractions--;
         return fetchArticleBody(item.link, s.slug, s.base_url);
       })
     );
@@ -227,10 +241,12 @@ async function fetchOneSource(env: Env['Bindings'], s: SourceRow, budget: Budget
       // Resolve slug collisions.
       const baseSlug = makeSlug(item.title);
       let slug = baseSlug || `article-${Date.now()}`;
-      for (let k = 2; k < 50; k++) {
+      // Cap collision probes (each is a D1 read) — real collisions are rare; after a few
+      // tries fall back to a timestamp suffix rather than hammering D1 up to 48 times.
+      for (let k = 2; k < 12; k++) {
         const exists = await env.DB.prepare('SELECT id FROM news_articles WHERE slug = ? LIMIT 1').bind(slug).first();
         if (!exists) break;
-        slug = withSuffix(baseSlug, k);
+        slug = k === 11 ? withSuffix(baseSlug, Date.now()) : withSuffix(baseSlug, k);
       }
 
       // Lead image: prefer RSS image, else first body image. Lazy CDN upload, best-effort,
@@ -287,12 +303,17 @@ async function fetchArticleBody(
   slug: string,
   baseUrl: string
 ): Promise<{ contentHtml: string; plainText: string; images: string[] } | null> {
+  if (isSpaSource(slug)) return null; // client-rendered; no server body to extract
   try {
     const res = await fetch(link, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
+    // Skip oversized pages before buffering/parsing — they are the source of the
+    // 10ms-CPU-cap-busting spikes. (extractArticleForSource also guards on length.)
+    const len = parseInt(res.headers.get('content-length') ?? '0', 10);
+    if (len > 1_500_000) return null;
     const html = await res.text();
     return await extractArticleForSource(html, slug, baseUrl);
   } catch {

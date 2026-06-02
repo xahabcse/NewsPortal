@@ -8,6 +8,11 @@ import { selectorsForSource } from './source-selectors';
 export type ExtractResult = { contentHtml: string; plainText: string; images: string[] };
 
 const MIN_CHARS = 200; // below this we treat extraction as failed / wrong selector
+// CPU guards (Workers free plan caps active CPU at 10ms/invocation). Each extractOnce
+// is a full-page HTMLRewriter parse + JS handler callbacks = real CPU, so we cap how
+// many selectors we re-parse with, and refuse oversized pages outright.
+const MAX_SELECTOR_ATTEMPTS = 3;
+const MAX_HTML_BYTES = 1_500_000; // ~1.5MB; bigger pages are the source of CPU spikes
 
 // Block-level tags we re-emit. Inline tags (a/strong/em) are flattened to text.
 const BLOCK_TAGS = ['p', 'h2', 'h3', 'li', 'blockquote'] as const;
@@ -168,8 +173,11 @@ export async function extractArticleForSource(
   slug: string,
   baseUrl: string
 ): Promise<ExtractResult | null> {
-  if (!html) return null;
-  for (const sel of selectorsForSource(slug)) {
+  if (!html || html.length > MAX_HTML_BYTES) return null;
+  // Only re-parse with the first few selectors — a full HTMLRewriter pass per selector
+  // is the dominant CPU cost; an article that needs >3 fallbacks is almost always a
+  // SPA/markup change that won't yield, so stop early and keep the RSS summary.
+  for (const sel of selectorsForSource(slug).slice(0, MAX_SELECTOR_ATTEMPTS)) {
     try {
       const r = await extractOnce(html, sel, baseUrl);
       if (r.plainText.length >= MIN_CHARS) return r;
