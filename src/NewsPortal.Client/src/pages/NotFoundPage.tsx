@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 const NotFoundPage = () => {
     return (
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
+            <Helmet>
+                <title>Page Not Found - NewsPortal</title>
+            </Helmet>
             <div className="max-w-md w-full text-center">
                 {/* 404 Animation */}
                 <div className="relative mb-8">

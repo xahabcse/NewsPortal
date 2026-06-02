@@ -124,6 +124,9 @@ const ArticleDetailPage = () => {
     if (loading) {
         return (
             <div className="p-4 sm:p-8 max-w-4xl mx-auto">
+                <Helmet>
+                    <title>Loading article… - NewsPortal</title>
+                </Helmet>
                 <div className="animate-pulse space-y-6">
                     <div className="h-4 bg-white/10 rounded w-24"></div>
                     <div className="h-10 bg-white/10 rounded w-3/4"></div>
@@ -142,6 +145,9 @@ const ArticleDetailPage = () => {
     if (error || !article) {
         return (
             <div className="p-4 sm:p-8 max-w-4xl mx-auto">
+                <Helmet>
+                    <title>Article Not Found - NewsPortal</title>
+                </Helmet>
                 <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
                     <h2 className="text-2xl font-bold text-white mb-2">Article Not Found</h2>
                     <p className="text-secondary text-sm mb-6">{error || 'The article you\'re looking for doesn\'t exist or has been removed.'}</p>

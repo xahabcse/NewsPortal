@@ -41,8 +41,11 @@ function App() {
     localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed))
   }, [sidebarCollapsed])
 
-  // Start SignalR connection on app mount
+  // Start SignalR connection on app mount — only when explicitly enabled.
+  // The Cloudflare Workers backend does not support SignalR, so on that deploy
+  // the env flag stays unset and we skip the connection entirely.
   useEffect(() => {
+    if (import.meta.env.VITE_ENABLE_SIGNALR !== 'true') return
     signalRService.start()
     return () => signalRService.stop()
   }, [])
