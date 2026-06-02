@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(*)",
       "Read(**)",
@@ -9,7 +8,9 @@
       "Glob(**)",
       "Grep(**)",
       "mcp__playwright__*",
-      "mcp__browser__*"
-    ]
+      "mcp__browser__*",
+      "PowerShell(if \\($env:GH_TOKEN\\) { \"GH_TOKEN set\" } elseif \\($env:GITHUB_TOKEN\\) { \"GITHUB_TOKEN set\" } else { \"No GH token env\" })"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }
