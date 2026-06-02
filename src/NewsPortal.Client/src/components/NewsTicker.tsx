@@ -56,6 +56,8 @@ const NewsTicker = () => {
                     className="flex-1 overflow-hidden"
                     onMouseEnter={() => setIsPaused(true)}
                     onMouseLeave={() => setIsPaused(false)}
+                    onTouchStart={() => setIsPaused(true)}
+                    onTouchEnd={() => setIsPaused(false)}
                 >
                     <div
                         className={`flex gap-8 whitespace-nowrap ${isPaused ? '' : 'animate-ticker'}`}
