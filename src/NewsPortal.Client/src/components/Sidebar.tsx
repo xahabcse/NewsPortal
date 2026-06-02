@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import ReadingHistory from './ReadingHistory'
 
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
@@ -287,13 +286,6 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                         )}
                     </nav>
                 )}
-
-                {/* Widgets — hidden when collapsed on desktop */}
-                <div className={isCollapsed ? 'lg:hidden' : ''}>
-                    <nav className="flex flex-col gap-2">
-                        <ReadingHistory />
-                    </nav>
-                </div>
 
                 {/* Admin Section */}
                 {isAdmin && (

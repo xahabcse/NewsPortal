@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { axiosInstance } from '../services/axiosInstance';
 import toast from 'react-hot-toast';
 import { Avatar, AvatarSelector } from '../utils/avatars';
+import ReadingHistory from '../components/ReadingHistory';
 
 interface UserProfile {
     id: number;
@@ -386,6 +387,11 @@ const ProfilePage = () => {
                         >
                             Logout
                         </button>
+                    </div>
+
+                    {/* Recently Read — moved here from the sidebar */}
+                    <div className="mt-6">
+                        <ReadingHistory variant="dashboard" />
                     </div>
 
                     {/* Back to Home */}
