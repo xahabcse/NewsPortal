@@ -12,7 +12,9 @@ const MIN_CHARS = 200; // below this we treat extraction as failed / wrong selec
 // is a full-page HTMLRewriter parse + JS handler callbacks = real CPU, so we cap how
 // many selectors we re-parse with, and refuse oversized pages outright.
 const MAX_SELECTOR_ATTEMPTS = 3;
-const MAX_HTML_BYTES = 1_500_000; // ~1.5MB; bigger pages are the source of CPU spikes
+const MAX_HTML_BYTES = 1_500_000;        // HTMLRewriter path: bigger pages spike CPU
+const MAX_HTML_BYTES_JSONLD = 6_000_000; // JSON-LD path is cheap, tolerate big SPA pages (e.g. CNN ~4MB)
+const MAX_LD_BLOCK = 500_000;            // skip pathologically large ld+json blocks (JSON.parse CPU)
 
 // Block-level tags we re-emit. Inline tags (a/strong/em) are flattened to text.
 const BLOCK_TAGS = ['p', 'h2', 'h3', 'li', 'blockquote'] as const;
@@ -164,19 +166,54 @@ export async function extractArticle(
 }
 
 /**
- * Try each candidate selector for a source slug in order; return the first
- * that yields >= MIN_CHARS of text. Null if none do (likely a JS SPA or markup
- * change) so the caller keeps the RSS summary.
+ * Extract the article body from JSON-LD (<script type="application/ld+json"> with an
+ * `articleBody` field). Cheap — a regex scan + JSON.parse of one block — and works on
+ * SPA pages whose visible HTML is empty but still ship JSON-LD for search engines.
+ */
+function extractJsonLdBody(html: string): ExtractResult | null {
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const raw = m[1].trim();
+    if (!raw || raw.length > MAX_LD_BLOCK) continue;
+    let data: any;
+    try { data = JSON.parse(raw); } catch { continue; }
+    const list: any[] = Array.isArray(data) ? data : (data && data['@graph'] ? data['@graph'] : [data]);
+    for (const node of list) {
+      const body = node && typeof node === 'object' ? node.articleBody : null;
+      if (typeof body === 'string' && body.trim().length >= MIN_CHARS) {
+        const paras = decode(body).replace(/\r/g, '').split(/\n+/).map((s) => s.trim()).filter(Boolean);
+        const contentHtml = paras.map((p) => `<p>${escapeHtml(p)}</p>`).join('');
+        const plainText = collapse(paras.join(' '));
+        if (plainText.length >= MIN_CHARS) return { contentHtml, plainText, images: [] };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Try JSON-LD first, then each candidate selector for a source slug; return the first
+ * that yields >= MIN_CHARS of text. Null if none do (true SPA / markup change) so the
+ * caller keeps the RSS summary.
  */
 export async function extractArticleForSource(
   html: string,
   slug: string,
   baseUrl: string
 ): Promise<ExtractResult | null> {
-  if (!html || html.length > MAX_HTML_BYTES) return null;
-  // Only re-parse with the first few selectors — a full HTMLRewriter pass per selector
-  // is the dominant CPU cost; an article that needs >3 fallbacks is almost always a
-  // SPA/markup change that won't yield, so stop early and keep the RSS summary.
+  if (!html || html.length > MAX_HTML_BYTES_JSONLD) return null;
+
+  // 1) JSON-LD articleBody — most news sites (incl. JS-SPA ones like CNN) embed a
+  //    <script type="application/ld+json"> NewsArticle with the full body for SEO. This
+  //    is server-rendered and cheap to read (regex + JSON.parse, no HTMLRewriter), so it
+  //    works even on huge SPA pages where a streaming parse would blow the CPU budget.
+  const ld = extractJsonLdBody(html);
+  if (ld) return ld;
+
+  // 2) HTMLRewriter selector path — only for reasonably sized pages (CPU guard). A full
+  //    re-parse per selector is the dominant CPU cost, so cap the fallback attempts.
+  if (html.length > MAX_HTML_BYTES) return null;
   for (const sel of selectorsForSource(slug).slice(0, MAX_SELECTOR_ATTEMPTS)) {
     try {
       const r = await extractOnce(html, sel, baseUrl);
