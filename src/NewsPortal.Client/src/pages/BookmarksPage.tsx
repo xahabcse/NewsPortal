@@ -192,24 +192,19 @@ const BookmarksPage = () => {
                     </Link>
                 </div>
             ) : bookmarks.length === 0 ? (
-                <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-secondary/40"
-                        >
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                <div className="text-center p-8 sm:p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
+                    {/* Decorative illustration — stacked bookmark pages with a soft accent glow */}
+                    <div className="relative w-28 h-28 mx-auto mb-6">
+                        <div className="absolute inset-0 bg-accent/20 blur-2xl rounded-full"></div>
+                        <svg viewBox="0 0 120 120" className="relative w-full h-full">
+                            <rect x="22" y="28" width="56" height="74" rx="6" className="fill-white/5" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.25"></rect>
+                            <rect x="32" y="20" width="56" height="74" rx="6" className="fill-white/10" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.35"></rect>
+                            <rect x="42" y="12" width="56" height="74" rx="6" className="fill-accent/15" stroke="currentColor" strokeWidth="2" strokeOpacity="0.6"></rect>
+                            <path d="M55 12 v32 l8 -6 l8 6 v-32" fill="none" stroke="rgb(99, 102, 241)" strokeWidth="2.5" strokeLinejoin="round"></path>
+                            <circle cx="80" cy="92" r="3" className="fill-accent"></circle>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">No Bookmarks Yet</h3>
+                    <h3 className="text-white font-semibold text-lg mb-2">No Bookmarks Yet</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto mb-6">
                         Start saving articles to read later by clicking the bookmark icon on any news card.
                     </p>
@@ -217,6 +212,10 @@ const BookmarksPage = () => {
                         to="/"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/80 transition-colors"
                     >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
                         Browse News
                     </Link>
                 </div>
