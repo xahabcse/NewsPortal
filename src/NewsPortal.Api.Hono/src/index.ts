@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
 import type { Env } from './lib/env';
 
 import { healthRoutes } from './routes/health';
@@ -99,6 +100,11 @@ app.route('/robots.txt', robotsRoutes);
 // Global error handling
 // ----------------------------------------------------------------------------
 app.onError((err, c) => {
+  // hono/jwt throws an HTTPException (401) when the token is missing/invalid;
+  // preserve its intended status/response instead of masking it as a 500.
+  if (err instanceof HTTPException) {
+    return err.getResponse();
+  }
   console.error('Unhandled error:', err);
   return c.json({ message: 'Internal server error' }, 500);
 });
