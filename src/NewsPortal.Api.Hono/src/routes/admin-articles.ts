@@ -181,6 +181,59 @@ adminArticlesRoutes.delete('/:id', async (c) => {
   return c.body(null, 204);
 });
 
+// POST /re-extract — backfill body content for articles with NULL content.
+// Admin-only. Processes a small batch so a single call stays within Worker
+// limits; call repeatedly to drain the backlog. Returns { processed, updated, failed }.
+adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
+  const { extractArticleForSource } = await import('../lib/article-extractor');
+  const limitParam = parseInt(c.req.query('limit') ?? '20');
+  const limit = isNaN(limitParam) ? 20 : Math.min(Math.max(limitParam, 1), 30);
+
+  const rows = await c.env.DB.prepare(`
+    SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
+    FROM news_articles a
+    INNER JOIN news_sources s ON s.id = a.source_id
+    WHERE a.content IS NULL AND a.source_url IS NOT NULL AND a.source_url <> ''
+    ORDER BY a.published_at DESC
+    LIMIT ?
+  `).bind(limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
+
+  const articles = rows.results ?? [];
+  let updated = 0;
+  let failed = 0;
+
+  // Bounded concurrency to keep CPU/wall-clock in check.
+  const CONCURRENCY = 5;
+  for (let i = 0; i < articles.length; i += CONCURRENCY) {
+    const batch = articles.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (a) => {
+        try {
+          const res = await fetch(a.source_url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!res.ok) return null;
+          const html = await res.text();
+          return await extractArticleForSource(html, a.source_slug, a.source_base_url);
+        } catch {
+          return null;
+        }
+      })
+    );
+    for (let j = 0; j < batch.length; j++) {
+      const body = results[j];
+      if (!body) { failed++; continue; }
+      await c.env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
+        .bind(body.contentHtml, body.plainText, nowIso(), batch[j].id).run();
+      updated++;
+    }
+  }
+
+  if (updated > 0) await invalidateNewsCache(c.env);
+  return c.json({ processed: articles.length, updated, failed });
+});
+
 // POST /auto-categorize — bulk re-categorize using the keyword classifier
 adminArticlesRoutes.post('/auto-categorize', async (c) => {
   const { categorize } = await import('../lib/categorizer');
