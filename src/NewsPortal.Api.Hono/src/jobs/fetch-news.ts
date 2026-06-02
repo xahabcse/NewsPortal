@@ -11,7 +11,7 @@ import { uploadFromUrl } from '../lib/cloudinary';
 import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource } from '../lib/article-extractor';
-import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl } from '../lib/source-selectors';
+import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_UA } from '../lib/source-selectors';
 
 type SourceRow = {
   id: number;
@@ -307,7 +307,7 @@ async function fetchArticleBody(
   link = normalizeArticleUrl(slug, link);
   try {
     const res = await fetch(link, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
+      headers: { 'User-Agent': BODY_FETCH_UA },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
