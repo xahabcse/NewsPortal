@@ -228,11 +228,13 @@ const RegisterPage = () => {
                             </button>
                         </form>
 
-                        {/* Google sign-in */}
-                        <div className="mt-4 pt-4 border-t border-glass-border">
-                            <p className="text-xs text-secondary text-center mb-3">Or sign up with</p>
-                            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
-                        </div>
+                        {/* Google sign-in — only when client id configured */}
+                        {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+                            <div className="mt-4 pt-4 border-t border-glass-border">
+                                <p className="text-xs text-secondary text-center mb-3">Or sign up with</p>
+                                <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
+                            </div>
+                        )}
 
                         {/* Login Link */}
                         <div className="mt-6 text-center">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -23,6 +23,8 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
     const { session, isAuthenticated, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
@@ -138,7 +140,8 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                 </div>
 
                 <div className="flex items-center gap-1 sm:gap-3 lg:gap-4 shrink-0">
-                    {/* Notification Bell */}
+                    {/* Notification Bell — only when authenticated (no-op for guests) */}
+                    {isAuthenticated && (
                     <div className="relative" ref={notificationRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
@@ -243,8 +246,10 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             </div>
                         )}
                     </div>
+                    )}
 
-                    {/* User Menu — avatar only on mobile, full block on sm+ */}
+                    {/* User Menu — avatar only on mobile, full block on sm+ (only when authenticated) */}
+                    {isAuthenticated && (
                     <div className="relative" ref={userMenuRef}>
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
@@ -340,6 +345,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             </div>
                         )}
                     </div>
+                    )}
 
                     {/* Theme Toggle */}
                     <button
@@ -367,7 +373,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         )}
                     </button>
 
-                    {!isAuthenticated && (
+                    {!isAuthenticated && !isAuthRoute && (
                         <button
                             onClick={() => navigate('/login')}
                             className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-xs sm:text-sm text-white hover:bg-accent/30 transition-colors whitespace-nowrap"
