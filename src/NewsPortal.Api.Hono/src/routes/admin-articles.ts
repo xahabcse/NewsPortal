@@ -217,13 +217,13 @@ adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
   // keep the batch tiny; call repeatedly to drain. SPA sources are excluded (unextractable).
   const limit = isNaN(limitParam) ? 5 : Math.min(Math.max(limitParam, 1), 6);
 
-  const spaPlaceholders = SPA_SOURCE_SLUGS.map(() => '?').join(',');
+  const spaFilter = SPA_SOURCE_SLUGS.length ? `AND s.slug NOT IN (${SPA_SOURCE_SLUGS.map(() => '?').join(',')})` : '';
   const rows = await c.env.DB.prepare(`
     SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
     FROM news_articles a
     INNER JOIN news_sources s ON s.id = a.source_id
     WHERE a.content IS NULL AND a.source_url IS NOT NULL AND a.source_url <> ''
-      AND s.slug NOT IN (${spaPlaceholders})
+      ${spaFilter}
     ORDER BY a.published_at DESC
     LIMIT ?
   `).bind(...SPA_SOURCE_SLUGS, limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
