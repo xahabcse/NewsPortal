@@ -90,6 +90,8 @@ const TimelinePage = () => {
                             categories={categories}
                             filters={filters}
                             onChange={setFilters}
+                            showSort={false}
+                            showThumbnail={false}
                         />
                     </div>
 

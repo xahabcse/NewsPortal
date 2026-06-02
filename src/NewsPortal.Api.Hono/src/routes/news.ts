@@ -270,7 +270,10 @@ newsRoutes.get('/filter', async (c) => {
   }
   if (dateTo) {
     where.push('COALESCE(a.published_at, a.fetched_at) <= ?');
-    binds.push(dateTo);
+    // dateTo is a date-only string (YYYY-MM-DD); make it inclusive of the whole day,
+    // otherwise timestamped articles on that day (e.g. "...T08:01Z") are excluded and
+    // single-day presets like "Today" return nothing.
+    binds.push(dateTo.length === 10 ? `${dateTo}T23:59:59.999Z` : dateTo);
   }
   if (hasThumbnail) {
     where.push('a.original_image_url IS NOT NULL');
@@ -337,7 +340,7 @@ newsRoutes.post('/search', async (c) => {
   }
   if (body.dateTo) {
     where.push('COALESCE(a.published_at, a.fetched_at) <= ?');
-    binds.push(body.dateTo);
+    binds.push(body.dateTo.length === 10 ? `${body.dateTo}T23:59:59.999Z` : body.dateTo);
   }
 
   const whereSql = where.join(' AND ');
