@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 
 import { useState, useEffect } from 'react'
 import { StatsService } from '../services/StatsService'
@@ -28,23 +27,8 @@ const IconBookmark = () => (
 const IconRss = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
 )
-const IconDashboard = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
-)
-const IconDownload = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-)
-const IconTag = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"></path><path d="M7 7h.01"></path></svg>
-)
 const IconFileText = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-)
-const IconBarChart = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
-)
-const IconUsers = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
 )
 const IconChevronLeft = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -69,7 +53,6 @@ const categoryIconMap: Record<string, JSX.Element> = {
 
 const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) => {
     const location = useLocation()
-    const { role } = useAuth()
     const [todayCount, setTodayCount] = useState<number>(0)
     const [categories, setCategories] = useState<Category[]>([])
     const [showAllCategories, setShowAllCategories] = useState(false)
@@ -90,7 +73,6 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
         return location.pathname === `/category/${slug}` ? 'active' : ''
     }
 
-    const isAdmin = role === 'Admin' || role === 'SuperAdmin'
 
     useEffect(() => {
         const fetchTodayCount = async () => {
@@ -287,67 +269,8 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     </nav>
                 )}
 
-                {/* Admin Section */}
-                {isAdmin && (
-                    <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
-                        <div className={`text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Admin</div>
-
-                        <Link to="/admin/dashboard" className={`huly-sidebar-item ${isActive('/admin/dashboard')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Dashboard">
-                            <span className="shrink-0"><IconDashboard /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>Dashboard</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">System overview</span>
-                            </div>
-                        </Link>
-
-                        <Link to="/admin/fetch-logs" className={`huly-sidebar-item ${isActive('/admin/fetch-logs')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Fetch Logs">
-                            <span className="shrink-0"><IconDownload /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>Fetch Logs</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Import history</span>
-                            </div>
-                        </Link>
-
-                        <Link to="/admin/categories" className={`huly-sidebar-item ${isActive('/admin/categories')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Categories">
-                            <span className="shrink-0"><IconTag /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>Categories</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage categories</span>
-                            </div>
-                        </Link>
-
-                        <Link to="/admin/articles" className={`huly-sidebar-item ${isActive('/admin/articles')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Articles">
-                            <span className="shrink-0"><IconFileText /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>Articles</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage articles</span>
-                            </div>
-                        </Link>
-
-                        <Link to="/admin/analytics" className={`huly-sidebar-item ${isActive('/admin/analytics')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Analytics">
-                            <span className="shrink-0"><IconBarChart /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>Analytics</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Content analytics</span>
-                            </div>
-                        </Link>
-                    </nav>
-                )}
-
-                {/* Admin Section */}
-                {(role === 'Admin' || role === 'SuperAdmin') && (
-                    <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'} pt-4 border-t border-glass-border`}>
-                        <div className={`text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Admin</div>
-
-                        <Link to="/admin/users" className={`huly-sidebar-item ${isActive('/admin/users')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="User Management">
-                            <span className="shrink-0"><IconUsers /></span>
-                            <div className={`flex flex-col ${textClass}`}>
-                                <span>User Management</span>
-                                <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage users & roles</span>
-                            </div>
-                        </Link>
-                    </nav>
-                )}
+                {/* Admin navigation moved to the profile dashboard (/profile) as a
+                    role-gated Admin Control Panel. */}
 
                 {/* Spacer to push toggle to bottom */}
                 <div className="flex-1" />
