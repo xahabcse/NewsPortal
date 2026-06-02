@@ -10,6 +10,7 @@ import { makeSlug, withSuffix } from '../lib/slug';
 import { uploadFromUrl } from '../lib/cloudinary';
 import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
+import { extractArticleForSource } from '../lib/article-extractor';
 
 type SourceRow = {
   id: number;
@@ -139,60 +140,105 @@ async function fetchOneSource(env: Env['Bindings'], s: SourceRow): Promise<Fetch
   const cats = await env.DB.prepare('SELECT id, slug FROM categories WHERE is_active = 1').all<{ id: number; slug: string }>();
   const bySlug = new Map(cats.results?.map((c) => [c.slug, c.id]));
 
+  // First pass: dedup-filter so we only do the expensive body fetch for genuinely new items.
+  const newItems: typeof items = [];
   for (const item of items) {
     const canonical = canonicalize(item.link);
     const dup = await findDuplicate(env, canonical, item.title, s.id);
-    if (dup) continue;
+    if (!dup) newItems.push(item);
+  }
 
-    const categorySlug = categorize(`${item.title}\n${item.description ?? ''}`);
-    const categoryId = bySlug.get(categorySlug) ?? null;
+  // Process new items in small batches so body fetches run with bounded concurrency
+  // (protects Worker CPU / wall-clock — never fire all 30 source-page fetches at once).
+  const BODY_CONCURRENCY = 5;
+  for (let i = 0; i < newItems.length; i += BODY_CONCURRENCY) {
+    const batch = newItems.slice(i, i + BODY_CONCURRENCY);
+    // Fetch + extract bodies concurrently for the batch.
+    const bodies = await Promise.all(
+      batch.map((item) => fetchArticleBody(item.link, s.slug, s.base_url))
+    );
 
-    // Resolve slug collisions.
-    const baseSlug = makeSlug(item.title);
-    let slug = baseSlug || `article-${Date.now()}`;
-    for (let i = 2; i < 50; i++) {
-      const exists = await env.DB.prepare('SELECT id FROM news_articles WHERE slug = ? LIMIT 1').bind(slug).first();
-      if (!exists) break;
-      slug = withSuffix(baseSlug, i);
-    }
+    // Insert sequentially (slug-collision check needs ordered DB reads).
+    for (let j = 0; j < batch.length; j++) {
+      const item = batch[j];
+      const body = bodies[j];
+      const canonical = canonicalize(item.link);
 
-    // Lazy image upload: best-effort, don't block on failure.
-    let imageUrl = item.imageUrl;
-    if (imageUrl) {
-      const cdn = await uploadFromUrl(env, imageUrl, `${s.slug}/${slug}`).catch(() => null);
-      if (cdn) imageUrl = cdn;
-    }
+      const categorySlug = categorize(`${item.title}\n${item.description ?? ''}\n${body?.plainText ?? ''}`);
+      const categoryId = bySlug.get(categorySlug) ?? null;
 
-    const now = nowIso();
-    try {
-      await env.DB.prepare(
-        `INSERT INTO news_articles (title, slug, canonical_url, summary, source_url,
-           original_image_url, author, published_at, fetched_at,
-           view_count, is_featured, source_id, category_id, created_at, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 1)`
-      ).bind(
-        item.title.slice(0, 500),
-        slug,
-        canonical,
-        item.description?.slice(0, 1000) ?? null,
-        item.link,
-        imageUrl ?? null,
-        item.author,
-        item.publishedAt?.toISOString() ?? null,
-        now,
-        s.id,
-        categoryId,
-        now,
-      ).run();
-      newCount++;
-    } catch {
-      // Concurrent insert collision on canonical_url unique index — skip.
+      // Resolve slug collisions.
+      const baseSlug = makeSlug(item.title);
+      let slug = baseSlug || `article-${Date.now()}`;
+      for (let k = 2; k < 50; k++) {
+        const exists = await env.DB.prepare('SELECT id FROM news_articles WHERE slug = ? LIMIT 1').bind(slug).first();
+        if (!exists) break;
+        slug = withSuffix(baseSlug, k);
+      }
+
+      // Lead image: prefer RSS image, else first body image. Lazy CDN upload, best-effort.
+      let imageUrl = item.imageUrl ?? body?.images[0] ?? null;
+      if (imageUrl) {
+        const cdn = await uploadFromUrl(env, imageUrl, `${s.slug}/${slug}`).catch(() => null);
+        if (cdn) imageUrl = cdn;
+      }
+
+      const now = nowIso();
+      try {
+        await env.DB.prepare(
+          `INSERT INTO news_articles (title, slug, canonical_url, summary, content, plain_text, source_url,
+             original_image_url, author, published_at, fetched_at,
+             view_count, is_featured, source_id, category_id, created_at, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 1)`
+        ).bind(
+          item.title.slice(0, 500),
+          slug,
+          canonical,
+          item.description?.slice(0, 1000) ?? null,
+          body?.contentHtml ?? null,
+          body?.plainText ?? null,
+          item.link,
+          imageUrl ?? null,
+          item.author,
+          item.publishedAt?.toISOString() ?? null,
+          now,
+          s.id,
+          categoryId,
+          now,
+        ).run();
+        newCount++;
+      } catch {
+        // Concurrent insert collision on canonical_url unique index — skip.
+      }
     }
   }
 
   await markSuccess(env, s, items.length, newCount);
   await logFetch(env, s, Date.now() - startTime, items.length, newCount, updatedCount, true, null);
   return { totalCount: items.length, newCount, updatedCount };
+}
+
+/**
+ * Fetch an article's source page and extract its body. Fully best-effort:
+ * any failure (timeout, non-OK, null extraction) returns null so the caller
+ * keeps the RSS summary and never throws. Runs inside the cron wall-clock budget.
+ */
+async function fetchArticleBody(
+  link: string,
+  slug: string,
+  baseUrl: string
+): Promise<{ contentHtml: string; plainText: string; images: string[] } | null> {
+  try {
+    const res = await fetch(link, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    return await extractArticleForSource(html, slug, baseUrl);
+  } catch {
+    return null;
+  }
 }
 
 async function parseGuardian(res: Response): Promise<Array<{ title: string; link: string; description: string | null; publishedAt: Date | null; author: string | null; imageUrl: string | null; guid: string | null }>> {
