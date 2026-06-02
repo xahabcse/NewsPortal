@@ -11,7 +11,7 @@ export const SOURCE_SELECTORS: Record<string, string> = {
   'bss': '.dtl_section',                                   // verified: /news/{id} article body section
   'bbc-news': 'article',                                   // verified: <article> wraps text-block <p>
   'al-jazeera': '.wysiwyg',                                // verified: .wysiwyg--all-content holds the body <p>
-  'npr-news': '#storytext',                                // verified: NPR body lives in #storytext
+  'npr-news': '.storytext',                                // body div is id=storytext class="storytext ..."; use the class (HTMLRewriter handles bare .class reliably, bare #id not)
 };
 
 // Tried in order; first selector whose plainText >= MIN_CHARS wins.
