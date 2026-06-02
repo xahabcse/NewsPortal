@@ -49,6 +49,10 @@ interface Props {
     categories: Category[];
     filters: ActiveFilters;
     onChange: (filters: ActiveFilters) => void;
+    /** Hide the Sort control (e.g. on the day-grouped Timeline where it doesn't apply). */
+    showSort?: boolean;
+    /** Hide the "Has image" toggle (e.g. on Timeline where highlights carry no thumbnail). */
+    showThumbnail?: boolean;
 }
 
 type OpenPanel = 'sources' | 'categories' | 'date' | 'sort' | null;
@@ -177,7 +181,7 @@ function MultiSelectDropdown({
     );
 }
 
-export default function NewsFilterBar({ sources, categories, filters, onChange }: Props) {
+export default function NewsFilterBar({ sources, categories, filters, onChange, showSort = true, showThumbnail = true }: Props) {
     const [open, setOpen] = useState<OpenPanel>(null);
     const barRef = useRef<HTMLDivElement>(null);
 
@@ -207,8 +211,8 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
         filters.sourceIds.length,
         filters.categoryIds.length,
         (filters.dateFrom || filters.dateTo) ? 1 : 0,
-        filters.sortBy !== 'newest' ? 1 : 0,
-        filters.hasThumbnail ? 1 : 0,
+        showSort && filters.sortBy !== 'newest' ? 1 : 0,
+        showThumbnail && filters.hasThumbnail ? 1 : 0,
     ].reduce((a, b) => a + b, 0);
 
     const sourcesMap = Object.fromEntries(sources.map(s => [s.id, s.name]));
@@ -220,8 +224,10 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
 
     return (
         <div ref={barRef} className="relative">
-            {/* Filter buttons row — horizontally scroll on mobile, wrap on sm+ for cleanliness */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto sm:flex-wrap pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Filter buttons row — wrap on all sizes. (Must NOT use overflow-x-auto: an
+                overflow container clips the absolute dropdown panels, which made the
+                filters unusable on mobile.) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
 
                 {/* Sources button */}
                 <div className="relative shrink-0">
@@ -387,6 +393,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                 </div>
 
                 {/* Sort button */}
+                {showSort && (
                 <div className="relative">
                     <button
                         onClick={() => toggle('sort')}
@@ -421,8 +428,10 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Has thumbnail toggle */}
+                {showThumbnail && (
                 <button
                     onClick={() => set({ hasThumbnail: !filters.hasThumbnail })}
                     className={`shrink-0 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${filters.hasThumbnail
@@ -432,6 +441,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     Has image
                 </button>
+                )}
 
                 {/* Clear all */}
                 {activeCount > 0 && (
@@ -477,7 +487,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                             </button>
                         </span>
                     )}
-                    {filters.sortBy !== 'newest' && (
+                    {showSort && filters.sortBy !== 'newest' && (
                         <span className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-green-500/15 border border-green-500/30 text-green-400 text-[11px] rounded-full">
                             {SORT_LABELS[filters.sortBy]}
                             <button onClick={() => set({ sortBy: 'newest' })} className="ml-0.5 hover:text-white transition-colors">
@@ -485,7 +495,7 @@ export default function NewsFilterBar({ sources, categories, filters, onChange }
                             </button>
                         </span>
                     )}
-                    {filters.hasThumbnail && (
+                    {showThumbnail && filters.hasThumbnail && (
                         <span className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[11px] rounded-full">
                             Has image
                             <button onClick={() => set({ hasThumbnail: false })} className="ml-0.5 hover:text-white transition-colors">
