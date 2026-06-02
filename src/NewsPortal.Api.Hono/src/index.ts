@@ -81,6 +81,9 @@ app.route('/api/v1/fetchjobs', fetchJobsRoutes);
 app.route('/api/v1/admin', adminRoutes);
 app.route('/api/v1/analytics', analyticsRoutes);
 app.route('/api/v1/usermanagement', userManagementRoutes);
+// Legacy .NET contract is /api/v1/admin/articles (what the React client calls).
+// Keep /adminarticles too as a back-compat alias.
+app.route('/api/v1/admin/articles', adminArticlesRoutes);
 app.route('/api/v1/adminarticles', adminArticlesRoutes);
 
 // Phase 4: images
