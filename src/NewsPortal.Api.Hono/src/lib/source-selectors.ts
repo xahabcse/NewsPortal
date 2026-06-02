@@ -10,6 +10,8 @@ export const SOURCE_SELECTORS: Record<string, string> = {
   'daily-star': '.field--name-body, .block-field-blocknodenewsbody', // Drupal body field
   'bss': '.dtl_section',                                   // verified: /news/{id} article body section
   'bbc-news': 'article',                                   // verified: <article> wraps text-block <p>
+  'al-jazeera': '.wysiwyg',                                // verified: .wysiwyg--all-content holds the body <p>
+  'npr-news': '#storytext',                                // verified: NPR body lives in #storytext
 };
 
 // Tried in order; first selector whose plainText >= MIN_CHARS wins.
@@ -30,9 +32,10 @@ export const GENERIC_SELECTORS: string[] = [
 // fail across the whole fallback selector list. They stay summary-only (headline + RSS
 // summary + lead image), which is the same outcome — minus the wasted work.
 // Truly client-rendered sources with no server body AND no JSON-LD articleBody.
-// (BSS is server-rendered at /news/{id}; CNN ships JSON-LD articleBody — both are now
-// extractable, so they were removed from this list.)
-export const SPA_SOURCE_SLUGS = ['al-jazeera', 'npr'];
+// Currently empty: every active source turned out to be server-rendered (BSS at
+// /news/{id}, Al Jazeera .wysiwyg, NPR #storytext) or ships JSON-LD (CNN). Kept as a
+// hook for future sources that genuinely can't be extracted server-side.
+export const SPA_SOURCE_SLUGS: string[] = [];
 const SPA_SOURCES = new Set(SPA_SOURCE_SLUGS);
 
 export function isSpaSource(slug: string): boolean {

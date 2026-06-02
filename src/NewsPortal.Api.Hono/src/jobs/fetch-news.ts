@@ -86,16 +86,16 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promi
   const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
   const limit = Math.min(budget.remaining - 2, budget.extractions, 10);
 
-  // Exclude SPA sources — their bodies can't be extracted, so retrying them every run
-  // would just burn budget and CPU for nothing.
-  const spaPlaceholders = SPA_SOURCE_SLUGS.map(() => '?').join(',');
+  // Exclude any SPA sources (can't be extracted) — skip the clause entirely when the
+  // list is empty, since `NOT IN ()` is a SQL syntax error.
+  const spaFilter = SPA_SOURCE_SLUGS.length ? `AND s.slug NOT IN (${SPA_SOURCE_SLUGS.map(() => '?').join(',')})` : '';
   const rows = await env.DB.prepare(`
     SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
     FROM news_articles a
     INNER JOIN news_sources s ON s.id = a.source_id
     WHERE a.content IS NULL AND a.is_active = 1
       AND a.source_url IS NOT NULL AND a.source_url <> ''
-      AND s.slug NOT IN (${spaPlaceholders})
+      ${spaFilter}
       AND COALESCE(a.published_at, a.fetched_at) >= ?
     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
     LIMIT ?
