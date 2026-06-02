@@ -63,8 +63,48 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
     processed++;
   }
 
-  if (totalNew > 0) await cacheInvalidatePrefix(env.CACHE_KV, 'news:');
+  // Spend any leftover subrequest budget backfilling bodies for recent articles that
+  // were inserted summary-only (content NULL) when an earlier run hit the budget cap.
+  // This drains the recent backlog automatically over successive cron runs.
+  const backfilled = await backfillRecentBodies(env, budget);
+
+  if (totalNew > 0 || backfilled > 0) await cacheInvalidatePrefix(env.CACHE_KV, 'news:');
   return { sourcesProcessed: processed, articlesNew: totalNew };
+}
+
+/**
+ * Best-effort backfill: re-fetch + extract bodies for recent NULL-content articles
+ * using whatever subrequest budget the main fetch loop left behind. Bounded to recent
+ * (last 3 days) articles so we don't burn budget retrying long-dead source URLs.
+ */
+async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promise<number> {
+  if (budget.remaining <= 4) return 0;
+  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
+  const limit = Math.min(budget.remaining - 2, 20);
+
+  const rows = await env.DB.prepare(`
+    SELECT a.id, a.source_url, s.slug AS source_slug, s.base_url AS source_base_url
+    FROM news_articles a
+    INNER JOIN news_sources s ON s.id = a.source_id
+    WHERE a.content IS NULL AND a.is_active = 1
+      AND a.source_url IS NOT NULL AND a.source_url <> ''
+      AND COALESCE(a.published_at, a.fetched_at) >= ?
+    ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
+    LIMIT ?
+  `).bind(cutoff, limit).all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
+
+  let updated = 0;
+  for (const a of rows.results ?? []) {
+    if (budget.remaining <= 2) break;
+    budget.remaining--;
+    const body = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
+    if (body) {
+      await env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
+        .bind(body.contentHtml, body.plainText, nowIso(), a.id).run();
+      updated++;
+    }
+  }
+  return updated;
 }
 
 /** Manually fetch a single source (called from POST /newssources/:id/fetch). */
