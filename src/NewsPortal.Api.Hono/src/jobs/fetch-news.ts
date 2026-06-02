@@ -11,7 +11,7 @@ import { uploadFromUrl } from '../lib/cloudinary';
 import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource } from '../lib/article-extractor';
-import { isSpaSource, SPA_SOURCE_SLUGS } from '../lib/source-selectors';
+import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl } from '../lib/source-selectors';
 
 type SourceRow = {
   id: number;
@@ -304,9 +304,7 @@ async function fetchArticleBody(
   baseUrl: string
 ): Promise<{ contentHtml: string; plainText: string; images: string[] } | null> {
   if (isSpaSource(slug)) return null; // truly client-rendered; no server body to extract
-  // BSS RSS links point at /subscriber/{id} (a paywall shell); the real article is at
-  // /news/{id}, which is fully server-rendered.
-  if (slug === 'bss') link = link.replace('/subscriber/', '/news/');
+  link = normalizeArticleUrl(slug, link);
   try {
     const res = await fetch(link, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },

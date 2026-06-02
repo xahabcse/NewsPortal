@@ -8,7 +8,7 @@ export const SOURCE_SELECTORS: Record<string, string> = {
   'bangla-tribune': '.jw_detail_content_holder',          // verified: 19 hits, real <p>
   'prothom-alo': '.story-element',                         // verified: story-element-text > div > p
   'daily-star': '.field--name-body, .block-field-blocknodenewsbody', // Drupal body field
-  'bss': '.headline_left',                                 // verified: /news/{id} article column
+  'bss': '.dtl_section',                                   // verified: /news/{id} article body section
   'bbc-news': 'article',                                   // verified: <article> wraps text-block <p>
 };
 
@@ -37,6 +37,16 @@ const SPA_SOURCES = new Set(SPA_SOURCE_SLUGS);
 
 export function isSpaSource(slug: string): boolean {
   return SPA_SOURCES.has(slug);
+}
+
+/**
+ * Normalise an article URL before fetching its body. Some feeds link to a non-article
+ * variant (e.g. BSS RSS points at /subscriber/{id}, a paywall shell, while the real
+ * server-rendered article lives at /news/{id}).
+ */
+export function normalizeArticleUrl(slug: string, url: string): string {
+  if (slug === 'bss') return url.replace('/subscriber/', '/news/');
+  return url;
 }
 
 /** Resolve the ordered list of selectors to try for a given source slug. */
