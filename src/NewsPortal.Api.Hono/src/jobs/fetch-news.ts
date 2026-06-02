@@ -303,17 +303,21 @@ async function fetchArticleBody(
   slug: string,
   baseUrl: string
 ): Promise<{ contentHtml: string; plainText: string; images: string[] } | null> {
-  if (isSpaSource(slug)) return null; // client-rendered; no server body to extract
+  if (isSpaSource(slug)) return null; // truly client-rendered; no server body to extract
+  // BSS RSS links point at /subscriber/{id} (a paywall shell); the real article is at
+  // /news/{id}, which is fully server-rendered.
+  if (slug === 'bss') link = link.replace('/subscriber/', '/news/');
   try {
     const res = await fetch(link, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
-    // Skip oversized pages before buffering/parsing — they are the source of the
-    // 10ms-CPU-cap-busting spikes. (extractArticleForSource also guards on length.)
+    // Hard ceiling on download size (memory + the regex/parse work). The extractor itself
+    // gates the expensive HTMLRewriter path to ≤1.5MB; the cheap JSON-LD path tolerates
+    // larger pages (CNN ~4MB ships its body in JSON-LD).
     const len = parseInt(res.headers.get('content-length') ?? '0', 10);
-    if (len > 1_500_000) return null;
+    if (len > 6_000_000) return null;
     const html = await res.text();
     return await extractArticleForSource(html, slug, baseUrl);
   } catch {
