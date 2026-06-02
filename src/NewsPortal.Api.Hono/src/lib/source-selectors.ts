@@ -7,7 +7,8 @@
 export const SOURCE_SELECTORS: Record<string, string> = {
   'bangla-tribune': '.jw_detail_content_holder',          // verified: 19 hits, real <p>
   'prothom-alo': '.story-element',                         // verified: story-element-text > div > p
-  'daily-star': '.field--name-body, .block-field-blocknodenewsbody', // Drupal body field
+  'daily-star': '.block-field-blocknodenewsbody',          // Drupal body block (single — HTMLRewriter has no comma lists)
+  'the-dhaka-post': '.details_view',                       // verified: col-md-12 details_view holds the body
   'bss': '.dtl_section',                                   // verified: /news/{id} article body section
   'bbc-news': 'article',                                   // verified: <article> wraps text-block <p>
   'al-jazeera': '.wysiwyg',                                // verified: .wysiwyg--all-content holds the body <p>
