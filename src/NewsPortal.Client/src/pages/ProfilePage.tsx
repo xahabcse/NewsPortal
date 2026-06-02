@@ -21,8 +21,44 @@ interface UserProfile {
     avatarId: number;
 }
 
+// Admin Control Panel tiles — surfaced on the dashboard only for Admin/SuperAdmin.
+// Routes are already role-gated in App.tsx; this is just the navigation surface.
+const ADMIN_TILES: { to: string; title: string; subtitle: string; tint: string; icon: JSX.Element }[] = [
+    {
+        to: '/admin/dashboard', title: 'Dashboard', subtitle: 'System overview',
+        tint: 'bg-accent/10 text-accent',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>,
+    },
+    {
+        to: '/admin/fetch-logs', title: 'Fetch Logs', subtitle: 'Import history',
+        tint: 'bg-blue-500/10 text-blue-400',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
+    },
+    {
+        to: '/admin/categories', title: 'Categories', subtitle: 'Manage categories',
+        tint: 'bg-purple-500/10 text-purple-400',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><path d="M7 7h.01" /></svg>,
+    },
+    {
+        to: '/admin/articles', title: 'Articles', subtitle: 'Manage articles',
+        tint: 'bg-emerald-500/10 text-emerald-400',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
+    },
+    {
+        to: '/admin/analytics', title: 'Analytics', subtitle: 'Content analytics',
+        tint: 'bg-amber-500/10 text-amber-400',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>,
+    },
+    {
+        to: '/admin/users', title: 'User Management', subtitle: 'Manage users & roles',
+        tint: 'bg-rose-500/10 text-rose-400',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    },
+];
+
 const ProfilePage = () => {
-    const { isAuthenticated, session, authProvider, logout, updateAvatarId } = useAuth();
+    const { isAuthenticated, session, authProvider, logout, updateAvatarId, role } = useAuth();
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);
@@ -258,6 +294,36 @@ const ProfilePage = () => {
                             <p className="text-secondary text-sm">Failed to load profile information</p>
                         )}
                     </div>
+
+                    {/* Admin Control Panel — only for Admin/SuperAdmin (moved from the sidebar) */}
+                    {isAdmin && (
+                        <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <h3 className="text-lg font-bold text-white">Admin Control Panel</h3>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                                    {role}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {ADMIN_TILES.map((tile) => (
+                                    <Link
+                                        key={tile.to}
+                                        to={tile.to}
+                                        aria-label={tile.title}
+                                        className="flex flex-col gap-2 min-h-[92px] p-4 rounded-xl bg-white/5 border border-glass-border hover:bg-white/10 hover:border-accent/30 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-transparent group"
+                                    >
+                                        <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${tile.tint}`}>
+                                            {tile.icon}
+                                        </span>
+                                        <span className="mt-auto">
+                                            <span className="block text-sm font-semibold text-white group-hover:text-accent transition-colors leading-tight">{tile.title}</span>
+                                            <span className="block text-[11px] text-secondary mt-0.5">{tile.subtitle}</span>
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Avatar & Bio Card */}
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
