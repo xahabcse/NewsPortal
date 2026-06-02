@@ -42,6 +42,11 @@ export function isSpaSource(slug: string): boolean {
   return SPA_SOURCES.has(slug);
 }
 
+// Article-page fetches use a real browser User-Agent. Some sites (e.g. NPR) serve an
+// EMPTY body to UAs that identify as a bot, so a "NewsPortalBot" UA gets nothing back.
+export const BODY_FETCH_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
 /**
  * Normalise an article URL before fetching its body. Some feeds link to a non-article
  * variant (e.g. BSS RSS points at /subscriber/{id}, a paywall shell, while the real

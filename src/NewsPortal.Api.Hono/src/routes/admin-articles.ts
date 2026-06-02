@@ -211,7 +211,7 @@ adminArticlesRoutes.delete('/:id', async (c) => {
 // limits; call repeatedly to drain the backlog. Returns { processed, updated, failed }.
 adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
   const { extractArticleForSource } = await import('../lib/article-extractor');
-  const { SPA_SOURCE_SLUGS, normalizeArticleUrl } = await import('../lib/source-selectors');
+  const { SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_UA } = await import('../lib/source-selectors');
   const limitParam = parseInt(c.req.query('limit') ?? '5');
   // Each item is a full HTMLRewriter parse (~CPU). On the free plan (10ms CPU/invocation)
   // keep the batch tiny; call repeatedly to drain. SPA sources are excluded (unextractable).
@@ -240,7 +240,7 @@ adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
       batch.map(async (a) => {
         try {
           const res = await fetch(normalizeArticleUrl(a.source_slug, a.source_url), {
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsPortalBot/1.0)' },
+            headers: { 'User-Agent': BODY_FETCH_UA },
             signal: AbortSignal.timeout(8000),
           });
           if (!res.ok) return null;
