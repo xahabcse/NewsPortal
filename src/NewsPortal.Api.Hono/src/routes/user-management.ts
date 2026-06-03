@@ -4,6 +4,7 @@ import { errMsg } from '../lib/response';
 import { requireAuth, requireRole } from '../lib/auth';
 import { nowIso, type Row } from '../lib/db';
 import { hashPassword } from '../lib/password';
+import { audit } from '../lib/logger';
 
 export const userManagementRoutes = new Hono<Env>();
 
@@ -112,6 +113,7 @@ userManagementRoutes.post('/', async (c) => {
 
   const created = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
     .bind(Number(result.meta.last_row_id)).first<Row>();
+  audit(c, { action: 'user.create', targetType: 'user', targetId: created?.id as number, message: `Created user ${created?.username}`, meta: { role: created?.role } });
   return c.json(mapUser(created!), 201);
 });
 
@@ -162,6 +164,7 @@ userManagementRoutes.put('/:id', async (c) => {
 
   const updated = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<Row>();
   if (!updated) return c.json(errMsg('User not found'), 404);
+  audit(c, { action: 'user.update', targetType: 'user', targetId: id, message: `Updated user ${updated.username}`, meta: { role: updated.role, isActive: updated.is_active === 1 } });
   return c.json(mapUser(updated));
 });
 
@@ -181,7 +184,7 @@ userManagementRoutes.delete('/:id', async (c) => {
     return c.json(errMsg('You cannot delete your own account'), 400);
   }
 
-  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE id = ? LIMIT 1').bind(id).first();
+  const existing = await c.env.DB.prepare('SELECT id, username FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; username: string }>();
   if (!existing) return c.json(errMsg('User not found'), 404);
 
   await c.env.DB.batch([
@@ -203,6 +206,7 @@ userManagementRoutes.delete('/:id', async (c) => {
     c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id),
   ]);
 
+  audit(c, { action: 'user.delete', targetType: 'user', targetId: id, level: 'warn', message: `Hard-deleted user ${existing.username}` });
   return c.body(null, 204);
 });
 
@@ -219,6 +223,7 @@ userManagementRoutes.post('/:id/reset-password', async (c) => {
   const hash = await hashPassword(body.newPassword);
   await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
     .bind(hash, nowIso(), id).run();
+  audit(c, { action: 'user.reset_password', targetType: 'user', targetId: id, level: 'warn', message: 'Reset user password' });
   return c.json({ message: 'Password reset' });
 });
 
@@ -232,6 +237,7 @@ userManagementRoutes.put('/:id/role', async (c) => {
   }
   await c.env.DB.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?')
     .bind(body.role, nowIso(), id).run();
+  audit(c, { action: 'user.role_change', targetType: 'user', targetId: id, level: 'warn', message: `Role → ${body.role}`, meta: { role: body.role } });
   return c.json({ message: 'Role updated' });
 });
 
@@ -242,5 +248,6 @@ userManagementRoutes.put('/:id/active', async (c) => {
   const body = await c.req.json<{ isActive?: boolean }>();
   await c.env.DB.prepare('UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?')
     .bind(body.isActive ? 1 : 0, nowIso(), id).run();
+  audit(c, { action: 'user.active_toggle', targetType: 'user', targetId: id, message: body.isActive ? 'Activated user' : 'Deactivated user', meta: { isActive: !!body.isActive } });
   return c.json({ message: 'Status updated' });
 });

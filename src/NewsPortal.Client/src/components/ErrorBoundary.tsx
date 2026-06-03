@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportClientError } from '../services/LogService';
 
 interface Props {
     children: ReactNode;
@@ -22,8 +23,8 @@ class ErrorBoundary extends Component<Props, State> {
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error('ErrorBoundary caught an error:', error, errorInfo);
-        // In production, you could send this to an error tracking service
-        // e.g., Sentry, LogRocket, etc.
+        // Report to the central log (category=client_error).
+        reportClientError(error.message || 'React render error', `${error.stack ?? ''}\n${errorInfo.componentStack ?? ''}`);
     }
 
     public render() {

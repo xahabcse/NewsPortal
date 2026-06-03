@@ -27,8 +27,10 @@ import { adminArticlesRoutes } from './routes/admin-articles';
 import { imagesRoutes } from './routes/images';
 import { aiRoutes } from './routes/ai';
 import { sseRoutes } from './routes/sse';
+import { logsRoutes } from './routes/logs';
 
 import { runScheduledFetch } from './jobs/fetch-news';
+import { requestLogger, pruneLogs } from './lib/logger';
 
 const app = new Hono<Env>();
 
@@ -56,6 +58,12 @@ app.use('*', async (c, next) => {
     credentials: true,
   })(c, next);
 });
+
+// ----------------------------------------------------------------------------
+// Request/access logging — persists mutations, errors, and slow responses to
+// app_logs (best-effort, via waitUntil so it adds no latency).
+// ----------------------------------------------------------------------------
+app.use('*', requestLogger);
 
 // ----------------------------------------------------------------------------
 // Routes — `/api/v1/...` namespace mirrors the legacy ASP.NET Core API.
@@ -95,6 +103,9 @@ app.route('/api/v1/ai', aiRoutes);
 // Phase 6: SSE realtime
 app.route('/api/v1/sse', sseRoutes);
 
+// Central application logs (SuperAdmin viewer + public client-error reporter)
+app.route('/api/v1/logs', logsRoutes);
+
 // Public, non-API routes
 app.route('/sitemap', sitemapRoutes);
 app.route('/robots.txt', robotsRoutes);
@@ -129,6 +140,8 @@ export default {
         } catch (err) {
           console.error('Scheduled fetch failed:', err);
         }
+        // Retention: drop log rows older than 14 days.
+        await pruneLogs(env);
       })()
     );
   },
