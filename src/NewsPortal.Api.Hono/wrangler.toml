@@ -40,10 +40,11 @@ binding = "CACHE_KV"
 id = "65d4c284eb7048d9b2cea23f571c1779"
 
 # ----------------------------------------------------------------------------
-# Cron Triggers — runs runScheduledFetch every 5 minutes. Each invocation gets a
-# fresh per-invocation budget (CPU + subrequests), so a more frequent schedule
-# raises daily ingestion/extraction throughput without touching paid limits
-# (~288 runs/day, far under the 100k requests/day free-plan allowance).
+# Cron Triggers (each fires its own invocation with a fresh CPU+subrequest budget):
+#   */5  — runScheduledFetch: ingest new articles from due sources (+ inline body).
+#   */30 — runBodyBackfill: independent job that visits source links and fills the
+#          body of NULL-content articles (today first, then last 3 days).
+# The scheduled() handler in index.ts branches on event.cron.
 # ----------------------------------------------------------------------------
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["*/5 * * * *", "*/30 * * * *"]

@@ -12,7 +12,7 @@ import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource, extractFromFeedHtml } from '../lib/article-extractor';
 import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_UA } from '../lib/source-selectors';
-import { logInsert } from '../lib/logger';
+import { logInsert, writeLog } from '../lib/logger';
 
 type SourceRow = {
   id: number;
@@ -49,6 +49,10 @@ const SUBREQUEST_BUDGET = 45;
 const EXTRACTION_BUDGET = 6;
 const MIN_SUBREQUEST_RESERVE = 4;   // never spend optional subrequests (bodies/images) below this floor
 
+// Dedicated body-backfill job (its own cron + invocation = its own fresh budget).
+const BACKFILL_SUBREQUEST_BUDGET = 45;
+const BACKFILL_EXTRACTION_BUDGET = 12;
+
 type Budget = { remaining: number; extractions: number };
 
 export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sourcesProcessed: number; articlesNew: number }> {
@@ -84,11 +88,25 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
     processed++;
   }
 
-  // Spend leftover budget backfilling bodies for recent summary-only articles.
-  const backfilled = await backfillRecentBodies(env, budget);
-
-  if (totalNew > 0 || backfilled > 0) await cacheInvalidatePrefix(env.CACHE_KV, 'news:');
+  // NOTE: NULL-body backfill is no longer done here — it runs as an independent
+  // cron (runBodyBackfill) with its own dedicated budget, so a busy fetch run
+  // can't starve it. This loop is pure ingestion + inline body for NEW items.
+  if (totalNew > 0) await cacheInvalidatePrefix(env.CACHE_KV, 'news:');
   return { sourcesProcessed: processed, articlesNew: totalNew };
+}
+
+/**
+ * Independent body-backfill job — runs on its own cron (every 30 min) in a
+ * separate invocation, so it gets a FULL fresh subrequest + CPU budget dedicated
+ * to filling articles that were inserted summary-only (content IS NULL). Visits
+ * each article's source_url, extracts the body, and fills it. Processes today's
+ * articles first, then the rest of the last 3 days while budget remains.
+ */
+export async function runBodyBackfill(env: Env['Bindings']): Promise<{ filled: number }> {
+  const budget: Budget = { remaining: BACKFILL_SUBREQUEST_BUDGET, extractions: BACKFILL_EXTRACTION_BUDGET };
+  const filled = await backfillRecentBodies(env, budget, BACKFILL_EXTRACTION_BUDGET);
+  if (filled > 0) await cacheInvalidatePrefix(env.CACHE_KV, 'news:');
+  return { filled };
 }
 
 /**
@@ -96,11 +114,11 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
  * using whatever budget the main loop left behind. A 6-hour per-row cooldown (via
  * updated_at) stops a permanently-unextractable URL from being retried every run.
  */
-async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promise<number> {
+async function backfillRecentBodies(env: Env['Bindings'], budget: Budget, maxItems = 10): Promise<number> {
   if (budget.remaining <= MIN_SUBREQUEST_RESERVE || budget.extractions <= 0) return 0;
   const recentCutoffIso = new Date(Date.now() - 3 * 86400000).toISOString();
   const retryCooldownIso = new Date(Date.now() - 6 * 3600000).toISOString();
-  const limit = Math.min(budget.remaining - MIN_SUBREQUEST_RESERVE, budget.extractions, 10);
+  const limit = Math.min(budget.remaining - MIN_SUBREQUEST_RESERVE, budget.extractions, maxItems);
 
   // Exclude SPA sources (can't be extracted); skip the clause entirely when the list
   // is empty since `NOT IN ()` is a SQL syntax error.
@@ -126,7 +144,7 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promi
     if (budget.remaining <= MIN_SUBREQUEST_RESERVE - 2 || budget.extractions <= 0) break;
     budget.remaining--;
     budget.extractions--;
-    const { body } = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
+    const { body, reason } = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
     const now = nowIso();
     if (body) {
       await env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
@@ -136,6 +154,17 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promi
       // Stamp updated_at so this row enters the retry cooldown instead of being
       // re-attempted (and burning budget) on every single run.
       await env.DB.prepare('UPDATE news_articles SET updated_at = ? WHERE id = ?').bind(now, a.id).run();
+      // Surface the failure in the central log (extraction category).
+      if (reason) {
+        await writeLog(env, {
+          category: 'extraction',
+          level: 'warn',
+          sourceSlug: a.source_slug,
+          url: a.source_url,
+          message: `Backfill extraction failed (${reason})`,
+          error: reason,
+        });
+      }
     }
   }
   return updated;
