@@ -97,7 +97,9 @@ authRoutes.post('/login', async (c) => {
 });
 
 // ----------------------------------------------------------------------------
-// POST /register  body: { username, email, password, firstName, lastName }
+// POST /register  body: { username, email, password, firstName?, lastName? }
+// firstName/lastName are OPTIONAL — the registration UI only collects
+// username/email/password. New accounts always get the 'Reader' role.
 // ----------------------------------------------------------------------------
 authRoutes.post('/register', async (c) => {
   const body = await c.req.json<{
@@ -107,11 +109,18 @@ authRoutes.post('/register', async (c) => {
   const username = (body.username ?? '').trim();
   const email = (body.email ?? '').trim().toLowerCase();
   const password = body.password ?? '';
-  const firstName = (body.firstName ?? '').trim();
+  // Default the display name to the username when the client doesn't send one.
+  const firstName = (body.firstName ?? '').trim() || username;
   const lastName = (body.lastName ?? '').trim();
 
-  if (!username || !email || !password || !firstName || !lastName) {
-    return c.json(errMsg('All fields are required'), 400);
+  if (!username || !email || !password) {
+    return c.json(errMsg('Username, email and password are required'), 400);
+  }
+  if (username.length < 3) {
+    return c.json(errMsg('Username must be at least 3 characters'), 400);
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return c.json(errMsg('Invalid email format'), 400);
   }
   if (password.length < 6) {
     return c.json(errMsg('Password must be at least 6 characters'), 400);
