@@ -389,6 +389,7 @@ const SearchResultsPage = () => {
                                 slug={article.slug}
                                 sourceUrl={article.sourceUrl}
                                 articleId={article.id}
+                                showBookmark
                             />
                         ))}
                     </div>

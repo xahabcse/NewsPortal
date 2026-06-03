@@ -5,6 +5,7 @@ import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
+import BookmarkButton from '../components/BookmarkButton';
 import ShareButton from '../components/ShareButton';
 import TextToSpeech from '../components/TextToSpeech';
 import CommentsSection from '../components/CommentsSection';
@@ -310,6 +311,7 @@ const ArticleDetailPage = () => {
                 {/* Action Buttons: Reactions + Share + Listen */}
                 <div className="flex items-center gap-x-2 gap-y-2 sm:gap-3 mt-4 flex-wrap">
                     <ArticleReactions articleId={article.id} />
+                    <BookmarkButton articleId={article.id} />
                     <ShareButton
                         title={article.title}
                         url={`${window.location.origin}/news/${article.slug}`}
@@ -440,6 +442,8 @@ const ArticleDetailPage = () => {
                                 publishedAt={related.publishedAt}
                                 thumbnailUrl={related.thumbnailUrl}
                                 slug={related.slug}
+                                articleId={related.id}
+                                showBookmark
                             />
                         ))}
                     </div>

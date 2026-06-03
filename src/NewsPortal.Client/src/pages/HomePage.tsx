@@ -247,6 +247,7 @@ const HomePage = () => {
                   slug={item.slug}
                   sourceUrl={item.sourceUrl}
                   articleId={item.id}
+                  showBookmark
                 />
               ))}
             </div>

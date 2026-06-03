@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, type FC } from 'react';
 import toast from 'react-hot-toast';
+import BookmarkButton from './BookmarkButton';
 
 interface NewsCardProps {
     title: string;
@@ -104,26 +105,38 @@ const NewsCard: FC<NewsCardProps> = ({
                 </div>
 
                 {showBookmark && articleId && (
-                    <button
-                        onClick={handleBookmarkClick}
-                        className="absolute top-2 right-2 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-                        title={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill={bookmarked ? 'currentColor' : 'none'}
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={bookmarked ? 'text-accent' : 'text-white'}
+                    onBookmarkToggle ? (
+                        // Controlled mode (e.g. Bookmarks page handles removal itself).
+                        <button
+                            onClick={handleBookmarkClick}
+                            className="absolute top-2 right-2 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                            title={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
                         >
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                    </button>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill={bookmarked ? 'currentColor' : 'none'}
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={bookmarked ? 'text-accent' : 'text-white'}
+                            >
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </button>
+                    ) : (
+                        // Self-managed mode (card grids): add/remove via BookmarkService.
+                        // checkOnMount is off so a grid of N cards doesn't fire N requests.
+                        <BookmarkButton
+                            articleId={articleId}
+                            variant="icon"
+                            checkOnMount={false}
+                            className="absolute top-2 right-2 md:top-4 md:right-4"
+                        />
+                    )
                 )}
             </div>
 

@@ -102,6 +102,8 @@ const CategoryPage = () => {
                                     publishedAt={article.publishedAt}
                                     thumbnailUrl={article.thumbnailUrl}
                                     slug={article.slug}
+                                    articleId={article.id}
+                                    showBookmark
                                 />
                             ))}
                         </div>
