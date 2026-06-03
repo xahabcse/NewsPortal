@@ -201,7 +201,7 @@ newsSourcesRoutes.post('/test', requireAuth, requireRole('Editor'), async (c) =>
 
   try {
     const res = await fetch(url, { headers: { 'User-Agent': 'NewsPortal/1.0' } });
-    if (!res.ok) {
+    if (res.ok === false) {
       return c.json({
         success: false,
         statusCode: res.status,

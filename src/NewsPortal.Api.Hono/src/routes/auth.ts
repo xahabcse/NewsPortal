@@ -88,7 +88,7 @@ authRoutes.post('/login', async (c) => {
   if (!user) return c.json(errMsg('Invalid username or password'), 401);
 
   const ok = await verifyPassword(password, user.password_hash);
-  if (!ok) return c.json(errMsg('Invalid username or password'), 401);
+  if (ok === false) return c.json(errMsg('Invalid username or password'), 401);
 
   await c.env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').bind(nowIso(), user.id).run();
 
@@ -185,7 +185,7 @@ authRoutes.post('/change-password', requireAuth, async (c) => {
   if (!user) return c.json(errMsg('User not found'), 404);
 
   const ok = await verifyPassword(currentPassword, user.password_hash);
-  if (!ok) return c.json(errMsg('Current password is incorrect'), 400);
+  if (ok === false) return c.json(errMsg('Current password is incorrect'), 400);
 
   const newHash = await hashPassword(newPassword);
   await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
@@ -203,7 +203,7 @@ authRoutes.post('/google', async (c) => {
   if (!credential) return c.json(errMsg('credential is required'), 400);
 
   const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
-  if (!resp.ok) return c.json(errMsg('Google authentication failed'), 401);
+  if (resp.ok === false) return c.json(errMsg('Google authentication failed'), 401);
 
   const payload = (await resp.json()) as {
     aud?: string;
@@ -219,7 +219,7 @@ authRoutes.post('/google', async (c) => {
   }
 
   const verified = payload.email_verified === true || payload.email_verified === 'true';
-  if (!verified) return c.json(errMsg('Google email is not verified'), 401);
+  if (verified === false) return c.json(errMsg('Google email is not verified'), 401);
 
   const email = payload.email.toLowerCase();
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ? LIMIT 1').bind(email).first<UserRow>();
