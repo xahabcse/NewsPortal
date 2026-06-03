@@ -431,7 +431,9 @@ const ArticleDetailPage = () => {
             {relatedArticles.length > 0 && (
                 <div className="mt-12 pt-8 border-t border-glass-border">
                     <h2 className="text-2xl font-bold text-white mb-6">Related Articles</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* 2-up on tablet/desktop: inside the max-w-4xl article column, 4 columns
+                        made each card too narrow and tall. 2 columns keeps a balanced size. */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {relatedArticles.map((related) => (
                             <NewsCard
                                 key={related.id}
