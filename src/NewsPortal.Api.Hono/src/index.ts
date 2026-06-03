@@ -29,7 +29,7 @@ import { aiRoutes } from './routes/ai';
 import { sseRoutes } from './routes/sse';
 import { logsRoutes } from './routes/logs';
 
-import { runScheduledFetch } from './jobs/fetch-news';
+import { runScheduledFetch, runBodyBackfill } from './jobs/fetch-news';
 import { requestLogger, pruneLogs } from './lib/logger';
 
 const app = new Hono<Env>();
@@ -135,13 +135,20 @@ export default {
     ctx.waitUntil(
       (async () => {
         try {
-          const result = await runScheduledFetch(env);
-          console.log('Scheduled fetch complete:', result);
+          if (event.cron === '*/30 * * * *') {
+            // Independent body-backfill job (its own fresh budget).
+            const r = await runBodyBackfill(env);
+            console.log('Body backfill complete:', r);
+            // Log retention housekeeping — every 30 min is plenty.
+            await pruneLogs(env);
+          } else {
+            // */5 ingestion fetch.
+            const result = await runScheduledFetch(env);
+            console.log('Scheduled fetch complete:', result);
+          }
         } catch (err) {
-          console.error('Scheduled fetch failed:', err);
+          console.error('Scheduled job failed:', err);
         }
-        // Retention: drop log rows older than 14 days.
-        await pruneLogs(env);
       })()
     );
   },
