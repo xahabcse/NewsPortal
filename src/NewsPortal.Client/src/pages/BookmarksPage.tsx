@@ -106,7 +106,7 @@ const BookmarksPage = () => {
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-gradient-to-br from-accent to-purple-500 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-accent/15 border border-accent/25 rounded-lg flex items-center justify-center text-accent">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="20"
@@ -117,12 +117,11 @@ const BookmarksPage = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-white"
                         >
                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-bold text-white">Saved Articles</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white">Saved Articles</h1>
                 </div>
                 <p className="text-secondary text-sm">
                     {loading ? (

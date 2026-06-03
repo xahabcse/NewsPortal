@@ -501,7 +501,7 @@ export default function NewsSourcesPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-1">News Channels</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white mb-1">News Channels</h1>
                     <p className="text-secondary text-sm">{sourcePermissionMessage}</p>
                 </div>
                 {canCreateSources && (
@@ -552,9 +552,18 @@ export default function NewsSourcesPage() {
             {selectedIds.size > 0 && canManageSources && (
                 <div className="flex items-center gap-3 mb-4 p-3 rounded-xl bg-accent/10 border border-accent/20 animate-fade-in">
                     <span className="text-sm text-white font-medium">{selectedIds.size} selected</span>
-                    <button className="bulk-btn" onClick={() => handleBulkAction('fetch')} disabled={bulkLoading}>⚡ Fetch All</button>
-                    <button className="bulk-btn" onClick={() => handleBulkAction('resume')} disabled={bulkLoading}>▶ Resume All</button>
-                    <button className="bulk-btn" onClick={() => handleBulkAction('pause')} disabled={bulkLoading}>⏸ Pause All</button>
+                    <button className="bulk-btn inline-flex items-center gap-1.5" onClick={() => handleBulkAction('fetch')} disabled={bulkLoading}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                        Fetch All
+                    </button>
+                    <button className="bulk-btn inline-flex items-center gap-1.5" onClick={() => handleBulkAction('resume')} disabled={bulkLoading}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                        Resume All
+                    </button>
+                    <button className="bulk-btn inline-flex items-center gap-1.5" onClick={() => handleBulkAction('pause')} disabled={bulkLoading}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="6" y2="20" /><line x1="18" y1="4" x2="18" y2="20" /></svg>
+                        Pause All
+                    </button>
                     <button className="text-xs text-secondary hover:text-white ml-auto transition-colors" onClick={() => setSelectedIds(new Set())}>Clear</button>
                 </div>
             )}
@@ -658,28 +667,29 @@ export default function NewsSourcesPage() {
                                                         {canFetchSources && source.isActive && (
                                                             <button
                                                                 onClick={() => handleFetch(source)}
-                                                                className="px-2 py-1 rounded-md bg-accent/15 text-accent text-xs font-medium hover:bg-accent/25 transition-colors"
+                                                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent/15 text-accent text-xs font-medium hover:bg-accent/25 transition-colors"
                                                                 title="Fetch now"
                                                             >
-                                                                ⚡ Fetch
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                                                                Fetch
                                                             </button>
                                                         )}
                                                         {canEditSources && (source.healthStatus === 2 || source.healthStatus === 1) && (
                                                             <button
                                                                 onClick={() => handleResume(source.id)}
-                                                                className="px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors"
+                                                                className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-400 text-xs font-medium hover:bg-emerald-500/25 transition-colors"
                                                                 title="Resume"
                                                             >
-                                                                ▶
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                                                             </button>
                                                         )}
                                                         {canEditSources && source.healthStatus === 0 && (
                                                             <button
                                                                 onClick={() => handlePause(source.id)}
-                                                                className="px-2 py-1 rounded-md bg-sky-500/15 text-sky-400 text-xs font-medium hover:bg-sky-500/25 transition-colors"
+                                                                className="inline-flex items-center justify-center px-2 py-1 rounded-md bg-sky-500/15 text-sky-400 text-xs font-medium hover:bg-sky-500/25 transition-colors"
                                                                 title="Pause"
                                                             >
-                                                                ⏸
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="6" y2="20" /><line x1="18" y1="4" x2="18" y2="20" /></svg>
                                                             </button>
                                                         )}
                                                         {canEditSources && (

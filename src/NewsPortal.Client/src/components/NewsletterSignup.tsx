@@ -57,7 +57,7 @@ const NewsletterSignup = () => {
     }
 
     return (
-        <div className="bg-gradient-to-br from-accent/10 to-purple-500/5 border border-accent/20 rounded-xl p-4">
+        <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>

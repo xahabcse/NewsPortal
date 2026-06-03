@@ -50,7 +50,7 @@ const NewsTicker = () => {
     if (dismissed || headlines.length === 0) return null;
 
     return (
-        <div className="bg-gradient-to-r from-red-500/10 via-accent/5 to-red-500/10 border-b border-red-500/20 relative overflow-hidden">
+        <div className="bg-danger/10 border-b border-danger/20 relative overflow-hidden">
             <div className="flex items-center h-8">
                 <div
                     className="flex-1 overflow-hidden"
@@ -71,7 +71,7 @@ const NewsTicker = () => {
                                 }}
                                 className="inline-flex items-center gap-2 text-xs text-secondary hover:text-white transition-colors cursor-pointer bg-transparent border-none"
                             >
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-500/70 flex-shrink-0"></span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-danger/70 flex-shrink-0"></span>
                                 <span>{item.title}</span>
                             </button>
                         ))}

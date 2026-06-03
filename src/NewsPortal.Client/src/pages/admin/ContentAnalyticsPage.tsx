@@ -52,7 +52,7 @@ interface HourlyData {
     comments: number;
 }
 
-const CHART_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#34d399', '#fbbf24', '#f87171', '#38bdf8', '#fb923c', '#a3e635'];
+const CHART_COLORS = ['#0E7C86', '#14B8A6', '#0EA5E9', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899', '#F97316', '#E11D48', '#06B6D4'];
 
 const ContentAnalyticsPage = () => {
     const { role } = useAuth();
@@ -121,7 +121,7 @@ const ContentAnalyticsPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                         { label: 'Total Articles', value: overview.totalArticles.toLocaleString(), sub: `+${overview.articlesToday} today`, color: 'text-accent' },
-                        { label: 'Total Views', value: overview.totalViews.toLocaleString(), sub: 'All time', color: 'text-purple-400' },
+                        { label: 'Total Views', value: overview.totalViews.toLocaleString(), sub: 'All time', color: 'text-accent' },
                         { label: 'Comments', value: overview.totalComments.toLocaleString(), sub: `+${overview.commentsToday} today`, color: 'text-green-400' },
                         { label: 'Users', value: overview.totalUsers.toLocaleString(), sub: `${overview.totalSources} sources`, color: 'text-amber-400' },
                     ].map((card, i) => (
@@ -141,8 +141,8 @@ const ContentAnalyticsPage = () => {
                     <AreaChart data={daily}>
                         <defs>
                             <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                <stop offset="5%" stopColor="#0E7C86" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#0E7C86" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -152,7 +152,7 @@ const ContentAnalyticsPage = () => {
                             contentStyle={{ background: 'rgba(22,23,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                             labelStyle={{ color: '#fff' }}
                         />
-                        <Area type="monotone" dataKey="count" stroke="#6366f1" fill="url(#colorCount)" strokeWidth={2} name="Articles" />
+                        <Area type="monotone" dataKey="count" stroke="#0E7C86" fill="url(#colorCount)" strokeWidth={2} name="Articles" />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -198,7 +198,7 @@ const ContentAnalyticsPage = () => {
                                 contentStyle={{ background: 'rgba(22,23,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                             />
                             <Legend />
-                            <Bar dataKey="articles" fill="#6366f1" name="Articles" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="articles" fill="#0E7C86" name="Articles" radius={[0, 4, 4, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

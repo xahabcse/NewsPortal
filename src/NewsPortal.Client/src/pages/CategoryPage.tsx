@@ -70,7 +70,7 @@ const CategoryPage = () => {
                         <span className="text-secondary/40">/</span>
                         <span className="text-accent font-medium">{categoryName}</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-white">{categoryName}</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white">{categoryName}</h1>
                     <p className="text-secondary text-sm mt-1">
                         {articles.length > 0
                             ? `Showing ${articles.length} articles`

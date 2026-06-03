@@ -12,7 +12,7 @@ const NotFoundPage = () => {
                 <div className="relative mb-8">
                     <div className="absolute inset-0 bg-accent/20 blur-3xl rounded-full"></div>
                     <div className="relative bg-white/5 border border-glass-border rounded-3xl p-12">
-                        <h1 className="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-500 mb-4">
+                        <h1 className="font-serif text-8xl font-bold text-accent mb-4">
                             404
                         </h1>
                         <p className="text-secondary text-lg mb-2">Page Not Found</p>
@@ -52,7 +52,7 @@ const NotFoundPage = () => {
                         to="/news-sources"
                         className="p-4 bg-white/5 border border-glass-border rounded-xl hover:bg-white/10 transition-colors group"
                     >
-                        <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-purple-500/20 transition-colors">
+                        <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-accent/20 transition-colors">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="20"
@@ -63,7 +63,7 @@ const NotFoundPage = () => {
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                className="text-purple-500"
+                                className="text-accent"
                             >
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>

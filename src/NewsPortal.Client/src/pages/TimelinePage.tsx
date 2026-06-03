@@ -70,7 +70,7 @@ const TimelinePage = () => {
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-white mb-1">Daily Timeline</h1>
+                                <h1 className="font-serif text-3xl font-bold text-white mb-1">Daily Timeline</h1>
                                 <p className="text-secondary text-sm">
                                     {loading ? 'Loading timeline…' : (
                                         <>
