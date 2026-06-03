@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // ----------------------------------------------------------------------------
-// useWeather — resolves the visitor's current-location weather and keeps it
-// fresh. Detection order:
+// useWeather — resolves the visitor's weather and keeps it fresh.
+// On load we NEVER prompt for location. Resolution order:
 //   1. Manual override (user typed a city) — persisted, wins until cleared.
-//   2. Browser geolocation (precise lat,lon) — needs one-time permission.
-//   3. IP-based fallback — wttr.in auto-detects from the request IP when no
-//      location is supplied, so we always have *something* to show.
-// Data comes from wttr.in's free `?format=j1` endpoint (no API key), whose
-// `nearest_area` block also gives us the resolved city/region/country names.
+//   2. IP-based — wttr.in auto-detects the request IP (approximate city), no
+//      permission prompt. This is the silent default.
+// Precise GPS (navigator.geolocation, which DOES prompt) is only requested when
+// the user explicitly taps "use my location" → useMyLocation(); on denial it
+// silently falls back to IP. Data comes from wttr.in's free `?format=j1`
+// endpoint (no API key); its `nearest_area` block gives the city/region/country.
 // ----------------------------------------------------------------------------
 
 export interface WeatherData {
@@ -144,20 +145,11 @@ export function useWeather(): WeatherState {
           if (cancelled) return
           finish(data, 'manual')
           return
-        } catch { /* fall through to auto */ }
+        } catch { /* fall through to IP */ }
       }
 
-      // 2. Precise device geolocation.
-      try {
-        const pos = await getPosition()
-        const query = `${pos.coords.latitude.toFixed(3)},${pos.coords.longitude.toFixed(3)}`
-        const data = await fetchWttr(query)
-        if (cancelled) return
-        finish(data, 'gps')
-        return
-      } catch { /* permission denied / timeout → IP fallback */ }
-
-      // 3. IP-based fallback (empty query → wttr.in geolocates the request IP).
+      // 2. IP-based default (empty query → wttr.in geolocates the request IP).
+      // No browser prompt here — precise GPS is opt-in via useMyLocation().
       try {
         const data = await fetchWttr('')
         if (cancelled) return
@@ -189,12 +181,30 @@ export function useWeather(): WeatherState {
     setReloadKey(k => k + 1)
   }, [])
 
-  const useMyLocation = useCallback(() => {
-    localStorage.setItem(MODE_KEY, 'auto')
-    localStorage.removeItem(CITY_KEY)
-    localStorage.removeItem(CACHE_KEY)
-    ignoreCache.current = true
-    setReloadKey(k => k + 1)
+  // Explicit, user-initiated precise location. This is the ONLY place that calls
+  // navigator.geolocation, so the browser permission prompt only appears on a
+  // deliberate tap. On denial/failure we silently fall back to IP-based.
+  const useMyLocation = useCallback(async () => {
+    setLoading(true)
+    try {
+      const pos = await getPosition()
+      const query = `${pos.coords.latitude.toFixed(3)},${pos.coords.longitude.toFixed(3)}`
+      const data = await fetchWttr(query)
+      localStorage.setItem(MODE_KEY, 'auto')
+      localStorage.removeItem(CITY_KEY)
+      const withDay = { ...data, isDay: isDaytime() }
+      writeCache(withDay, 'gps')
+      setWeather(withDay)
+      setSource('gps')
+      setLoading(false)
+    } catch {
+      // Denied / unavailable → drop any manual city and re-resolve via IP.
+      localStorage.setItem(MODE_KEY, 'auto')
+      localStorage.removeItem(CITY_KEY)
+      localStorage.removeItem(CACHE_KEY)
+      ignoreCache.current = true
+      setReloadKey(k => k + 1) // the effect re-resolves (IP) and manages loading
+    }
   }, [])
 
   return { weather, loading, source, setManualCity, useMyLocation }

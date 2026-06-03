@@ -90,7 +90,7 @@ const WeatherWidget = ({ data, loading, source, onSetCity, onUseLocation, varian
           <button
             type="button"
             onMouseDown={e => { e.preventDefault(); onUseLocation(); setEditing(false) }}
-            title="আমার অবস্থান"
+            title="আমার নিখুঁত অবস্থান"
             className="shrink-0 text-secondary hover:text-accent"
           >
             <LocateFixed className="h-4 w-4" strokeWidth={1.75} />
@@ -146,10 +146,10 @@ const WeatherWidget = ({ data, loading, source, onSetCity, onUseLocation, varian
             </button>
           )}
         </div>
-        {source === 'manual' && (
+        {source !== 'gps' && (
           <button
             onClick={onUseLocation}
-            title="আমার অবস্থান ব্যবহার করুন"
+            title="আমার নিখুঁত অবস্থান ব্যবহার করুন"
             className="shrink-0 text-secondary transition-colors hover:text-accent"
           >
             <LocateFixed className="h-3.5 w-3.5" strokeWidth={1.75} />
