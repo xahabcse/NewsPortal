@@ -57,7 +57,7 @@ const TEAM: TeamMember[] = [
         blurb:
             'Software engineer ও bilingual builder। NewsPortal-এর পুরো pipeline — source curation, RSS/scraping ingestion, dedup, categorization, full-content extraction, এবং bilingual UI — নিজে structure করেন। লক্ষ্য একটাই: এক জায়গায় বিশ্বস্ত সব খবর, calm আর ad-free ভাবে।',
         image: 'https://avatars.githubusercontent.com/u/178742119?v=4&s=300',
-        link: 'https://github.com/xujoncep',
+        link: 'https://github.com/xahabcse',
         badge: 'Lead',
         since: 'Since 2024',
         kind: 'human',
@@ -676,13 +676,13 @@ const AboutPage = () => {
                                         <div className="font-serif text-[18px] mt-4 text-white tracking-tight">Email</div>
                                         <div className="text-[13px] text-secondary mt-1">sujoncep@gmail.com</div>
                                     </a>
-                                    <a href="https://github.com/xujoncep" target="_blank" rel="noopener noreferrer" className="glass-morphism border border-glass-border rounded-2xl p-5 hover:border-accent/50 transition-colors group block">
+                                    <a href="https://github.com/xahabcse" target="_blank" rel="noopener noreferrer" className="glass-morphism border border-glass-border rounded-2xl p-5 hover:border-accent/50 transition-colors group block">
                                         <div className="flex items-center justify-between">
                                             <GithubMark className="h-5 w-5 text-white" />
                                             <ArrowUpRight className="h-4 w-4 text-secondary group-hover:text-accent transition-colors" />
                                         </div>
                                         <div className="font-serif text-[18px] mt-4 text-white tracking-tight">GitHub</div>
-                                        <div className="text-[13px] text-secondary mt-1">@xujoncep</div>
+                                        <div className="text-[13px] text-secondary mt-1">@xahabcse</div>
                                     </a>
                                     <Link to="/" className="glass-morphism border border-glass-border rounded-2xl p-5 hover:border-accent/50 transition-colors group block">
                                         <div className="flex items-center justify-between">
