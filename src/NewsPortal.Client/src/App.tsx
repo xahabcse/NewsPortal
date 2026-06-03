@@ -28,6 +28,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import BackToTop from './components/BackToTop'
+import ScrollToTop from './components/ScrollToTop'
 import KeyboardShortcuts from './components/KeyboardShortcuts'
 import NewsTicker from './components/NewsTicker'
 import { signalRService } from './services/SignalRService'
@@ -56,6 +57,7 @@ function App() {
         <HelmetProvider>
           <ErrorBoundary>
             <Router>
+              <ScrollToTop />
               <div className="min-h-screen bg-background text-foreground flex overflow-x-hidden">
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} isCollapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(c => !c)} />
 
