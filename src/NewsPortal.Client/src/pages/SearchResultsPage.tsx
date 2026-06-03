@@ -52,7 +52,9 @@ const SearchResultsPage = () => {
     // Load filter options
     useEffect(() => {
         newsApi.getCategories().then(setCategories).catch(() => {});
-        NewsSourceService.getAll().then(s => setSources(s.filter(x => x.isActive))).catch(() => {});
+        // Use the PUBLIC active-sources endpoint: getAll() hits the Editor-only
+        // /newssources/all and 403s for regular readers, leaving the Source filter empty.
+        NewsSourceService.getActive().then(setSources).catch(() => {});
     }, []);
 
     const activeFilterCount = [selectedCategory, selectedSource, datePreset].filter(Boolean).length + (sortOrder !== 'newest' ? 1 : 0);
