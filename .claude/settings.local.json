@@ -13,7 +13,23 @@
       "WebSearch",
       "WebFetch(domain:developers.cloudflare.com)",
       "WebFetch(domain:cogley.jp)",
-      "PowerShell(node \"d:\\\\Exp-Work\\\\NewsPortal\\\\_tmp_test_rss.mjs\")"
+      "PowerShell(node \"d:\\\\Exp-Work\\\\NewsPortal\\\\_tmp_test_rss.mjs\")",
+      "PowerShell(npm --prefix src/NewsPortal.Client run build)",
+      "PowerShell($env:VITE_API_URL='https://newsportal-api-hono.sujoncep.workers.dev/api'; npm --prefix src/NewsPortal.Client run dev)",
+      "PowerShell(git add src/NewsPortal.Client/src/hooks/useWeather.ts src/NewsPortal.Client/src/components/WeatherWidget.tsx src/NewsPortal.Client/src/pages/HomePage.tsx)",
+      "PowerShell(git push origin dev)",
+      "PowerShell(gh run list --limit 6 --json databaseId,name,headBranch,status,conclusion,createdAt,workflowName 2>$null)",
+      "PowerShell($id = \\(gh run list --limit 1 --workflow \"CI - Dev \\(build + auto-merge to main\\)\" --json databaseId 2>$null | ConvertFrom-Json\\)[0].databaseId; Write-Output \"Watching run $id\"; gh run watch $id --exit-status 2>$null; Write-Output \"CI-Dev done with exit $LASTEXITCODE\")",
+      "PowerShell(Start-Sleep -Seconds 8; $run = \\(gh run list --workflow \"Deploy React Client to Cloudflare Pages\" --branch main --limit 1 --json databaseId,status,createdAt 2>$null | ConvertFrom-Json\\)[0]; Write-Output \"Latest client-deploy run: $\\($run.databaseId\\) status=$\\($run.status\\) created=$\\($run.createdAt\\)\"; if \\($run.status -ne 'completed'\\) { gh run watch $run.databaseId --exit-status 2>$null; Write-Output \"Client deploy done exit $LASTEXITCODE\" } else { Write-Output \"Already completed \\(may be the older run; will re-check\\)\" })",
+      "PowerShell(gh run view 26877848782 --json conclusion,status,headSha,displayTitle 2>$null)",
+      "PowerShell(git ls-remote origin main)",
+      "PowerShell(git add src/NewsPortal.Client/public/_headers)",
+      "PowerShell(git commit -m \"fix\\(client\\): allow same-origin geolocation in Permissions-Policy \\(geolocation=\\(self\\)\\) so location-based weather works\")",
+      "PowerShell(Start-Sleep -Seconds 6; $id = \\(gh run list --workflow \"CI - Dev \\(build + auto-merge to main\\)\" --branch dev --limit 1 --json databaseId,status 2>$null | ConvertFrom-Json\\)[0].databaseId; Write-Output \"Watching CI-Dev run $id\"; gh run watch $id --exit-status 2>$null; Write-Output \"CI-Dev exit $LASTEXITCODE\")",
+      "PowerShell(Start-Sleep -Seconds 10; $run = \\(gh run list --workflow \"Deploy React Client to Cloudflare Pages\" --branch main --limit 1 --json databaseId,status,conclusion,displayTitle,createdAt 2>$null | ConvertFrom-Json\\)[0]; Write-Output \"run=$\\($run.databaseId\\) status=$\\($run.status\\) conclusion=$\\($run.conclusion\\) title=$\\($run.displayTitle\\)\"; if \\($run.status -ne 'completed'\\) { gh run watch $run.databaseId --exit-status 2>$null; Write-Output \"deploy exit $LASTEXITCODE\"; gh run view $run.databaseId --json conclusion 2>$null | ConvertFrom-Json | Format-List })",
+      "PowerShell(Start-Sleep -Seconds 5; $r = Invoke-WebRequest -Uri \"https://news.xahabcse.me/\" -Method Head -UseBasicParsing; $r.Headers[\"Permissions-Policy\"])",
+      "PowerShell(git add .claude/settings.local.json)",
+      "PowerShell(git commit -m \"chore: update local Claude permission allowlist\")"
     ],
     "defaultMode": "bypassPermissions"
   }
