@@ -9,7 +9,11 @@
       "Grep(**)",
       "mcp__playwright__*",
       "mcp__browser__*",
-      "PowerShell(if \\($env:GH_TOKEN\\) { \"GH_TOKEN set\" } elseif \\($env:GITHUB_TOKEN\\) { \"GITHUB_TOKEN set\" } else { \"No GH token env\" })"
+      "PowerShell(if \\($env:GH_TOKEN\\) { \"GH_TOKEN set\" } elseif \\($env:GITHUB_TOKEN\\) { \"GITHUB_TOKEN set\" } else { \"No GH token env\" })",
+      "WebSearch",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:cogley.jp)",
+      "PowerShell(node \"d:\\\\Exp-Work\\\\NewsPortal\\\\_tmp_test_rss.mjs\")"
     ],
     "defaultMode": "bypassPermissions"
   }
