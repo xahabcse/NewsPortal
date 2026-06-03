@@ -52,7 +52,7 @@ const calculateReadingTime = (content: string | null): number => {
 };
 
 const ImagePlaceholder: React.FC<{ category: string }> = ({ category }) => (
-    <div className="w-full h-full bg-gradient-to-br from-accent/20 via-purple-500/10 to-background flex flex-col items-center justify-center gap-3">
+    <div className="w-full h-full bg-accent/10 flex flex-col items-center justify-center gap-3">
         <div className="w-20 h-20 rounded-2xl bg-accent/15 border border-accent/20 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                 <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8l-4 4v14a2 2 0 0 0 2 2z" />
@@ -261,7 +261,7 @@ const ArticleDetailPage = () => {
                 </div>
 
                 {/* Title */}
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                <h1 className="font-serif text-[2rem] md:text-5xl font-bold text-white mb-4 tracking-tight leading-[1.12]">
                     {article.title}
                 </h1>
 
@@ -399,9 +399,9 @@ const ArticleDetailPage = () => {
 
             {/* Article Content */}
             {article.content && article.content !== 'No content available' ? (
-                <article className="prose prose-invert prose-lg max-w-none">
+                <article className="prose prose-invert prose-lg max-w-[68ch]">
                     <div
-                        className={`text-white/90 leading-relaxed space-y-4 transition-all ${
+                        className={`text-white/90 leading-[1.75] space-y-4 transition-all ${
                             fontSize === 'small' ? 'text-sm' : fontSize === 'large' ? 'text-xl' : 'text-base'
                         }`}
                         dangerouslySetInnerHTML={{ __html: article.content.replace(/\n\n/g, '</p><p class="mb-4">').replace(/\n/g, '<br />') }}
@@ -430,7 +430,7 @@ const ArticleDetailPage = () => {
             {/* Related Articles */}
             {relatedArticles.length > 0 && (
                 <div className="mt-12 pt-8 border-t border-glass-border">
-                    <h2 className="text-2xl font-bold text-white mb-6">Related Articles</h2>
+                    <h2 className="font-serif text-2xl font-bold text-white mb-6">Related Articles</h2>
                     {/* 2-up on tablet/desktop: inside the max-w-4xl article column, 4 columns
                         made each card too narrow and tall. 2 columns keeps a balanced size. */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

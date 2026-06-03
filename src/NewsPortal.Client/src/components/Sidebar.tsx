@@ -151,7 +151,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                 {/* Today's Articles Badge */}
                 {/* Expanded: full badge on all screens */}
                 {!isCollapsed ? (
-                    <div className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/30 rounded-xl p-3">
+                    <div className="bg-accent/15 border border-accent/30 rounded-xl p-3">
                         <div className="flex items-center justify-between">
                             <div>
                                 <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
@@ -165,7 +165,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                 ) : (
                     <>
                         {/* Mobile: full badge (sidebar always expanded on mobile) */}
-                        <div className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/30 rounded-xl p-3 lg:hidden">
+                        <div className="bg-accent/15 border border-accent/30 rounded-xl p-3 lg:hidden">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
@@ -177,7 +177,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                             </div>
                         </div>
                         {/* Desktop collapsed: compact count */}
-                        <div className="hidden lg:flex flex-col items-center bg-gradient-to-b from-accent/20 to-purple-500/20 border border-accent/30 rounded-lg py-2" title={`${todayCount} articles today`}>
+                        <div className="hidden lg:flex flex-col items-center bg-accent/15 border border-accent/30 rounded-lg py-2" title={`${todayCount} articles today`}>
                             <div className="text-[8px] text-secondary uppercase">Today</div>
                             <div className="text-lg font-bold text-white">{todayCount}</div>
                         </div>
@@ -240,10 +240,14 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                                     <span className="flex items-center gap-2.5">
                                         <span
                                             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                                            style={{
-                                                backgroundColor: `${cat.color || '#6366f1'}20`,
-                                                color: cat.color || '#6366f1',
-                                                border: `1px solid ${cat.color || '#6366f1'}30`
+                                            style={cat.color ? {
+                                                backgroundColor: `${cat.color}20`,
+                                                color: cat.color,
+                                                border: `1px solid ${cat.color}30`
+                                            } : {
+                                                backgroundColor: 'rgb(var(--color-accent) / 0.12)',
+                                                color: 'rgb(var(--color-accent))',
+                                                border: '1px solid rgb(var(--color-accent) / 0.3)'
                                             }}
                                         >
                                             {cat.icon && categoryIconMap[cat.icon] ? categoryIconMap[cat.icon] : (

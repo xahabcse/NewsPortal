@@ -128,7 +128,7 @@ const AdminDashboard = () => {
         { name: 'Disabled', value: stats.sourceHealth.disabled },
     ].filter(d => d.value > 0);
 
-    const categoryColors = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'];
+    const categoryColors = ['#0E7C86', '#14B8A6', '#0EA5E9', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899', '#F97316', '#E11D48', '#06B6D4'];
 
     return (
         <>
@@ -157,7 +157,7 @@ const AdminDashboard = () => {
                     </div>
                     <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
                         <div className="text-sm text-secondary mb-2">Articles Today</div>
-                        <div className="text-2xl sm:text-3xl font-bold text-purple-400 mb-1">{stats.articlesToday.toLocaleString()}</div>
+                        <div className="text-2xl sm:text-3xl font-bold text-accent mb-1">{stats.articlesToday.toLocaleString()}</div>
                         <div className="text-xs text-secondary/70">Fetched in last 24h</div>
                     </div>
                     <div className="glass-morphism border border-glass-border rounded-2xl p-4 sm:p-6">
@@ -177,8 +177,8 @@ const AdminDashboard = () => {
                                 <AreaChart data={chartStats.dailyArticles}>
                                     <defs>
                                         <linearGradient id="colorArticles" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#0E7C86" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#0E7C86" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
                                     <Area
                                         type="monotone"
                                         dataKey="count"
-                                        stroke="#6366f1"
+                                        stroke="#0E7C86"
                                         strokeWidth={2}
                                         fillOpacity={1}
                                         fill="url(#colorArticles)"
@@ -388,8 +388,8 @@ const AdminDashboard = () => {
                                 to="/admin/fetch-logs"
                                 className="p-3 bg-white/5 border border-glass-border rounded-lg hover:bg-white/10 transition-colors group flex items-center gap-3"
                             >
-                                <div className="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500">
+                                <div className="w-9 h-9 bg-accent/10 rounded-lg flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                                         <line x1="12" y1="20" x2="12" y2="10"></line>
                                         <line x1="18" y1="20" x2="18" y2="4"></line>
                                         <line x1="6" y1="20" x2="6" y2="16"></line>

@@ -282,7 +282,7 @@ const UserManagementPage = () => {
                         ) : users.map((user) => (
                             <div key={user.id} className="glass-morphism border border-glass-border rounded-xl p-4 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-white font-bold shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-bold shrink-0">
                                         {user.username.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -383,7 +383,7 @@ const UserManagementPage = () => {
                                             <tr key={user.id} className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent to-purple-500 flex items-center justify-center text-white font-bold">
+                                                        <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-bold">
                                                             {user.username.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>

@@ -177,7 +177,7 @@ const SearchResultsPage = () => {
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Search News</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white mb-2">Search News</h1>
                     <p className="text-secondary text-sm mb-8">
                         Find articles by title, summary, author, or content
                     </p>
@@ -217,7 +217,7 @@ const SearchResultsPage = () => {
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">
+                        <h1 className="font-serif text-3xl font-bold text-white mb-2">
                             Search Results
                         </h1>
                         <p className="text-secondary text-sm">

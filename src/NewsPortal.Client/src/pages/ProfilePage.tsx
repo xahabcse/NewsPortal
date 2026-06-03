@@ -206,7 +206,7 @@ const ProfilePage = () => {
                 <div className="max-w-2xl mx-auto">
                     {/* Header */}
                     <div className="mb-4 sm:mb-8">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">My Profile</h1>
+                        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white mb-2">My Profile</h1>
                         <p className="text-secondary text-sm">Manage your account settings</p>
                     </div>
 
@@ -300,7 +300,7 @@ const ProfilePage = () => {
                         <div className="glass-morphism border border-glass-border rounded-2xl p-6 mb-6">
                             <div className="flex items-center gap-2 mb-4">
                                 <h3 className="text-lg font-bold text-white">Admin Control Panel</h3>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
                                     {role}
                                 </span>
                             </div>
