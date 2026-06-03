@@ -166,13 +166,43 @@ userManagementRoutes.put('/:id', async (c) => {
 });
 
 // ----------------------------------------------------------------------------
-// DELETE /:id — soft delete (sets is_active = 0)
+// DELETE /:id — HARD delete. Permanently removes the user and all data they own.
+// Replies by OTHER users to this user's comments are re-parented to top-level so
+// their threads survive. Dependents are cleaned in FK-safe order inside one atomic
+// batch (transaction) — required because comments.user_id is ON DELETE RESTRICT.
 // ----------------------------------------------------------------------------
 userManagementRoutes.delete('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  await c.env.DB.prepare('UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?')
-    .bind(nowIso(), id).run();
+
+  // Admins can't delete their own account out from under themselves.
+  const currentUserId = c.get('userId');
+  if (currentUserId && Number(currentUserId) === id) {
+    return c.json(errMsg('You cannot delete your own account'), 400);
+  }
+
+  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE id = ? LIMIT 1').bind(id).first();
+  if (!existing) return c.json(errMsg('User not found'), 404);
+
+  await c.env.DB.batch([
+    // Votes this user cast, and votes on this user's comments.
+    c.env.DB.prepare('DELETE FROM comment_votes WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM comment_votes WHERE comment_id IN (SELECT id FROM comments WHERE user_id = ?)').bind(id),
+    // Re-parent any replies to this user's comments to top-level, then delete the
+    // user's own comments (avoids the comments.parent_id RESTRICT constraint).
+    c.env.DB.prepare('UPDATE comments SET parent_id = NULL WHERE parent_id IN (SELECT id FROM comments WHERE user_id = ?)').bind(id),
+    c.env.DB.prepare('DELETE FROM comments WHERE user_id = ?').bind(id),
+    // Other user-owned rows.
+    c.env.DB.prepare('DELETE FROM article_reactions WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM article_reports WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM user_bookmarks WHERE user_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM user_read_history WHERE user_id = ?').bind(id),
+    // source_fetch_jobs keeps an audit reference (no FK) — null it so it doesn't dangle.
+    c.env.DB.prepare('UPDATE source_fetch_jobs SET requested_by_user_id = NULL WHERE requested_by_user_id = ?').bind(id),
+    // Finally the user.
+    c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id),
+  ]);
+
   return c.body(null, 204);
 });
 
