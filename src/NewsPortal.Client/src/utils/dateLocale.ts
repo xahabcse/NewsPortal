@@ -17,11 +17,15 @@ const BENGALI_CAL_MONTHS = [
   'কার্তিক', 'অগ্রহায়ণ', 'পৌষ', 'মাঘ', 'ফাল্গুন', 'চৈত্র',
 ]
 
-// Bengali month start dates: [gregorianMonth (0-based), gregorianDay]
-// Sorted by Gregorian calendar order (Jan → Dec)
+// Bengali month start dates (Gregorian): [gregorianMonth (0-based), gregorianDay].
+// Aligned to the official Bangladesh revised calendar (Bangla Academy, 2019):
+// Pohela Boishakh is fixed on 14 April; the first six months (Boishakh–Ashwin)
+// are 31 days, the next five (Kartik–Falgun) are 30 (Falgun 29, +1 in a leap
+// year), and Choitro is 30 — which keeps every month-start on a fixed Gregorian
+// date year-round. Sorted by Gregorian calendar order (Jan → Dec).
 const BENGALI_MONTH_MAP = [
-  { gMonth: 0, gDay: 14, bIndex: 9 },   // মাঘ — Jan 14
-  { gMonth: 1, gDay: 13, bIndex: 10 },  // ফাল্গুন — Feb 13
+  { gMonth: 0, gDay: 15, bIndex: 9 },   // মাঘ — Jan 15
+  { gMonth: 1, gDay: 14, bIndex: 10 },  // ফাল্গুন — Feb 14
   { gMonth: 2, gDay: 15, bIndex: 11 },  // চৈত্র — Mar 15
   { gMonth: 3, gDay: 14, bIndex: 0 },   // বৈশাখ — Apr 14
   { gMonth: 4, gDay: 15, bIndex: 1 },   // জ্যৈষ্ঠ — May 15
@@ -29,9 +33,9 @@ const BENGALI_MONTH_MAP = [
   { gMonth: 6, gDay: 16, bIndex: 3 },   // শ্রাবণ — Jul 16
   { gMonth: 7, gDay: 16, bIndex: 4 },   // ভাদ্র — Aug 16
   { gMonth: 8, gDay: 16, bIndex: 5 },   // আশ্বিন — Sep 16
-  { gMonth: 9, gDay: 16, bIndex: 6 },   // কার্তিক — Oct 16
-  { gMonth: 10, gDay: 15, bIndex: 7 },  // অগ্রহায়ণ — Nov 15
-  { gMonth: 11, gDay: 15, bIndex: 8 },  // পৌষ — Dec 15
+  { gMonth: 9, gDay: 17, bIndex: 6 },   // কার্তিক — Oct 17
+  { gMonth: 10, gDay: 16, bIndex: 7 },  // অগ্রহায়ণ — Nov 16
+  { gMonth: 11, gDay: 16, bIndex: 8 },  // পৌষ — Dec 16
 ]
 
 // Hijri months in Bangla
@@ -85,7 +89,7 @@ function getBengaliMonthIndex(date: Date): number {
       return entry.bIndex
     }
   }
-  // Before Jan 14 → পৌষ (index 8)
+  // Before Jan 15 (i.e. still পৌষ, which began Dec 16 of the previous year)
   return 8
 }
 
@@ -112,8 +116,8 @@ export function getBengaliCalendarDate(date: Date): string {
     bDay = Math.floor((date.getTime() - start.getTime()) / 86400000) + 1
     bMonthName = BENGALI_CAL_MONTHS[foundEntry.bIndex]
   } else {
-    // Before Jan 14 → পৌষ from Dec 15 of previous year
-    const start = new Date(gYear - 1, 11, 15)
+    // Before Jan 15 → still পৌষ, which began Dec 16 of the previous year
+    const start = new Date(gYear - 1, 11, 16)
     bDay = Math.floor((date.getTime() - start.getTime()) / 86400000) + 1
     bMonthName = 'পৌষ'
   }
