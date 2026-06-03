@@ -243,7 +243,7 @@ adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
             headers: { 'User-Agent': BODY_FETCH_UA },
             signal: AbortSignal.timeout(8000),
           });
-          if (!res.ok) return null;
+          if (res.ok === false) return null;
           const html = await res.text();
           return await extractArticleForSource(html, a.source_slug, a.source_base_url);
         } catch {

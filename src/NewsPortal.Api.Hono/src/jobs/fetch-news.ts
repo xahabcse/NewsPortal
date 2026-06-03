@@ -232,7 +232,7 @@ async function fetchOneSource(
   } catch (e: any) {
     return await recordFailure(env, s, budget, startTime, e.message ?? 'Network error');
   }
-  if (!res.ok) {
+  if (res.ok === false) {
     return await recordFailure(env, s, budget, startTime, `HTTP ${res.status}`);
   }
 
@@ -422,7 +422,7 @@ async function fetchArticleBody(
       headers: { 'User-Agent': BODY_FETCH_UA },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return { body: null, reason: `http_${res.status}` };
+    if (res.ok === false) return { body: null, reason: `http_${res.status}` };
     // Hard ceiling on download size. The extractor gates the HTMLRewriter path to
     // <=1.5MB; the cheap JSON-LD path tolerates larger pages (CNN ~4MB).
     const contentLength = parseInt(res.headers.get('content-length') ?? '0', 10);
