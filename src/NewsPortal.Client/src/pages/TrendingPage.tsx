@@ -210,6 +210,7 @@ const TrendingPage = () => {
                                     slug={article.slug}
                                     sourceUrl={article.sourceUrl}
                                     articleId={article.id}
+                                    showBookmark
                                 />
                             </div>
                         ))}
