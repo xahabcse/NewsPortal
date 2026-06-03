@@ -72,6 +72,14 @@ export const NewsSourceService = {
         return response.data;
     },
 
+    backfillBodies: async (): Promise<{ message: string; filled: number }> => {
+        const response = await axios.post<{ message: string; filled: number }>(
+            `${API_URL}/newssources/backfill`,
+            null,
+            { headers: getAuthHeaders() });
+        return response.data;
+    },
+
     resume: async (id: number): Promise<void> => {
         await axios.post(`${API_URL}/newssources/${id}/resume`, null, { headers: getAuthHeaders() });
     },

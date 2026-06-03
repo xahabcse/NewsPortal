@@ -349,7 +349,21 @@ function FetchJobTracker({ jobId, onDone }: { jobId: string; onDone: () => void 
 }
 
 export default function NewsSourcesPage() {
-    const { canManageSources, canCreateSources, canEditSources, canDeleteSources, canFetchSources, sourcePermissionMessage } = useAuth();
+    const { canManageSources, canCreateSources, canEditSources, canDeleteSources, canFetchSources, sourcePermissionMessage, role } = useAuth();
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
+    const [backfilling, setBackfilling] = useState(false);
+
+    const handleBackfill = async () => {
+        setBackfilling(true);
+        try {
+            const res = await NewsSourceService.backfillBodies();
+            toast.success(res.filled > 0 ? `Filled ${res.filled} article ${res.filled === 1 ? 'body' : 'bodies'}` : 'No empty-body articles to fill right now');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || err.message || 'Backfill failed');
+        } finally {
+            setBackfilling(false);
+        }
+    };
 
     const [sources, setSources] = useState<NewsSource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -504,14 +518,27 @@ export default function NewsSourcesPage() {
                     <h1 className="font-serif text-3xl font-bold text-white mb-1">News Channels</h1>
                     <p className="text-secondary text-sm">{sourcePermissionMessage}</p>
                 </div>
-                {canCreateSources && (
-                    <button
-                        className="btn-primary flex items-center gap-2"
-                        onClick={() => { setEditingSource(null); setModalOpen(true); }}
-                    >
-                        <span className="text-lg leading-none">+</span> Add Source
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAdmin && (
+                        <button
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-white/5 border border-glass-border text-secondary hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+                            onClick={handleBackfill}
+                            disabled={backfilling}
+                            title="Visit source links and fill the body of empty-body articles (today first, then last 3 days)"
+                        >
+                            <svg className={backfilling ? 'animate-spin' : ''} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                            {backfilling ? 'Backfilling…' : 'Backfill bodies'}
+                        </button>
+                    )}
+                    {canCreateSources && (
+                        <button
+                            className="btn-primary flex items-center gap-2"
+                            onClick={() => { setEditingSource(null); setModalOpen(true); }}
+                        >
+                            <span className="text-lg leading-none">+</span> Add Source
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Filters */}
