@@ -29,7 +29,8 @@
       "PowerShell(Start-Sleep -Seconds 10; $run = \\(gh run list --workflow \"Deploy React Client to Cloudflare Pages\" --branch main --limit 1 --json databaseId,status,conclusion,displayTitle,createdAt 2>$null | ConvertFrom-Json\\)[0]; Write-Output \"run=$\\($run.databaseId\\) status=$\\($run.status\\) conclusion=$\\($run.conclusion\\) title=$\\($run.displayTitle\\)\"; if \\($run.status -ne 'completed'\\) { gh run watch $run.databaseId --exit-status 2>$null; Write-Output \"deploy exit $LASTEXITCODE\"; gh run view $run.databaseId --json conclusion 2>$null | ConvertFrom-Json | Format-List })",
       "PowerShell(Start-Sleep -Seconds 5; $r = Invoke-WebRequest -Uri \"https://news.xahabcse.me/\" -Method Head -UseBasicParsing; $r.Headers[\"Permissions-Policy\"])",
       "PowerShell(git add .claude/settings.local.json)",
-      "PowerShell(git commit -m \"chore: update local Claude permission allowlist\")"
+      "PowerShell(git commit -m \"chore: update local Claude permission allowlist\")",
+      "PowerShell($id = \\(gh run list --workflow \"CI - Dev \\(build + auto-merge to main\\)\" --branch dev --limit 1 --json databaseId,status 2>$null | ConvertFrom-Json\\)[0].databaseId; gh run watch $id --exit-status 2>$null | Out-Null; Write-Output \"CI-Dev \\(dac5e6e\\) exit $LASTEXITCODE\"; Start-Sleep -Seconds 8; gh run list --limit 4 --json workflowName,headBranch,status,conclusion 2>$null | ConvertFrom-Json | Format-Table workflowName,headBranch,status,conclusion -AutoSize)"
     ],
     "defaultMode": "bypassPermissions"
   }
