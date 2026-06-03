@@ -23,6 +23,7 @@ import UserManagementPage from './pages/admin/UserManagementPage'
 import ArticleManagementPage from './pages/admin/ArticleManagementPage'
 import ContentAnalyticsPage from './pages/admin/ContentAnalyticsPage'
 import TimelinePage from './pages/TimelinePage'
+import AboutPage from './pages/AboutPage'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
@@ -69,6 +70,7 @@ function App() {
                     <Routes>
                       {/* Public routes — home, login, register only */}
                       <Route path="/" element={<HomePage />} />
+                      <Route path="/about" element={<AboutPage />} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
 
