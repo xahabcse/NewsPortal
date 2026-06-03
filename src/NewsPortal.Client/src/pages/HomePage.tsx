@@ -11,41 +11,23 @@ import { getNotificationPrefs } from '../components/NotificationPreferences'
 import { getBanglaDate, getBengaliCalendarDate, getHijriDate, getSession, getBanglaRitu, toBanglaDigits } from '../utils/dateLocale'
 import { useAuth } from '../context/AuthContext'
 import WeatherWidget from '../components/WeatherWidget'
+import { useWeather } from '../hooks/useWeather'
+import { Sunrise, Sun, Sunset, Moon, CalendarDays, Leaf, Newspaper, type LucideIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const PAGE_SIZE = 9
 
-// Time-of-day outline icon (line/transparent, 24x24, currentColor) — replaces the greeting emoji.
-const SessionIcon = ({ hour }: { hour: number }) => {
-  const svgProps = {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.75,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    className: 'w-5 h-5 sm:w-7 sm:h-7',
-  }
-  // Night
-  if (hour < 4 || hour >= 19) {
-    return (
-      <svg {...svgProps}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" /></svg>
-    )
-  }
-  // Sunrise (dawn) / sunset (evening) — horizon with rising sun
-  if ((hour >= 4 && hour < 6) || (hour >= 15 && hour < 19)) {
-    return (
-      <svg {...svgProps}><path d="M17 18a5 5 0 0 0-10 0" /><line x1="12" y1="2" x2="12" y2="9" /><line x1="4.22" y1="10.22" x2="5.64" y2="11.64" /><line x1="1" y1="18" x2="3" y2="18" /><line x1="21" y1="18" x2="23" y2="18" /><line x1="18.36" y1="11.64" x2="19.78" y2="10.22" /><line x1="23" y1="22" x2="1" y2="22" /><polyline points="8 6 12 2 16 6" /></svg>
-    )
-  }
-  // Daytime sun
-  return (
-    <svg {...svgProps}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>
-  )
+// Time-of-day outline glyph (lucide, transparent/line) — matches the greeting copy.
+function sessionGlyph(hour: number): LucideIcon {
+  if (hour < 4 || hour >= 19) return Moon   // রাত
+  if (hour < 6) return Sunrise              // ভোর
+  if (hour < 15) return Sun                 // সকাল / দুপুর
+  return Sunset                             // বিকেল / সন্ধ্যা
 }
 
 const HomePage = () => {
   const { session: authSession } = useAuth()
+  const weather = useWeather()
   const [news, setNews] = useState<NewsArticle[]>([])
   const [sources, setSources] = useState<NewsSource[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -72,6 +54,8 @@ const HomePage = () => {
       currentHour: now.getHours(),
     }
   }, [])
+
+  const SessionGlyph = sessionGlyph(currentHour)
 
   const handlePremiumClick = () => {
     toast(
@@ -164,39 +148,60 @@ const HomePage = () => {
         <div className="mb-6">
           {/* Header */}
           <div className="flex items-start justify-between gap-2 sm:gap-4 mb-4">
-            <div className="flex items-start gap-2 sm:gap-4 min-w-0 flex-1">
+            <div className="flex items-start gap-2.5 sm:gap-4 min-w-0 flex-1">
               <span className="shrink-0 mt-0.5 sm:mt-1 w-9 h-9 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-accent/12 border border-accent/25 flex items-center justify-center text-accent">
-                <SessionIcon hour={currentHour} />
+                <SessionGlyph className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={1.75} />
               </span>
               <div className="min-w-0 flex-1">
                 <h1 className="font-serif text-xl sm:text-4xl font-bold text-white mb-1.5 tracking-tight leading-tight break-words">
                   {session.greeting}, <span className="text-accent">{authSession?.username || 'পাঠক'}</span>
                 </h1>
-                <p className="text-[11px] sm:text-base font-bold mb-1 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
-                  <span className="text-white/80">আজ</span>
+                <p className="text-[11px] sm:text-base font-bold mb-1.5 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
+                  <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" strokeWidth={1.75} />
                   <span className="text-accent">{bengaliDate}</span>
                   <span className="text-white/20">•</span>
                   <span className="text-white/70">{hijriDate}</span>
                   <span className="text-white/20">•</span>
                   <span className="text-white/70">{banglaDate}</span>
                 </p>
-                <p className="text-[11px] sm:text-sm font-semibold mb-1 flex items-center gap-1.5">
+                <p className="text-[11px] sm:text-sm font-semibold mb-1.5 flex items-center gap-1.5">
+                  <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" strokeWidth={1.75} />
                   <span className="text-secondary">ঋতু পরিক্রমায়</span>
                   <span className="text-accent font-bold">{ritu.name}</span>
                 </p>
-                <p className="text-secondary text-[11px] sm:text-sm font-medium flex items-center flex-wrap">
+                <p className="text-secondary text-[11px] sm:text-sm font-medium flex items-center flex-wrap gap-1.5">
+                  <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-secondary/70 shrink-0" strokeWidth={1.75} />
                   {loading ? 'সর্বশেষ শিরোনাম লোড হচ্ছে…' : (
-                    <>
+                    <span className="flex items-center flex-wrap">
                       সর্বমোট <span className="text-accent font-bold text-sm sm:text-base mx-1">{toBanglaDigits(totalCount)}</span> টি সংবাদ প্রস্তুত আছে আপনার জন্য
-                      <span className="inline-block w-3 h-3 rounded-full bg-danger ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
-                    </>
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-danger ml-2" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+                    </span>
                   )}
                 </p>
               </div>
             </div>
-            <div className="hidden sm:block shrink-0 w-44">
-              <WeatherWidget />
+            <div className="hidden sm:block shrink-0 w-44 lg:w-48">
+              <WeatherWidget
+                data={weather.weather}
+                loading={weather.loading}
+                source={weather.source}
+                onSetCity={weather.setManualCity}
+                onUseLocation={weather.useMyLocation}
+                variant="card"
+              />
             </div>
+          </div>
+
+          {/* Weather — compact, mobile only (desktop shows the card above) */}
+          <div className="sm:hidden mb-4">
+            <WeatherWidget
+              data={weather.weather}
+              loading={weather.loading}
+              source={weather.source}
+              onSetCity={weather.setManualCity}
+              onUseLocation={weather.useMyLocation}
+              variant="compact"
+            />
           </div>
 
           {/* Feed mode tabs */}
