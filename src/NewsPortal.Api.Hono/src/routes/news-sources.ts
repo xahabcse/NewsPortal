@@ -4,6 +4,7 @@ import { errMsg } from '../lib/response';
 import { requireAuth, requireRole } from '../lib/auth';
 import { nowIso, type Row } from '../lib/db';
 import { makeSlug } from '../lib/slug';
+import { audit } from '../lib/logger';
 
 export const newsSourcesRoutes = new Hono<Env>();
 
@@ -88,6 +89,7 @@ newsSourcesRoutes.post('/', requireAuth, requireRole('Editor'), async (c) => {
 
   const created = await c.env.DB.prepare('SELECT * FROM news_sources WHERE id = ?')
     .bind(Number(result.meta.last_row_id)).first<Row>();
+  audit(c, { action: 'source.create', targetType: 'source', targetId: created?.id as number, message: `Created source ${created?.name}` });
   return c.json(mapSource(created!), 201);
 });
 
@@ -113,6 +115,7 @@ newsSourcesRoutes.put('/:id', requireAuth, requireRole('Editor'), async (c) => {
     nowIso(),
     id
   ).run();
+  audit(c, { action: 'source.update', targetType: 'source', targetId: id, message: `Updated source ${body.name ?? id}` });
   return c.body(null, 204);
 });
 
@@ -122,6 +125,7 @@ newsSourcesRoutes.delete('/:id', requireAuth, requireRole('Admin'), async (c) =>
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   await c.env.DB.prepare('UPDATE news_sources SET is_active = 0, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  audit(c, { action: 'source.delete', targetType: 'source', targetId: id, level: 'warn', message: `Deleted (deactivated) source ${id}` });
   return c.body(null, 204);
 });
 
@@ -132,6 +136,7 @@ newsSourcesRoutes.post('/:id/resume', requireAuth, requireRole('Editor'), async 
   await c.env.DB.prepare(
     'UPDATE news_sources SET is_active = 1, health_status = 0, consecutive_failures = 0, updated_at = ? WHERE id = ?'
   ).bind(nowIso(), id).run();
+  audit(c, { action: 'source.resume', targetType: 'source', targetId: id, message: `Resumed source ${id}` });
   return c.body(null, 204);
 });
 
@@ -141,6 +146,7 @@ newsSourcesRoutes.post('/:id/pause', requireAuth, requireRole('Editor'), async (
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   await c.env.DB.prepare('UPDATE news_sources SET health_status = 2, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  audit(c, { action: 'source.pause', targetType: 'source', targetId: id, message: `Paused source ${id}` });
   return c.body(null, 204);
 });
 
@@ -150,6 +156,7 @@ newsSourcesRoutes.post('/:id/disable', requireAuth, requireRole('Admin'), async 
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   await c.env.DB.prepare('UPDATE news_sources SET is_active = 0, health_status = 3, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  audit(c, { action: 'source.disable', targetType: 'source', targetId: id, level: 'warn', message: `Disabled source ${id}` });
   return c.body(null, 204);
 });
 

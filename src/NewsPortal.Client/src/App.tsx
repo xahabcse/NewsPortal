@@ -22,6 +22,7 @@ import CategoriesPage from './pages/admin/CategoriesPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
 import ArticleManagementPage from './pages/admin/ArticleManagementPage'
 import ContentAnalyticsPage from './pages/admin/ContentAnalyticsPage'
+import LogsPage from './pages/admin/LogsPage'
 import TimelinePage from './pages/TimelinePage'
 import AboutPage from './pages/AboutPage'
 import LoginPage from './pages/LoginPage'
@@ -92,6 +93,7 @@ function App() {
                       <Route path="/admin/articles" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><ArticleManagementPage /></ProtectedRoute>} />
                       <Route path="/admin/analytics" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><ContentAnalyticsPage /></ProtectedRoute>} />
                       <Route path="/admin/users" element={<ProtectedRoute roles={['Admin', 'SuperAdmin']}><UserManagementPage /></ProtectedRoute>} />
+                      <Route path="/admin/logs" element={<ProtectedRoute roles={['SuperAdmin']}><LogsPage /></ProtectedRoute>} />
 
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>

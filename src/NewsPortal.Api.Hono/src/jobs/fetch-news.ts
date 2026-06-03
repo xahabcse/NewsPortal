@@ -12,6 +12,7 @@ import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource, extractFromFeedHtml } from '../lib/article-extractor';
 import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_UA } from '../lib/source-selectors';
+import { logInsert } from '../lib/logger';
 
 type SourceRow = {
   id: number;
@@ -125,7 +126,7 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget): Promi
     if (budget.remaining <= MIN_SUBREQUEST_RESERVE - 2 || budget.extractions <= 0) break;
     budget.remaining--;
     budget.extractions--;
-    const body = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
+    const { body } = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
     const now = nowIso();
     if (body) {
       await env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
@@ -238,6 +239,7 @@ async function fetchOneSource(
   const bodyByItem = new Map<FeedItem, ResolvedBody>();
   let feedBodyCount = 0;
   let extractedBodyCount = 0;
+  const extractionFailures: { url: string; reason: string }[] = [];
 
   // 1) Cheap path: full body shipped in the feed (<content:encoded>). No budget cost.
   const needsPageFetch: FeedItem[] = [];
@@ -257,13 +259,13 @@ async function fetchOneSource(
   for (let i = 0; i < needsPageFetch.length && !skipPageFetch; i += BODY_CONCURRENCY) {
     const batch = needsPageFetch.slice(i, i + BODY_CONCURRENCY);
     const bodies = await Promise.all(
-      batch.map((item) => {
+      batch.map((item): Promise<{ body: ResolvedBody; reason: string | null }> => {
         if (
           budget.remaining <= MIN_SUBREQUEST_RESERVE ||
           budget.extractions <= 0 ||
           extractedBodyCount >= extractionCap
         ) {
-          return Promise.resolve(null);
+          return Promise.resolve({ body: null, reason: null }); // not attempted, not a failure
         }
         budget.remaining--;
         budget.extractions--;
@@ -271,7 +273,10 @@ async function fetchOneSource(
         return fetchArticleBody(item.link, s.slug, s.base_url);
       })
     );
-    batch.forEach((item, j) => bodyByItem.set(item, bodies[j]));
+    batch.forEach((item, j) => {
+      bodyByItem.set(item, bodies[j].body);
+      if (bodies[j].reason) extractionFailures.push({ url: item.link, reason: bodies[j].reason! });
+    });
   }
 
   // --- Build rows (resolve images, slug, category) --------------------------
@@ -336,6 +341,17 @@ async function fetchOneSource(
   await env.DB.batch([
     markSuccessStatement(env, s.id),
     logFetchStatement(env, s, durationMs, items.length, newCount, 0, true, null, details),
+    // Per-article extraction failures (capped) → central app_logs, same round-trip.
+    ...extractionFailures.slice(0, 12).map((f) =>
+      logInsert(env, {
+        category: 'extraction',
+        level: 'warn',
+        sourceSlug: s.slug,
+        url: f.url,
+        message: `Body extraction failed (${f.reason})`,
+        error: f.reason,
+      })
+    ),
   ]);
 
   return { totalCount: items.length, newCount, updatedCount: 0 };
@@ -365,22 +381,23 @@ async function fetchArticleBody(
   link: string,
   slug: string,
   baseUrl: string
-): Promise<{ contentHtml: string; plainText: string; images: string[] } | null> {
-  if (isSpaSource(slug)) return null; // truly client-rendered; no server body to extract
+): Promise<{ body: ResolvedBody; reason: string | null }> {
+  if (isSpaSource(slug)) return { body: null, reason: null }; // intentionally skipped, not a failure
   link = normalizeArticleUrl(slug, link);
   try {
     const res = await fetch(link, {
       headers: { 'User-Agent': BODY_FETCH_UA },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { body: null, reason: `http_${res.status}` };
     // Hard ceiling on download size. The extractor gates the HTMLRewriter path to
     // <=1.5MB; the cheap JSON-LD path tolerates larger pages (CNN ~4MB).
     const contentLength = parseInt(res.headers.get('content-length') ?? '0', 10);
-    if (contentLength > 6_000_000) return null;
-    return await extractArticleForSource(await res.text(), slug, baseUrl);
-  } catch {
-    return null;
+    if (contentLength > 6_000_000) return { body: null, reason: 'too_large' };
+    const result = await extractArticleForSource(await res.text(), slug, baseUrl);
+    return { body: result, reason: result ? null : 'no_body' };
+  } catch (e: any) {
+    return { body: null, reason: e?.name === 'TimeoutError' ? 'timeout' : 'fetch_error' };
   }
 }
 
