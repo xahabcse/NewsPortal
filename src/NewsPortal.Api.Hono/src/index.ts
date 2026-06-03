@@ -119,6 +119,12 @@ app.onError((err, c) => {
   if (err instanceof HTTPException) {
     return err.getResponse();
   }
+  // A malformed or empty JSON body makes c.req.json() throw a SyntaxError. That's a
+  // client error (400), not a server fault (500). One central guard covers every
+  // route that parses a JSON body (and any future ones) without per-handler try/catch.
+  if (err instanceof SyntaxError) {
+    return c.json({ message: 'Invalid or missing JSON body' }, 400);
+  }
   console.error('Unhandled error:', err);
   return c.json({ message: 'Internal server error' }, 500);
 });
