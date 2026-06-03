@@ -256,3 +256,13 @@ newsSourcesRoutes.post('/bulk-action', requireAuth, requireRole('Admin'), async 
 
   return c.json({ processed, failed, total: body.ids.length });
 });
+
+// POST /backfill — manually run the body-backfill job now (Admin+). Visits the
+// source links of NULL-content articles (today first, then last 3 days) and fills
+// their body. The same job also runs automatically every 30 min via cron.
+newsSourcesRoutes.post('/backfill', requireAuth, requireRole('Admin'), async (c) => {
+  const { runBodyBackfill } = await import('../jobs/fetch-news');
+  audit(c, { action: 'backfill.run', message: 'Manually triggered body backfill' });
+  const result = await runBodyBackfill(c.env);
+  return c.json({ message: 'Body backfill complete', ...result });
+});

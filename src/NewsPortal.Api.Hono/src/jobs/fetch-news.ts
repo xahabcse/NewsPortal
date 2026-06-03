@@ -50,8 +50,12 @@ const EXTRACTION_BUDGET = 6;
 const MIN_SUBREQUEST_RESERVE = 4;   // never spend optional subrequests (bodies/images) below this floor
 
 // Dedicated body-backfill job (its own cron + invocation = its own fresh budget).
+// Kept at a CPU-safe extraction count: a scheduled invocation still has the 10ms
+// active-CPU cap, and each extraction is an HTMLRewriter/JSON-LD parse. 8 is a bit
+// above the */5 fetch's 6 (this invocation does nothing else), but well clear of
+// the count that previously tripped exceededResources.
 const BACKFILL_SUBREQUEST_BUDGET = 45;
-const BACKFILL_EXTRACTION_BUDGET = 12;
+const BACKFILL_EXTRACTION_BUDGET = 8;
 
 type Budget = { remaining: number; extractions: number };
 
