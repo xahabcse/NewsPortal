@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import type { Category, NewsFilterParams } from '../services/api';
 import type { NewsSource } from '../types/NewsSource';
 
@@ -53,6 +53,9 @@ interface Props {
     showSort?: boolean;
     /** Hide the "Has image" toggle (e.g. on Timeline where highlights carry no thumbnail). */
     showThumbnail?: boolean;
+    /** Optional controls rendered as the first items of the filter row (e.g. feed-mode tabs),
+        so they share the same wrapping line as the filters instead of sitting on a row above. */
+    leading?: ReactNode;
 }
 
 type OpenPanel = 'sources' | 'categories' | 'date' | 'sort' | null;
@@ -181,7 +184,7 @@ function MultiSelectDropdown({
     );
 }
 
-export default function NewsFilterBar({ sources, categories, filters, onChange, showSort = true, showThumbnail = true }: Props) {
+export default function NewsFilterBar({ sources, categories, filters, onChange, showSort = true, showThumbnail = true, leading }: Props) {
     const [open, setOpen] = useState<OpenPanel>(null);
     const barRef = useRef<HTMLDivElement>(null);
 
@@ -228,6 +231,12 @@ export default function NewsFilterBar({ sources, categories, filters, onChange, 
                 overflow container clips the absolute dropdown panels, which made the
                 filters unusable on mobile.) */}
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+
+                {/* Leading controls (e.g. feed-mode tabs) share this same wrapping row */}
+                {leading}
+                {leading && (
+                    <span className="hidden sm:block self-center w-px h-5 bg-glass-border mx-0.5" aria-hidden="true" />
+                )}
 
                 {/* Sources button */}
                 <div className="relative shrink-0">

@@ -204,40 +204,40 @@ const HomePage = () => {
             />
           </div>
 
-          {/* Feed mode tabs */}
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={() => { setFeedMode('all'); setFilters(defaultFilters()); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${feedMode === 'all' && !hasActiveFilters(filters)
-                ? 'bg-accent/20 text-accent border border-accent/30'
-                : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'}`}
-            >
-              All News
-            </button>
-            {userCategorySlugs.length > 0 && (
-              <button
-                onClick={() => {
-                  const catIds = categories
-                    .filter(c => userCategorySlugs.includes(c.slug))
-                    .map(c => c.id)
-                  setFilters({ ...defaultFilters(), categoryIds: catIds })
-                  setFeedMode('foryou')
-                }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${feedMode === 'foryou'
-                  ? 'bg-accent/20 text-accent border border-accent/30'
-                  : 'bg-white/5 text-secondary hover:text-white hover:bg-white/10 border border-glass-border'}`}
-              >
-                For You
-              </button>
-            )}
-          </div>
-
-          {/* Filter bar */}
+          {/* Filter bar — the feed-mode tabs ride on the same wrapping line via `leading` */}
           <NewsFilterBar
             sources={sources}
             categories={categories}
             filters={filters}
             onChange={handleFiltersChange}
+            leading={
+              <>
+                <button
+                  onClick={() => { setFeedMode('all'); setFilters(defaultFilters()); }}
+                  className={`shrink-0 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${feedMode === 'all' && !hasActiveFilters(filters)
+                    ? 'bg-accent/20 text-accent border-accent/40'
+                    : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
+                >
+                  All News
+                </button>
+                {userCategorySlugs.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const catIds = categories
+                        .filter(c => userCategorySlugs.includes(c.slug))
+                        .map(c => c.id)
+                      setFilters({ ...defaultFilters(), categoryIds: catIds })
+                      setFeedMode('foryou')
+                    }}
+                    className={`shrink-0 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-lg border transition-colors ${feedMode === 'foryou'
+                      ? 'bg-accent/20 text-accent border-accent/40'
+                      : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
+                  >
+                    For You
+                  </button>
+                )}
+              </>
+            }
           />
         </div>
 
