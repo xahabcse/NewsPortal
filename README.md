@@ -1,257 +1,183 @@
-# NewsPortal
+# NewsPortal — বাংলা ও আন্তর্জাতিক সংবাদের অ্যাগ্রিগেটর
 
-A full-featured news aggregation portal built with React + ASP.NET Core 8.0. Fetches, categorizes, and displays news from multiple sources with AI-powered features.
+> Multi-source news aggregation portal — fetch, dedupe, categorize, and read news with AI summaries, translation, bookmarks, comments, reactions, and an admin/analytics suite.
+> Trust Slate-Teal editorial UI · bilingual (Bangla + English) · role-gated (SuperAdmin / Admin / Editor / Reader) · PWA.
 
-**Stack:** React 18 + TypeScript + Vite | ASP.NET Core 8.0 | PostgreSQL + MongoDB + Redis | Docker
+**Live site:** <https://news.xahabcse.me> (Cloudflare Pages) · **API:** <https://newsportal-api-hono.sujoncep.workers.dev>
+**Repo:** <https://github.com/xahabcse/NewsPortal>
 
 ---
 
-## Quick Start
+## Two ways to run
 
-### Prerequisites
+NewsPortal ships **two complete backends** — pick the one that fits your deployment:
 
-- Docker Desktop (or Docker Engine + Compose V2 on Linux)
-- .NET 8.0 SDK (for local development)
-- Node.js 20.x (for frontend development)
+| Path | Stack | When |
+|------|-------|------|
+| **A. Cloudflare serverless** *(live production)* | React/Vite on Cloudflare **Pages** + **Hono** Worker + **D1** (SQLite) + **KV** + Gemini + Cloudinary | Zero-ops, edge, free-tier friendly — what powers `news.xahabcse.me` |
+| **B. Docker / .NET self-host** *(original full stack)* | React + **ASP.NET Core 8** + **PostgreSQL** + **MongoDB** + **Redis** + Hangfire + Seq | Self-hosted on your own Linux server with full control |
 
-### Option 1: Docker (Full Stack)
+The same React client (`src/NewsPortal.Client`) serves both — it just points `VITE_API_URL` at whichever API is running.
+
+---
+
+## 🔐 Access Model
+
+JWT auth (bcrypt passwords; Google OAuth optional). New sign-ups default to **Reader**.
+
+**Roles (high → low):** `SuperAdmin` > `Admin` > `Editor` > `Reader`.
+
+| Path | Access |
+|------|--------|
+| `/`, `/about`, `/login`, `/register` | 🌐 Public |
+| `/search`, `/timeline`, `/trending`, `/news-sources`, `/news/:slug`, `/category/:slug`, `/bookmarks`, `/profile`, `/user/:username` | 🔒 Reader+ |
+| `/admin/dashboard`, `/admin/fetch-logs`, `/admin/categories`, `/admin/articles`, `/admin/analytics`, `/admin/users` | 🔒 Admin / SuperAdmin |
+| `/admin/logs` | 🔒 SuperAdmin only |
+
+Backend gates with `requireAuth` + `requireRole(...)` (Hono) / role attributes (.NET); frontend with `<ProtectedRoute roles={[...]}>`.
+
+**Seed users (dev only):** `superadmin/superadmin`, `admin/admin1`, `editor/editor`, `reader/reader`.
+
+---
+
+## 📁 Repository Structure
+
+```text
+NewsPortal/
+├── .claude/                         # 🤖 Claude Code: agents/ (10) + skills/ (5) + CLAUDE.md
+├── .github/workflows/               # CI/CD
+│   ├── ci-dev.yml                   #   push dev → build/typecheck → auto-merge dev→main
+│   ├── deploy-api-hono.yml          #   main → D1 migrate + wrangler deploy (Worker)
+│   ├── deploy-client-pages.yml      #   main → wrangler pages deploy (frontend)
+│   └── ci-cd.yml                    #   ⏸️  legacy .NET Docker pipeline (manual-only)
+├── src/
+│   ├── NewsPortal.Client/           # ⚛️  React 18 + TS + Vite + Tailwind (serves BOTH backends)
+│   │   └── src/  pages/ (+ admin/) · components/ · services/ · context/ · hooks/ · i18n/ · utils/
+│   ├── NewsPortal.Api.Hono/         # ☁️  LIVE backend — Hono Worker
+│   │   ├── src/  index.ts · routes/ (21) · lib/ (15) · jobs/fetch-news.ts
+│   │   ├── migrations/  0001_init.sql · 0002_app_logs.sql
+│   │   ├── seed/seed.sql            #   categories + news sources
+│   │   └── wrangler.toml            #   D1 (newsportal) + KV (CACHE_KV) + vars + crons
+│   ├── NewsPortal.Api/              # 🟪 legacy — ASP.NET Core 8 REST API
+│   ├── NewsPortal.McpServer/        # 🟪 legacy — Hangfire background fetch
+│   ├── NewsPortal.Scheduler/        # 🟪 legacy — scheduled jobs
+│   ├── NewsPortal.Service/          # 🟪 legacy — business logic
+│   ├── NewsPortal.Repository/       # 🟪 legacy — data access (EF Core)
+│   └── NewsPortal.Core/             # 🟪 legacy — domain models
+├── document/                        # implementation status notes
+├── monitoring/                      # Prometheus / Grafana / Loki (Docker path)
+├── script/                          # deploy / backup / rollback scripts (Docker path)
+├── docker-compose.yml               # full stack (Docker path)
+├── docker-compose.dev.yml           # DBs only (local .NET dev)
+└── docker-compose.prod.yml          # production (Docker path)
+```
+
+---
+
+## 🎨 Design System (Trust Slate-Teal)
+
+Professional editorial dark/light UI.
+
+| Group | Tokens |
+|-------|--------|
+| Base | `background`, `foreground` |
+| Brand | `accent` (teal ~`#0E7C86`) |
+| Alert | `danger` (crimson ~`#E11D48`) |
+| Text / surface | `secondary`, `glass`, `glass-border`, `glass-surface` |
+
+**Fonts:** `font-sans` Inter · `font-serif` **Source Serif 4** (headlines + article body).
+**Icons:** lucide-react outline/transparent (no emoji in UI). **Theme:** dark/light via `ThemeContext` (CSS variables auto-flip).
+
+---
+
+## ☁️ Path A — Cloudflare serverless (live production)
+
+### Backend (`src/NewsPortal.Api.Hono/`) — Hono Worker + D1 + KV
+
+Hono + TypeScript on the **Cloudflare Workers runtime** (not Node.js).
+
+- **Data:** D1 (SQLite, binding `DB`, db `newsportal`) + KV (binding `CACHE_KV`, response caching).
+- **AI:** Google **Gemini 2.5 Flash Lite** — summarize / translate / sentiment (graceful fallback).
+- **Images:** **Cloudinary** (remote-URL upload to CDN).
+- **Cron Triggers:** `*/5` `runScheduledFetch` (ingest due sources + inline body) · `*/30` `runBodyBackfill` (fill NULL-body recent articles) — both in `src/jobs/fetch-news.ts`.
+- **Realtime:** SSE breaking-news stream at `/api/v1/sse/breaking`.
+- **Logging:** central `app_logs` table (`lib/logger.ts`) → SuperAdmin viewer at `/admin/logs`.
+- **Vars** (`wrangler.toml`): `ADMIN_EMAIL`, `CORS_ORIGINS`, `PUBLIC_BASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`.
+- **Secrets** (`wrangler secret put` — see `/setup-secrets`): `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GEMINI_API_KEY`, `CLOUDINARY_API_SECRET`.
+- **Migrations:** `migrations/NNNN_*.sql` → `npx wrangler d1 migrations apply newsportal` (`--local` dev / `--remote` prod; CI runs `--remote` on deploy).
+
+### Local development
 
 ```bash
-git clone https://github.com/sujoncep/NewsPortal.git
+# Frontend
+cd src/NewsPortal.Client
+npm install
+npm run dev        # http://localhost:5173
+
+# Backend (Hono Worker)
+cd src/NewsPortal.Api.Hono
+npm install
+npx wrangler dev                                   # local Worker + D1 emulator
+npx wrangler d1 migrations apply newsportal --local
+```
+
+Point the client at any API via `VITE_API_URL` (e.g. `https://newsportal-api-hono.sujoncep.workers.dev/api`).
+
+### Deploy — git-push-to-deploy
+
+```bash
+git add <files> && git commit -m "feat: …" && git push origin dev
+```
+
+1. **`ci-dev.yml`** (push `dev`) — typecheck Hono API + build client → auto-create + auto-merge `dev→main` PR.
+2. **`deploy-api-hono.yml`** (`main`, `src/NewsPortal.Api.Hono/**`) — `wrangler d1 migrations apply newsportal --remote` → `wrangler deploy --minify`.
+3. **`deploy-client-pages.yml`** (`main`, `src/NewsPortal.Client/**`) — `npm run build` → `wrangler pages deploy dist --project-name newsportal-client --branch main`.
+
+Use `/deploy` for the full flow. **GitHub secrets:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `VITE_API_URL`, `GH_PAT` (auto-merge).
+
+---
+
+## 🐳 Path B — Docker / .NET self-host (original full stack)
+
+### Quick start (full stack)
+
+```bash
+git clone https://github.com/xahabcse/NewsPortal.git
 cd NewsPortal
+cp .env.example .env   # or create .env from the template below
 docker compose up -d --build
 ```
 
-- Frontend: `http://localhost:5000`
-- API: `http://localhost:8080`
-- Seq Logs: `http://localhost:8081`
+- Frontend `http://localhost:5000` · API `http://localhost:8080` · Seq logs `http://localhost:8081`
 
-### Option 2: Local Development
+### Local dev (.NET)
 
 ```bash
-# Start databases only
-docker compose -f docker-compose.dev.yml up -d
-
-# Run API (terminal 1)
-cd src/NewsPortal.Api && dotnet run
-
-# Run frontend (terminal 2)
-cd src/NewsPortal.Client && npm install && npm run dev
-```
-
-- API: `http://localhost:5016`
-- Frontend: `http://localhost:5173`
-
----
-
-## Architecture
-
-```text
-User Browser <--> React Frontend <--> ASP.NET Core API <--> PostgreSQL / MongoDB / Redis
-                                                  |
-                                        MCP Server (Background Jobs)
-                                                  |
-                                        External News Sources (RSS/API)
+docker compose -f docker-compose.dev.yml up -d        # databases only
+cd src/NewsPortal.Api && dotnet run                   # API → http://localhost:5016
+cd src/NewsPortal.Client && npm install && npm run dev # → http://localhost:5173
 ```
 
 ### Services
 
-| Service      | Image          | Purpose                          |
-| ------------ | -------------- | -------------------------------- |
-| `web`        | React + Nginx  | Frontend SPA                     |
-| `api`        | .NET 8         | REST API                         |
-| `mcpserver`  | .NET 8         | Background news fetching (Hangfire) |
-| `postgres`   | PostgreSQL 15  | Relational data                  |
-| `mongodb`    | MongoDB 4.4    | Image storage (GridFS)           |
-| `redis`      | Redis 7        | Caching                          |
-| `seq`        | Datalust Seq   | Structured logging               |
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `web` | React + Nginx | Frontend SPA |
+| `api` | .NET 8 | REST API |
+| `mcpserver` | .NET 8 | Background news fetch (Hangfire) |
+| `postgres` | PostgreSQL 15 | Relational data (EF Core) |
+| `mongodb` | MongoDB 4.4 | Image storage (GridFS) |
+| `redis` | Redis 7 | Caching |
+| `seq` | Datalust Seq | Structured logging |
 
----
+### Environment (`.env` at repo root — git-ignored)
 
-## Project Structure
+**Required:** `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_PORT`, `REDIS_PASSWORD`, `REDIS_PORT`, `WEB_PORT`, `ASPNETCORE_ENVIRONMENT`, `CORS_ALLOWED_ORIGINS`, `JWT_SECRET_KEY` (≥ 32 chars).
 
-```text
-NewsPortal/
-├── src/
-│   ├── NewsPortal.Client/       # React frontend
-│   ├── NewsPortal.Api/          # REST API
-│   ├── NewsPortal.McpServer/    # Background job service
-│   ├── NewsPortal.Scheduler/    # Hangfire jobs
-│   ├── NewsPortal.Service/      # Business logic
-│   ├── NewsPortal.Repository/   # Data access
-│   └── NewsPortal.Core/         # Domain models
-├── document/                    # Implementation status
-├── monitoring/                  # Prometheus, Grafana, Loki
-├── script/                      # Deploy, backup, rollback scripts
-├── docker-compose.yml           # Full stack
-├── docker-compose.dev.yml       # DBs only (local dev)
-└── docker-compose.prod.yml      # Production
-```
-
----
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint                       | Description          |
-| ------ | ------------------------------ | -------------------- |
-| POST   | `/api/v1/auth/login`           | Login (JWT)          |
-| POST   | `/api/v1/auth/register`        | Register             |
-| POST   | `/api/v1/auth/google`          | Google OAuth login   |
-| GET    | `/api/v1/auth/me`              | Current user         |
-| POST   | `/api/v1/auth/change-password` | Change password      |
-
-**Roles:** SuperAdmin, Admin, Editor, Reader
-**Seed users:** `superadmin/superadmin`, `admin/admin1`, `editor/editor`, `reader/reader`
-
-### News
-
-| Method | Endpoint                       | Description                 |
-| ------ | ------------------------------ | --------------------------- |
-| GET    | `/api/v1/news/latest`          | Latest articles (paginated) |
-| GET    | `/api/v1/news/category/{slug}` | Articles by category        |
-| GET    | `/api/v1/news/{slug}`          | Article detail              |
-| POST   | `/api/v1/news/search`          | Search articles             |
-| GET    | `/api/v1/news/trending`        | Trending articles           |
-| GET    | `/api/v1/news/{slug}/related`  | Related articles            |
-
-### AI Features
-
-| Method | Endpoint                            | Description                |
-| ------ | ----------------------------------- | -------------------------- |
-| POST   | `/api/v1/ai/summarize/{id}`         | AI article summarization   |
-| POST   | `/api/v1/ai/categorize/{id}`        | Auto-categorize article    |
-| POST   | `/api/v1/ai/translate/{id}?target=en` | Translate article        |
-| GET    | `/api/v1/ai/sentiment/article/{id}` | Comment sentiment analysis |
-
-### Analytics (Admin)
-
-| Method | Endpoint                                 | Description            |
-| ------ | ---------------------------------------- | ---------------------- |
-| GET    | `/api/v1/analytics/overview`             | Dashboard overview     |
-| GET    | `/api/v1/analytics/articles/daily`       | Daily article trend    |
-| GET    | `/api/v1/analytics/categories/performance` | Category stats       |
-| GET    | `/api/v1/analytics/articles/top`         | Top performing articles |
-
-### Other
-
-| Method          | Endpoint                         | Description         |
-| --------------- | -------------------------------- | ------------------- |
-| POST/DELETE     | `/api/v1/bookmarks/{articleId}`  | Bookmark management |
-| GET/POST/DELETE | `/api/v1/comments`               | Comment system      |
-| POST/DELETE     | `/api/v1/reactions`              | Article reactions   |
-| GET             | `/sitemap`                       | XML sitemap         |
-| GET             | `/api/v1/feed/rss`               | RSS feed            |
-
----
-
-## Features
-
-### Reader
-
-- Infinite scroll news feed with category filtering
-- Article detail with reading time, related articles, lazy-loaded comments
-- Full-text search with date/source/category filters
-- Advanced multi-filter bar (source, category, date range)
-- Trending articles, bookmarks, reading history
-- Daily news timeline page with category-based grouping
-- Dark/Light theme toggle
-- Text-to-Speech with Bengali voice fallback (Web Speech API)
-- Keyboard shortcuts (j/k navigate, o open, b bookmark, ? help)
-- PWA support (installable, offline capable)
-- Mobile responsive design (360px–430px viewports optimized)
-- Dynamic Bangla greeting with Bengali, Hijri, and Gregorian calendar dates
-- Weather widget (Dhaka) in greeting section
-- User profile with bio, emoji avatars, and public profile page
-- Collapsible sidebar with semantic icons
-
-### AI-Powered
-
-- Article summarization via Google Gemini 2.5 Flash
-- Lazy content scraping — full article fetched on first view from source URL
-- Auto-categorization (keyword-based classifier)
-- Multi-language translation (6 languages via MyMemory API)
-- Comment sentiment analysis with visual badge
-
-### Social
-
-- Article reactions (Like, Love, Informative, Shocking, Sad, Angry)
-- Threaded comments with upvote/downvote
-- Share button (Copy Link, Facebook, Twitter, WhatsApp, Telegram, Email)
-- Article reporting/flagging
-
-### Admin
-
-- Dashboard with charts (Recharts)
-- Article CRUD management with bulk auto-categorize
-- Content analytics dashboard (6 chart types, full-width layout)
-- User management (Admin+ access), category management
-- Fetch log viewer, news source management
-- News ticker / breaking news banner
-- System tool links (Seq, Grafana, etc.)
-- LAN access support (dynamic CORS for private network IPs)
-
----
-
-## Deployment
-
-### Environment Files
-
-| File                       | Purpose                     |
-| -------------------------- | --------------------------- |
-| `docker-compose.dev.yml`   | Local dev (databases only)  |
-| `docker-compose.yml`       | Full stack testing          |
-| `docker-compose.prod.yml`  | Production deployment       |
-
-### Environment Variables
-
-Create a `.env` file in the project root before running `docker compose up`. The file is read by all `docker-compose.*.yml` stacks and the deploy scripts.
-
-> **Note:** `.env` is git-ignored. Never commit real secrets.
-
-#### Required
-
-| Variable                   | Used By                            | Example / Notes                                                              |
-| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| `POSTGRES_USER`            | postgres, api, mcpserver           | `newsadmin`                                                                  |
-| `POSTGRES_PASSWORD`        | postgres, api, mcpserver           | Strong password                                                              |
-| `POSTGRES_DB`              | postgres                           | `newsportal`                                                                 |
-| `POSTGRES_PORT`            | postgres                           | `5432`                                                                       |
-| `MONGO_USER`               | mongodb, api                       | `mongouser`                                                                  |
-| `MONGO_PASSWORD`           | mongodb, api                       | Strong password                                                              |
-| `MONGO_PORT`               | mongodb                            | `27017`                                                                      |
-| `REDIS_PASSWORD`           | redis, api                         | Strong password                                                              |
-| `REDIS_PORT`               | redis                              | `6379`                                                                       |
-| `WEB_PORT`                 | web                                | `5000`                                                                       |
-| `ASPNETCORE_ENVIRONMENT`   | api, mcpserver                     | `Production` \| `Staging` \| `Development`                                   |
-| `CORS_ALLOWED_ORIGINS`     | api                                | Comma-separated URLs, e.g. `http://localhost:5000,http://192.168.0.109:5000` |
-| `JWT_SECRET_KEY`           | api                                | **≥ 32 chars.** Generate via `openssl rand -base64 48`                       |
-
-#### Optional
-
-| Variable                   | Used By                            | Purpose                                                                      |
-| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| `SEQ_PORT`                 | seq (dev)                          | `5341` (Seq UI)                                                              |
-| `GOOGLE_CLIENT_ID`         | api (frontend OAuth)               | Google OAuth Client ID — leave blank to disable Google sign-in               |
-| `GEMINI_API_KEY`           | api                                | Google AI Studio key — leave blank to fall back to TF-IDF summarization      |
-| `NEWS_API_KEY`             | mcpserver                          | NewsAPI.org key (background fetch)                                           |
-| `GNEWS_API_KEY`            | mcpserver                          | GNews.io key                                                                 |
-| `BING_SEARCH_API_KEY`      | mcpserver                          | Bing News Search key                                                         |
-| `GUARDIAN_API_KEY`         | mcpserver                          | The Guardian Open Platform key                                               |
-| `GRAFANA_ADMIN_USER`       | grafana (monitoring stack)         | `admin`                                                                      |
-| `GRAFANA_ADMIN_PASSWORD`   | grafana                            | Strong password                                                              |
-| `DOCKER_REGISTRY`          | CI/CD                              | `ghcr.io`                                                                    |
-| `DOCKER_USERNAME`          | CI/CD                              | GitHub username                                                              |
-| `IMAGE_TAG`                | CI/CD, docker-compose.prod         | `latest` or commit SHA                                                       |
-| `SERVER_HOST`              | CI/CD deploy                       | Prod server hostname/IP                                                      |
-| `SERVER_USER`              | CI/CD deploy                       | SSH user (e.g. `ubuntu`)                                                     |
-| `PRODUCTION_URL`           | CI/CD post-deploy health check     | `https://yourdomain.com`                                                     |
-
-#### Quick template
+**Optional:** `SEQ_PORT`, `GOOGLE_CLIENT_ID`, `GEMINI_API_KEY`, `NEWS_API_KEY`, `GNEWS_API_KEY`, `GUARDIAN_API_KEY`, `GRAFANA_ADMIN_USER/PASSWORD`, `DOCKER_REGISTRY`, `DOCKER_USERNAME`, `IMAGE_TAG`, `SERVER_HOST`, `SERVER_USER`, `PRODUCTION_URL`.
 
 ```bash
-# Save as `.env` in project root, then fill in values
+# Minimal .env
 POSTGRES_USER=newsadmin
 POSTGRES_PASSWORD=change_me
 POSTGRES_DB=newsportal
@@ -267,91 +193,98 @@ CORS_ALLOWED_ORIGINS=http://localhost:5000
 JWT_SECRET_KEY=replace_with_a_random_32_plus_char_secret
 ```
 
-### Connection String Rule
+**Connection-string rule:** app on host → `localhost`; app in Docker → service names (`postgres`, `mongodb`, `redis`).
 
-- **App on host** (local dev): use `localhost`
-- **App in Docker** (prod): use service names (`postgres`, `mongodb`, `redis`)
+### Ports
 
-### Port Reference
+| Service | Dev | Docker |
+|---------|-----|--------|
+| API | 5016 | 8080 |
+| Frontend | 5173 | 5000 |
+| PostgreSQL | 5432 | internal |
+| MongoDB | 27017 | internal |
+| Redis | 6379 | internal |
+| Seq | 5341 | 8081 |
 
-| Service    | Dev Port | Docker Port   |
-| ---------- | -------- | ------------- |
-| API        | 5016     | 8080          |
-| Frontend   | 5173     | 5000          |
-| PostgreSQL | 5432     | Internal only |
-| MongoDB    | 27017    | Internal only |
-| Redis      | 6379     | Internal only |
-| Seq        | 5341     | 8081          |
-
-### Production (Linux Server)
+### Production (Linux server)
 
 ```bash
-# 1. SSH to server
 ssh user@your-server
-
-# 2. Clone and configure
-git clone https://github.com/sujoncep/NewsPortal.git
-cd NewsPortal
-nano .env  # Create using the template in the Environment Variables section above
-
-# 3. Deploy
+git clone https://github.com/xahabcse/NewsPortal.git && cd NewsPortal
+nano .env                                  # fill from the template above
 docker compose -f docker-compose.prod.yml up -d
-
-# 4. Setup SSL (optional)
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com
+sudo certbot --nginx -d yourdomain.com     # optional SSL
 ```
 
-### CI/CD (GitHub Actions)
-
-Push to `main` triggers automatic: Build > Test > Docker Build > Push to GHCR > Deploy to server
-
-Required GitHub Secrets: `SSH_PRIVATE_KEY`, `SERVER_HOST`, `SERVER_USER`, `POSTGRES_PASSWORD`, `MONGO_PASSWORD`, `REDIS_PASSWORD`, `JWT_SECRET_KEY`, `CORS_ALLOWED_ORIGINS`
-
-### Backup & Restore
-
-```bash
-# Backup
-./script/backup.sh
-
-# Restore PostgreSQL
-gunzip -c backups/daily/postgres/pg_backup.sql.gz | \
-  docker exec -i newsportal-db psql -U newsadmin newsportal
-
-# Rollback deployment
-./script/rollback.sh previous
-```
+The `ci-cd.yml` workflow (Build → Test → Docker → GHCR → SSH deploy) is **manual-only** (`workflow_dispatch`). Backup/restore via `./script/backup.sh` and `./script/rollback.sh`.
 
 ---
 
-## Troubleshooting
+## ✨ Features
 
-| Problem                  | Fix                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------------- |
-| Can't connect to DB      | `docker compose ps` then `docker compose restart postgres`                               |
-| Port already in use      | `sudo lsof -i :5432` then `sudo kill -9 <PID>`                                          |
-| Image not updating       | `docker compose build --no-cache && docker compose up -d --force-recreate`               |
-| CI/CD failed             | Check GitHub Actions logs, verify secrets, SSH to server and check `docker compose logs`  |
-| Permission denied (logs) | `sudo chown -R $USER:$USER logs/ && chmod -R 755 logs/`                                  |
+**Reader:** infinite-scroll feed with multi-filter bar (source / category / date range) · article detail with reading time, related articles, lazy comments · full-text search · trending · bookmarks · reading history · daily timeline · dark/light theme · text-to-speech (Bengali fallback) · keyboard shortcuts · PWA (installable, offline) · mobile-responsive · dynamic Bangla greeting with Bengali/Hijri/Gregorian dates · location-aware weather widget · public user profiles.
 
-### Health Checks
+**AI:** article summarization (Gemini 2.5 Flash Lite) · lazy/backfill body scraping · keyword auto-categorization · multi-language translation · comment sentiment analysis.
 
-```bash
-curl http://localhost:8080/health                          # API
-docker compose exec postgres pg_isready -U newsadmin       # PostgreSQL
-docker compose exec redis redis-cli ping                   # Redis
-```
+**Social:** reactions (Like/Love/Informative/Shocking/Sad/Angry) · threaded comments with up/down-vote · share (Copy/Facebook/Twitter/WhatsApp/Telegram/Email) · report/flag.
+
+**Admin:** dashboard with charts (Recharts) · article CRUD + bulk auto-categorize · content analytics · user & category management · fetch-log + news-source management · central log viewer (SuperAdmin).
 
 ---
 
-## News Sources
+## 🛠️ Tech Stack
 
-8 Bangladeshi RSS sources seeded (Prothom Alo, bdnews24, Bangla Tribune, Jagonews24, Sun News, BSS, Dhaka Post, Daily Star) plus **The Guardian Open Platform API** (international, optional via `GUARDIAN_API_KEY`). See [IMPLEMENTATION-STATUS.md](document/IMPLEMENTATION-STATUS.md) for recommended international source additions.
+| Layer | Cloudflare path | Docker/.NET path |
+|-------|-----------------|------------------|
+| Frontend | React 18 + TS + Vite + Tailwind (shared) | ← same |
+| API | Hono on Cloudflare Workers | ASP.NET Core 8 |
+| DB | D1 (SQLite) | PostgreSQL (EF Core) |
+| Cache | KV | Redis |
+| Images | Cloudinary | MongoDB GridFS |
+| Background jobs | Cron Triggers (`fetch-news.ts`) | Hangfire (McpServer) |
+| Realtime | SSE | SignalR |
+| AI | Gemini 2.5 Flash Lite | Gemini / TF-IDF fallback |
+| Logging | `app_logs` (D1) | Seq |
+| Hosting | Cloudflare Pages + Workers | Docker / nginx on a server |
+
+---
+
+## 🤖 AI Skills & Agents
+
+Claude Code automation lives under `.claude/`.
+
+### Skills — invoke with `/<name>`
+
+| Skill | Purpose |
+|-------|---------|
+| `/deploy` | Commit + push `dev` → CI auto-deploys to Cloudflare (monitor + smoke test) |
+| `/build-check` | Local client build + Hono API typecheck (no deploy) |
+| `/ui-test` | Playwright MCP smoke test of the live site (mobile + desktop) |
+| `/setup-secrets` | Set Cloudflare Worker + GitHub Actions secrets (BOM-safe) |
+| `/backfill` | Run the article-body backfill job now |
+
+### Agents — delegate via the `Agent` tool
+
+| Group | Agents |
+|-------|--------|
+| Backend (live) | `hono-api-engineer`, `d1-migration-engineer` |
+| Backend (legacy .NET) | `dotnet-api-engineer`, `ef-migration-engineer` |
+| Ingestion | `content-fetcher-engineer` |
+| Frontend | `react-client-engineer`, `ui-ux-designer`, `bn-en-translator` |
+| Ops & QA | `release-engineer`, `ui-tester` |
+
+Definitions: `.claude/agents/*.md` and `.claude/skills/*.md`.
+
+---
+
+## 📋 CLAUDE.md
+
+Project conventions for AI-assisted work — Bangla answers, plan-first workflow, build-local/test-live, no-attribution commits, the Trust Slate-Teal design system, role gate, and the two-stack architecture. See [.claude/CLAUDE.md](.claude/CLAUDE.md).
 
 ---
 
 ## License
 
-This project is for educational and portfolio purposes.
+For educational and portfolio purposes.
 
-**Last Updated:** May 24, 2026
+**Last Updated:** June 7, 2026
