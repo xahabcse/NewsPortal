@@ -11,7 +11,7 @@ import { uploadFromUrl } from '../lib/cloudinary';
 import { cacheInvalidatePrefix } from '../lib/cache';
 import { nowIso } from '../lib/db';
 import { extractArticleForSource, extractFromFeedHtml } from '../lib/article-extractor';
-import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_UA } from '../lib/source-selectors';
+import { isSpaSource, SPA_SOURCE_SLUGS, normalizeArticleUrl, BODY_FETCH_HEADERS } from '../lib/source-selectors';
 import { logInsert, writeLog } from '../lib/logger';
 
 type SourceRow = {
@@ -418,8 +418,12 @@ async function fetchArticleBody(
   if (isSpaSource(slug)) return { body: null, reason: null }; // intentionally skipped, not a failure
   link = normalizeArticleUrl(slug, link);
   try {
+    // Full browser header set (+ same-origin Referer) so Cloudflare-fronted sites that
+    // bot-block a bare-UA request (e.g. Bangla Tribune → 403) serve the real article HTML.
+    let referer = baseUrl;
+    try { referer = new URL(link).origin + '/'; } catch { /* keep baseUrl */ }
     const res = await fetch(link, {
-      headers: { 'User-Agent': BODY_FETCH_UA },
+      headers: { ...BODY_FETCH_HEADERS, Referer: referer },
       signal: AbortSignal.timeout(8000),
     });
     if (res.ok === false) return { body: null, reason: `http_${res.status}` };
