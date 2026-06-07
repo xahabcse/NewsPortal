@@ -141,7 +141,9 @@ const TextToSpeech = ({ text, title }: TextToSpeechProps) => {
     };
 
     useEffect(() => {
-        return () => { speechSynthesis.cancel(); };
+        // Runs on every unmount regardless of support — guard it so browsers/webviews
+        // without the Web Speech API don't throw "speechSynthesis is not defined".
+        return () => { window.speechSynthesis?.cancel(); };
     }, []);
 
     if (!isSupported) return null;

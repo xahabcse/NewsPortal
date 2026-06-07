@@ -48,6 +48,29 @@ export function isSpaSource(slug: string): boolean {
 export const BODY_FETCH_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+// A COMPLETE browser header set for article-page fetches. Some sites (notably Bangla
+// Tribune, behind Cloudflare) return 403 to a request that carries a Chrome User-Agent
+// but NONE of the headers a real Chrome navigation sends — the missing Accept-Language /
+// sec-fetch-* / sec-ch-ua fingerprint trips the WAF's "likely bot" heuristic. The RSS
+// feed fetch from the SAME Worker egress IP succeeds, which proves the block is
+// header-based, not IP-based; sending the full set drops us below the heuristic so the
+// article HTML comes back 200. (Workers' fetch — unlike browser fetch — lets us set the
+// otherwise-forbidden sec-* / sec-ch-ua headers.)
+export const BODY_FETCH_HEADERS: Record<string, string> = {
+  'User-Agent': BODY_FETCH_UA,
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8',
+  'Upgrade-Insecure-Requests': '1',
+  'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'document',
+  'sec-fetch-mode': 'navigate',
+  'sec-fetch-site': 'none',
+  'sec-fetch-user': '?1',
+};
+
 /**
  * Normalise an article URL before fetching its body. Some feeds link to a non-article
  * variant (e.g. BSS RSS points at /subscriber/{id}, a paywall shell, while the real
