@@ -152,4 +152,4 @@ The live Worker, D1 `newsportal`, KV, and secrets sit on the **`sujoncep` Cloudf
 
 - Hono: https://hono.dev/ · D1 client API: https://developers.cloudflare.com/d1/build-with-d1/d1-client-api/
 - Workers runtime: https://developers.cloudflare.com/workers/runtime-apis/ · Cron Triggers: https://developers.cloudflare.com/workers/configuration/cron-triggers/
-- Project conventions: [.claude/CLAUDE.md](../CLAUDE.md)
+- Project conventions: [CLAUDE.md](../../CLAUDE.md)
