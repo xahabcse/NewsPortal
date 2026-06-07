@@ -75,4 +75,4 @@ For each ❌: what you did, what you expected, what happened, a screenshot, the 
 
 ## References
 
-- Playwright: https://playwright.dev/ · Project conventions: [.claude/CLAUDE.md](../CLAUDE.md)
+- Playwright: https://playwright.dev/ · Project conventions: [CLAUDE.md](../../CLAUDE.md)

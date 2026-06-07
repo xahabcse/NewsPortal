@@ -86,4 +86,4 @@ The live D1 `newsportal` backs `news.xahabcse.me` on the `sujoncep` account. Bef
 
 - D1 migrations: https://developers.cloudflare.com/d1/reference/migrations/
 - SQLite SQL: https://www.sqlite.org/lang.html · `ALTER TABLE` limits: https://www.sqlite.org/lang_altertable.html
-- Project conventions: [.claude/CLAUDE.md](../CLAUDE.md)
+- Project conventions: [CLAUDE.md](../../CLAUDE.md)

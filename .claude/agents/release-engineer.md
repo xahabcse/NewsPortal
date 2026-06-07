@@ -93,4 +93,4 @@ State plainly what each command will change before asking for the go-ahead. Pref
 ## References
 
 - Wrangler CI/CD: https://developers.cloudflare.com/workers/wrangler/ci-cd/
-- `gh` CLI: https://cli.github.com/manual/ · Project conventions: [.claude/CLAUDE.md](../CLAUDE.md)
+- `gh` CLI: https://cli.github.com/manual/ · Project conventions: [CLAUDE.md](../../CLAUDE.md)

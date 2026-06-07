@@ -44,7 +44,8 @@ Backend gates with `requireAuth` + `requireRole(...)` (Hono) / role attributes (
 
 ```text
 NewsPortal/
-├── .claude/                         # 🤖 Claude Code: agents/ (10) + skills/ (5) + CLAUDE.md
+├── CLAUDE.md                        # 🤖 project conventions for Claude Code (root)
+├── .claude/                         # 🤖 Claude Code: agents/ (10) + skills/ (5) + settings.local.json
 ├── .github/workflows/               # CI/CD
 │   ├── ci-dev.yml                   #   push dev → build/typecheck → auto-merge dev→main
 │   ├── deploy-api-hono.yml          #   main → D1 migrate + wrangler deploy (Worker)
@@ -279,7 +280,7 @@ Definitions: `.claude/agents/*.md` and `.claude/skills/*.md`.
 
 ## 📋 CLAUDE.md
 
-Project conventions for AI-assisted work — Bangla answers, plan-first workflow, build-local/test-live, no-attribution commits, the Trust Slate-Teal design system, role gate, and the two-stack architecture. See [.claude/CLAUDE.md](.claude/CLAUDE.md).
+Project conventions for AI-assisted work — Bangla answers, plan-first workflow, build-local/test-live, no-attribution commits, the Trust Slate-Teal design system, role gate, and the two-stack architecture. See [CLAUDE.md](CLAUDE.md).
 
 ---
 
