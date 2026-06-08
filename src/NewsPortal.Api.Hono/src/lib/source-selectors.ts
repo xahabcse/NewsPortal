@@ -36,7 +36,17 @@ export const GENERIC_SELECTORS: string[] = [
 // Currently empty: every active source turned out to be server-rendered (BSS at
 // /news/{id}, Al Jazeera .wysiwyg, NPR #storytext) or ships JSON-LD (CNN). Kept as a
 // hook for future sources that genuinely can't be extracted server-side.
-export const SPA_SOURCE_SLUGS: string[] = [];
+export const SPA_SOURCE_SLUGS: string[] = [
+  // Bangla Tribune is NOT a JS SPA, but its article pages sit behind a Cloudflare
+  // "Managed Challenge" that 403s every datacenter/Worker fetch (the RSS /feed/ is
+  // exempt, so we still get the headline + ~400-char summary + lead image). Proven
+  // unfetchable from any non-residential IP — Worker, Jina (incl. browser engine),
+  // and a real headless Chromium on a GitHub Actions runner were ALL blocked. So we
+  // skip the futile body fetch here: no wasted subrequests/CPU, no 403 log spam.
+  // Full body for this source needs a residential-IP scraper (self-host or paid) on
+  // a separate path; remove it from this list once that exists.
+  'bangla-tribune',
+];
 const SPA_SOURCES = new Set(SPA_SOURCE_SLUGS);
 
 export function isSpaSource(slug: string): boolean {
