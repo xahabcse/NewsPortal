@@ -27,20 +27,20 @@ readHistoryRoutes.get('/', async (c) => {
     LIMIT ?
   `).bind(userId, limit).all<any>();
 
-  const items = (rows.results ?? []).map((r: any) => ({
-    id: r.id,
-    articleId: r.article_id,
-    userId: r.user_id,
-    createdAt: r.created_at,
+  const items = (rows.results ?? []).map((row: any) => ({
+    id: row.id,
+    articleId: row.article_id,
+    userId: row.user_id,
+    createdAt: row.created_at,
     article: {
-      id: r.article_id,
-      title: r.title,
-      slug: r.slug,
-      summary: r.summary,
-      thumbnailUrl: r.thumbnail_url,
-      publishedAt: r.published_at,
-      sourceName: r.source_name,
-      categoryName: r.category_name,
+      id: row.article_id,
+      title: row.title,
+      slug: row.slug,
+      summary: row.summary,
+      thumbnailUrl: row.thumbnail_url,
+      publishedAt: row.published_at,
+      sourceName: row.source_name,
+      categoryName: row.category_name,
     },
   }));
 
@@ -56,6 +56,11 @@ readHistoryRoutes.post('/:articleId', async (c) => {
   const userId = c.get('userId')!;
   const articleId = parseInt(c.req.param('articleId'));
   if (isNaN(articleId)) return c.json(errMsg('Invalid article id'), 400);
+
+  const article = await c.env.DB.prepare(
+    'SELECT id FROM news_articles WHERE id = ? AND is_active = 1 LIMIT 1'
+  ).bind(articleId).first<{ id: number }>();
+  if (!article) return c.json(errMsg('Article not found'), 404);
 
   const now = nowIso();
   const existing = await c.env.DB.prepare(

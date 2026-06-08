@@ -100,7 +100,7 @@ fetchJobsRoutes.get('/logs', requireAuth, requireRole('Editor'), async (c) => {
 });
 
 // GET /:externalId — single job by external id
-fetchJobsRoutes.get('/:externalId', requireAuth, async (c) => {
+fetchJobsRoutes.get('/:externalId', requireAuth, requireRole('Editor'), async (c) => {
   const externalId = c.req.param('externalId');
   const row = await c.env.DB.prepare(`
     SELECT j.*, s.name AS source_name
@@ -114,7 +114,7 @@ fetchJobsRoutes.get('/:externalId', requireAuth, async (c) => {
   return c.json(mapJob(row));
 });
 
-// GET /logs — fetch logs (audit view)
+// GET /logs/recent — most-recent N fetch logs (unpaginated)
 fetchJobsRoutes.get('/logs/recent', requireAuth, requireRole('Editor'), async (c) => {
   const limit = Math.min(200, Math.max(1, parseInt(c.req.query('limit') ?? '50') || 50));
   const rows = await c.env.DB.prepare(

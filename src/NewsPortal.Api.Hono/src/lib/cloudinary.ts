@@ -75,9 +75,13 @@ export async function deleteByPublicId(env: Env['Bindings'], publicId: string): 
   form.append('timestamp', String(timestamp));
   form.append('signature', signature);
 
-  const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/image/destroy`,
-    { method: 'POST', body: form }
-  );
-  return res.ok;
+  try {
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      { method: 'POST', body: form }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

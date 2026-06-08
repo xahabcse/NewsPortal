@@ -8,15 +8,17 @@ export const sseRoutes = new Hono<Env>();
 // Client usage: new EventSource('/api/v1/sse/breaking')
 sseRoutes.get('/breaking', async (c) => {
   const lastEventId = c.req.header('Last-Event-ID');
-  const since = lastEventId ? parseInt(lastEventId) : 0;
+  // A non-numeric Last-Event-ID must not yield NaN (which would make the snapshot query return nothing).
+  const parsed = parseInt(lastEventId ?? '', 10);
+  const sinceArticleId = Number.isFinite(parsed) ? parsed : 0;
 
   // SSE streaming. Workers supports ReadableStream so we can keep the connection open
   // and push updates every 15s — but we keep this implementation simple and short-lived.
   const stream = new ReadableStream({
     async start(controller) {
-      const enc = new TextEncoder();
+      const encoder = new TextEncoder();
       const write = (event: string, id: number, data: any) => {
-        controller.enqueue(enc.encode(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        controller.enqueue(encoder.encode(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
 
       // Initial snapshot
@@ -25,22 +27,22 @@ sseRoutes.get('/breaking', async (c) => {
         FROM news_articles
         WHERE is_active = 1 AND id > ?
         ORDER BY fetched_at DESC LIMIT 10
-      `).bind(since).all<{ id: number; title: string; slug: string; summary: string | null; published_at: string | null; fetched_at: string }>();
+      `).bind(sinceArticleId).all<{ id: number; title: string; slug: string; summary: string | null; published_at: string | null; fetched_at: string }>();
 
-      let lastId = since;
-      for (const r of (rows.results ?? []).reverse()) {
-        write('breaking', r.id, {
-          id: r.id,
-          title: r.title,
-          slug: r.slug,
-          summary: r.summary,
-          publishedAt: r.published_at ?? r.fetched_at,
+      let lastSentId = sinceArticleId;
+      for (const article of (rows.results ?? []).reverse()) {
+        write('breaking', article.id, {
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+          summary: article.summary,
+          publishedAt: article.published_at ?? article.fetched_at,
         });
-        lastId = Math.max(lastId, r.id);
+        lastSentId = Math.max(lastSentId, article.id);
       }
 
       // Keep-alive ping then close. Browser EventSource will reconnect with Last-Event-ID.
-      controller.enqueue(enc.encode(`event: ping\ndata: ${lastId}\n\n`));
+      controller.enqueue(encoder.encode(`event: ping\ndata: ${lastSentId}\n\n`));
       controller.close();
     },
   });

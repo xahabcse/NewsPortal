@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { Env } from '../lib/env';
 import { errMsg } from '../lib/response';
-import { requireAuth, requireRole } from '../lib/auth';
+import { requireAuth, requireRole, decodeToken } from '../lib/auth';
 import { nowIso } from '../lib/db';
 
 export const commentsRoutes = new Hono<Env>();
@@ -42,13 +43,12 @@ function mapComment(r: CommentRow) {
   };
 }
 
-async function loadCurrentUserId(c: any): Promise<number | null> {
+async function loadCurrentUserId(c: Context<Env>): Promise<number | null> {
   const authHeader = c.req.header('Authorization') as string | undefined;
   if (!authHeader?.startsWith('Bearer ')) return null;
   try {
-    const { decodeToken } = await import('../lib/auth');
     const payload = await decodeToken(authHeader.slice(7), c.env.JWT_SECRET);
-    return payload ? parseInt(payload.sub) : null;
+    return payload ? parseInt(payload.sub, 10) : null;
   } catch {
     return null;
   }
@@ -94,6 +94,18 @@ commentsRoutes.post('/', requireAuth, async (c) => {
   if (!body.articleId || !body.content?.trim()) return c.json(errMsg('articleId and content required'), 400);
   if (body.content.length > 2000) return c.json(errMsg('Comment too long (max 2000 chars)'), 400);
 
+  const article = await c.env.DB.prepare('SELECT id, is_active FROM news_articles WHERE id = ? LIMIT 1')
+    .bind(body.articleId).first<{ id: number; is_active: number }>();
+  if (!article || article.is_active !== 1) return c.json(errMsg('Article not found'), 404);
+
+  if (body.parentId != null) {
+    const parent = await c.env.DB.prepare('SELECT article_id FROM comments WHERE id = ? AND is_active = 1 LIMIT 1')
+      .bind(body.parentId).first<{ article_id: number }>();
+    if (!parent || parent.article_id !== body.articleId) {
+      return c.json(errMsg('parentId does not belong to this article'), 400);
+    }
+  }
+
   const now = nowIso();
   const result = await c.env.DB.prepare(
     `INSERT INTO comments (article_id, user_id, parent_id, content, is_approved, is_deleted, created_at, is_active)
@@ -110,7 +122,7 @@ commentsRoutes.delete('/:id', requireAuth, async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
 
-  const owner = await c.env.DB.prepare('SELECT user_id FROM comments WHERE id = ? LIMIT 1')
+  const owner = await c.env.DB.prepare('SELECT user_id FROM comments WHERE id = ? AND is_active = 1 AND is_deleted = 0 LIMIT 1')
     .bind(id).first<{ user_id: number }>();
   if (!owner) return c.json(errMsg('Comment not found'), 404);
 
@@ -131,25 +143,33 @@ commentsRoutes.post('/:id/vote', requireAuth, async (c) => {
   const body = await c.req.json<{ upvote?: boolean }>();
   if (typeof body.upvote !== 'boolean') return c.json(errMsg('upvote boolean required'), 400);
 
-  const now = nowIso();
-  const existing = await c.env.DB.prepare(
-    'SELECT id, is_upvote, is_active FROM comment_votes WHERE user_id = ? AND comment_id = ? LIMIT 1'
-  ).bind(userId, id).first<{ id: number; is_upvote: number; is_active: number }>();
+  const comment = await c.env.DB.prepare(
+    'SELECT id FROM comments WHERE id = ? AND is_active = 1 AND is_deleted = 0 LIMIT 1'
+  ).bind(id).first<{ id: number }>();
+  if (!comment) return c.json(errMsg('Comment not found'), 404);
 
-  if (existing) {
-    // Same vote → toggle off; different vote → switch.
-    if (existing.is_active === 1 && existing.is_upvote === (body.upvote ? 1 : 0)) {
-      await c.env.DB.prepare('UPDATE comment_votes SET is_active = 0, updated_at = ? WHERE id = ?')
-        .bind(now, existing.id).run();
-      return c.json({ message: 'Vote cleared' });
-    }
+  const now = nowIso();
+  const wantUpvote = body.upvote ? 1 : 0;
+
+  // Same vote → toggle off; otherwise (new or switched) → activate with the chosen direction.
+  // ON CONFLICT(user_id, comment_id) keeps the toggle atomic against the unique index (no TOCTOU race).
+  const existing = await c.env.DB.prepare(
+    'SELECT is_upvote, is_active FROM comment_votes WHERE user_id = ? AND comment_id = ? LIMIT 1'
+  ).bind(userId, id).first<{ is_upvote: number; is_active: number }>();
+
+  if (existing && existing.is_active === 1 && existing.is_upvote === wantUpvote) {
     await c.env.DB.prepare(
-      'UPDATE comment_votes SET is_upvote = ?, is_active = 1, updated_at = ? WHERE id = ?'
-    ).bind(body.upvote ? 1 : 0, now, existing.id).run();
-  } else {
-    await c.env.DB.prepare(
-      'INSERT INTO comment_votes (user_id, comment_id, is_upvote, created_at, is_active) VALUES (?, ?, ?, ?, 1)'
-    ).bind(userId, id, body.upvote ? 1 : 0, now).run();
+      `INSERT INTO comment_votes (user_id, comment_id, is_upvote, created_at, is_active)
+       VALUES (?, ?, ?, ?, 1)
+       ON CONFLICT(user_id, comment_id) DO UPDATE SET is_active = 0, updated_at = ?`
+    ).bind(userId, id, wantUpvote, now, now).run();
+    return c.json({ message: 'Vote cleared' });
   }
+
+  await c.env.DB.prepare(
+    `INSERT INTO comment_votes (user_id, comment_id, is_upvote, created_at, is_active)
+     VALUES (?, ?, ?, ?, 1)
+     ON CONFLICT(user_id, comment_id) DO UPDATE SET is_upvote = ?, is_active = 1, updated_at = ?`
+  ).bind(userId, id, wantUpvote, now, wantUpvote, now).run();
   return c.json({ message: 'Vote saved' });
 });

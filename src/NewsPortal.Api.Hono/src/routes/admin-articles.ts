@@ -4,7 +4,7 @@ import { errMsg, paged } from '../lib/response';
 import { requireAuth, requireRole } from '../lib/auth';
 import { nowIso, paginate, type Row } from '../lib/db';
 import { invalidateNewsCache } from './news';
-import { makeSlug, withSuffix } from '../lib/slug';
+import { makeSlug, uniqueSlug } from '../lib/slug';
 
 export const adminArticlesRoutes = new Hono<Env>();
 
@@ -116,19 +116,13 @@ adminArticlesRoutes.post('/', async (c) => {
   const body = await c.req.json<any>();
   if (!body.title || !body.sourceId) return c.json(errMsg('title and sourceId required'), 400);
 
-  // makeSlug returns '' for a whitespace/punctuation-only title; fall back to a
-  // usable base so we never insert an empty (un-routable) or '-2' slug.
-  const baseSlug = body.slug?.trim() || makeSlug(body.title) || 'article';
-  let slug = baseSlug;
-  // Resolve slug collisions.
-  for (let i = 2; i < 100; i++) {
-    const exists = await c.env.DB.prepare('SELECT id FROM news_articles WHERE slug = ? LIMIT 1').bind(slug).first();
-    if (!exists) break;
-    slug = withSuffix(baseSlug, i);
-  }
-
   const now = nowIso();
-  const canonicalUrl = body.canonicalUrl ?? body.sourceUrl ?? `${slug}-${Date.now()}`;
+  const canonicalUrl = body.canonicalUrl ?? body.sourceUrl ?? `${makeSlug(body.title) || 'article'}-${Date.now()}`;
+
+  // uniqueSlug is collision-free by construction (title + a short hash of the
+  // canonical URL), so we avoid the ~98 sequential SELECTs of the old probe loop.
+  // An explicit slug in the body still wins.
+  const slug = body.slug?.trim() || uniqueSlug(body.title, canonicalUrl);
 
   const result = await c.env.DB.prepare(
     `INSERT INTO news_articles (title, slug, canonical_url, summary, content, plain_text, source_url,
@@ -163,7 +157,7 @@ adminArticlesRoutes.put('/:id', async (c) => {
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   const body = await c.req.json<any>();
 
-  await c.env.DB.prepare(
+  const result = await c.env.DB.prepare(
     `UPDATE news_articles SET
        title = COALESCE(?, title),
        summary = COALESCE(?, summary),
@@ -181,6 +175,7 @@ adminArticlesRoutes.put('/:id', async (c) => {
     nowIso(),
     id
   ).run();
+  if (result.meta.changes === 0) return c.json(errMsg('Article not found'), 404);
 
   await invalidateNewsCache(c.env);
   return c.body(null, 204);
@@ -190,10 +185,10 @@ adminArticlesRoutes.put('/:id', async (c) => {
 adminArticlesRoutes.put('/:id/feature', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  const cur = await c.env.DB.prepare('SELECT is_featured FROM news_articles WHERE id = ? LIMIT 1')
+  const current = await c.env.DB.prepare('SELECT is_featured FROM news_articles WHERE id = ? LIMIT 1')
     .bind(id).first<{ is_featured: number }>();
-  if (!cur) return c.json(errMsg('Article not found'), 404);
-  const next = cur.is_featured === 1 ? 0 : 1;
+  if (!current) return c.json(errMsg('Article not found'), 404);
+  const next = current.is_featured === 1 ? 0 : 1;
   await c.env.DB.prepare('UPDATE news_articles SET is_featured = ?, updated_at = ? WHERE id = ?')
     .bind(next, nowIso(), id).run();
   await invalidateNewsCache(c.env);
@@ -204,8 +199,9 @@ adminArticlesRoutes.put('/:id/feature', async (c) => {
 adminArticlesRoutes.post('/:id/hide', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  await c.env.DB.prepare('UPDATE news_articles SET is_active = 0, updated_at = ? WHERE id = ?')
+  const result = await c.env.DB.prepare('UPDATE news_articles SET is_active = 0, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('Article not found'), 404);
   await invalidateNewsCache(c.env);
   return c.json({ message: 'Hidden' });
 });
@@ -214,8 +210,9 @@ adminArticlesRoutes.post('/:id/hide', async (c) => {
 adminArticlesRoutes.post('/:id/show', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  await c.env.DB.prepare('UPDATE news_articles SET is_active = 1, updated_at = ? WHERE id = ?')
+  const result = await c.env.DB.prepare('UPDATE news_articles SET is_active = 1, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('Article not found'), 404);
   await invalidateNewsCache(c.env);
   return c.json({ message: 'Restored' });
 });
@@ -224,8 +221,9 @@ adminArticlesRoutes.post('/:id/show', async (c) => {
 adminArticlesRoutes.delete('/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
-  await c.env.DB.prepare('UPDATE news_articles SET is_active = 0, updated_at = ? WHERE id = ?')
+  const result = await c.env.DB.prepare('UPDATE news_articles SET is_active = 0, updated_at = ? WHERE id = ?')
     .bind(nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('Article not found'), 404);
   await invalidateNewsCache(c.env);
   return c.body(null, 204);
 });
@@ -289,24 +287,34 @@ adminArticlesRoutes.post('/re-extract', requireRole('Admin'), async (c) => {
 });
 
 // POST /auto-categorize — bulk re-categorize using the keyword classifier
-adminArticlesRoutes.post('/auto-categorize', async (c) => {
+adminArticlesRoutes.post('/auto-categorize', requireRole('Admin'), async (c) => {
   const { categorize } = await import('../lib/categorizer');
   const articles = await c.env.DB.prepare(
-    'SELECT id, title, summary, plain_text FROM news_articles WHERE is_active = 1 AND category_id IS NULL LIMIT 500'
+    'SELECT id, title, summary, plain_text FROM news_articles WHERE is_active = 1 AND category_id IS NULL LIMIT 100'
   ).all<{ id: number; title: string; summary: string | null; plain_text: string | null }>();
 
   const categories = await c.env.DB.prepare('SELECT id, slug FROM categories WHERE is_active = 1').all<{ id: number; slug: string }>();
   const bySlug = new Map(categories.results?.map((c) => [c.slug, c.id]));
 
-  let updated = 0;
+  // categorize() is pure/in-memory; collect the matching UPDATEs and apply them
+  // in a single DB.batch() (one subrequest) instead of one .run() per row.
+  const now = nowIso();
+  const stmts: D1PreparedStatement[] = [];
   for (const a of articles.results ?? []) {
     const slug = categorize(`${a.title}\n${a.summary ?? ''}\n${a.plain_text ?? ''}`);
     const catId = bySlug.get(slug);
     if (!catId) continue;
-    await c.env.DB.prepare('UPDATE news_articles SET category_id = ?, updated_at = ? WHERE id = ?')
-      .bind(catId, nowIso(), a.id).run();
-    updated++;
+    stmts.push(
+      c.env.DB.prepare('UPDATE news_articles SET category_id = ?, updated_at = ? WHERE id = ?')
+        .bind(catId, now, a.id)
+    );
   }
-  await invalidateNewsCache(c.env);
+
+  let updated = 0;
+  if (stmts.length > 0) {
+    const results = await c.env.DB.batch(stmts);
+    updated = results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+    await invalidateNewsCache(c.env);
+  }
   return c.json({ processed: articles.results?.length ?? 0, updated });
 });

@@ -14,8 +14,8 @@ export type JwtPayload = {
 
 /** Mounts hono/jwt + populates c.var.userId/role on success. */
 export const requireAuth: MiddlewareHandler<Env> = async (c, next) => {
-  const mw = jwt({ secret: c.env.JWT_SECRET, alg: 'HS256' });
-  return mw(c, async () => {
+  const jwtMiddleware = jwt({ secret: c.env.JWT_SECRET, alg: 'HS256' });
+  return jwtMiddleware(c, async () => {
     const payload = c.get('jwtPayload') as JwtPayload | undefined;
     if (payload) {
       c.set('userId', parseInt(payload.sub));
@@ -25,7 +25,7 @@ export const requireAuth: MiddlewareHandler<Env> = async (c, next) => {
   });
 };
 
-const ROLE_RANK: Record<string, number> = {
+export const ROLE_RANK: Record<string, number> = {
   Reader: 1,
   Viewer: 1,        // legacy alias
   Editor: 2,

@@ -16,13 +16,15 @@ sitemapRoutes.get('/', async (c) => {
   ).all<{ slug: string; lastmod: string }>();
 
   const articleEntries = (rows.results ?? [])
-    .map(
-      (r) => `  <url>
+    .map((r) => {
+      const parsed = new Date(r.lastmod);
+      const lastmod = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+      return `  <url>
     <loc>${base}/news/${encodeURIComponent(r.slug)}</loc>
-    <lastmod>${new Date(r.lastmod).toISOString()}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>hourly</changefreq>
-  </url>`
-    )
+  </url>`;
+    })
     .join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

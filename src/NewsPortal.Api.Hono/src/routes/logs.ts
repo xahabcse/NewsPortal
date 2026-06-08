@@ -109,16 +109,16 @@ logsRoutes.get('/stats', async (c) => {
         c.env.DB.prepare('SELECT COUNT(*) as count FROM app_logs WHERE created_at >= ?').bind(since).first<{ count: number }>(),
     ]);
 
-    const cat: Record<string, number> = {};
-    for (const r of byCategory.results ?? []) cat[r.category] = r.count;
-    const lvl: Record<string, number> = {};
-    for (const r of byLevel.results ?? []) lvl[r.level] = r.count;
+    const countsByCategory: Record<string, number> = {};
+    for (const r of byCategory.results ?? []) countsByCategory[r.category] = r.count;
+    const countsByLevel: Record<string, number> = {};
+    for (const r of byLevel.results ?? []) countsByLevel[r.level] = r.count;
 
     return c.json({
         total: total?.count ?? 0,
         last24h: last24h?.count ?? 0,
-        byCategory: cat,
-        byLevel: lvl,
+        byCategory: countsByCategory,
+        byLevel: countsByLevel,
     });
 });
 

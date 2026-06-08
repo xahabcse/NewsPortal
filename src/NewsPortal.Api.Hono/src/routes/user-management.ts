@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/env';
 import { errMsg } from '../lib/response';
-import { requireAuth, requireRole } from '../lib/auth';
+import { requireAuth, requireRole, ROLE_RANK } from '../lib/auth';
 import { nowIso, type Row } from '../lib/db';
 import { hashPassword } from '../lib/password';
 import { audit } from '../lib/logger';
@@ -10,19 +10,31 @@ export const userManagementRoutes = new Hono<Env>();
 
 userManagementRoutes.use('*', requireAuth, requireRole('Admin'));
 
-function mapUser(r: Row) {
+// Accepted role inputs (Viewer is a legacy alias for Reader). Single source of
+// truth shared by POST /, PUT /:id and PUT /:id/role so they validate identically.
+const VALID_ROLES = ['Reader', 'Viewer', 'Editor', 'Admin', 'SuperAdmin'];
+function normalizeRole(role: string): string {
+  return role === 'Viewer' ? 'Reader' : role;
+}
+
+/** Rank of the actor's role (0 if somehow unknown). */
+function rankOf(role: string | undefined | null): number {
+  return ROLE_RANK[role ?? ''] ?? 0;
+}
+
+function mapUser(row: Row) {
   return {
-    id: r.id,
-    username: r.username,
-    email: r.email,
-    firstName: r.first_name,
-    lastName: r.last_name,
-    role: r.role,
-    authProvider: r.auth_provider,
-    avatarId: r.avatar_id,
-    isActive: r.is_active === 1,
-    lastLoginAt: r.last_login_at,
-    createdAt: r.created_at,
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    role: row.role,
+    authProvider: row.auth_provider,
+    avatarId: row.avatar_id,
+    isActive: row.is_active === 1,
+    lastLoginAt: row.last_login_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -85,15 +97,21 @@ userManagementRoutes.post('/', async (c) => {
     return c.json(errMsg('username, email and password are required'), 400);
   }
   if (password.length < 6) return c.json(errMsg('Password must be at least 6 characters'), 400);
-  if (!['Reader', 'Viewer', 'Editor', 'Admin', 'SuperAdmin'].includes(role)) {
+  if (!VALID_ROLES.includes(role)) {
     return c.json(errMsg('Invalid role'), 400);
+  }
+
+  const normalizedRole = normalizeRole(role);
+  // Privilege escalation guard: an actor can never grant a role whose rank is
+  // >= their own (e.g. an Admin can't create another Admin or a SuperAdmin).
+  if (rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
   }
 
   const existing = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1 OR email = ?2 LIMIT 1')
     .bind(username, email).first();
   if (existing) return c.json(errMsg('Username or email already exists'), 409);
 
-  const normalizedRole = role === 'Viewer' ? 'Reader' : role;
   const passwordHash = await hashPassword(password);
   const now = nowIso();
 
@@ -113,8 +131,9 @@ userManagementRoutes.post('/', async (c) => {
 
   const created = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
     .bind(Number(result.meta.last_row_id)).first<Row>();
-  audit(c, { action: 'user.create', targetType: 'user', targetId: created?.id as number, message: `Created user ${created?.username}`, meta: { role: created?.role } });
-  return c.json(mapUser(created!), 201);
+  if (!created) return c.json(errMsg('User created but could not be loaded'), 500);
+  audit(c, { action: 'user.create', targetType: 'user', targetId: created.id as number, message: `Created user ${created.username}`, meta: { role: created.role } });
+  return c.json(mapUser(created), 201);
 });
 
 // ----------------------------------------------------------------------------
@@ -136,10 +155,15 @@ userManagementRoutes.put('/:id', async (c) => {
   const username = (body.username ?? '').trim();
   const email = (body.email ?? '').trim().toLowerCase();
   const role = body.role ?? null;
-  if (role && !['Reader', 'Viewer', 'Editor', 'Admin', 'SuperAdmin'].includes(role)) {
+  if (role && !VALID_ROLES.includes(role)) {
     return c.json(errMsg('Invalid role'), 400);
   }
-  const normalizedRole = role === 'Viewer' ? 'Reader' : role;
+  const normalizedRole = role ? normalizeRole(role) : null;
+  // Privilege escalation guard: when a role is being assigned it must rank below
+  // the actor's own role.
+  if (normalizedRole && rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
 
   await c.env.DB.prepare(
     `UPDATE users SET
@@ -184,8 +208,13 @@ userManagementRoutes.delete('/:id', async (c) => {
     return c.json(errMsg('You cannot delete your own account'), 400);
   }
 
-  const existing = await c.env.DB.prepare('SELECT id, username FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; username: string }>();
+  const existing = await c.env.DB.prepare('SELECT id, username, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; username: string; role: string }>();
   if (!existing) return c.json(errMsg('User not found'), 404);
+
+  // Privilege guard: never delete a user whose current role ranks >= the actor's.
+  if (rankOf(existing.role) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
 
   await c.env.DB.batch([
     // Votes this user cast, and votes on this user's comments.
@@ -220,9 +249,18 @@ userManagementRoutes.post('/:id/reset-password', async (c) => {
   if (!body.newPassword || body.newPassword.length < 6) {
     return c.json(errMsg('newPassword must be at least 6 characters'), 400);
   }
+
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
+  if (!target) return c.json(errMsg('User not found'), 404);
+  // Privilege guard: can't reset the password of a user who ranks >= the actor.
+  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
+
   const hash = await hashPassword(body.newPassword);
-  await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+  const result = await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
     .bind(hash, nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('User not found'), 404);
   audit(c, { action: 'user.reset_password', targetType: 'user', targetId: id, level: 'warn', message: 'Reset user password' });
   return c.json({ message: 'Password reset' });
 });
@@ -232,12 +270,26 @@ userManagementRoutes.put('/:id/role', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   const body = await c.req.json<{ role?: string }>();
-  if (!['Reader', 'Editor', 'Admin', 'SuperAdmin'].includes(body.role ?? '')) {
+  if (!VALID_ROLES.includes(body.role ?? '')) {
     return c.json(errMsg('Invalid role'), 400);
   }
-  await c.env.DB.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?')
-    .bind(body.role, nowIso(), id).run();
-  audit(c, { action: 'user.role_change', targetType: 'user', targetId: id, level: 'warn', message: `Role → ${body.role}`, meta: { role: body.role } });
+  const normalizedRole = normalizeRole(body.role as string);
+  // Privilege guard: can't grant a role that ranks >= the actor's own role.
+  if (rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
+
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
+  if (!target) return c.json(errMsg('User not found'), 404);
+  // Privilege guard: can't change the role of a user who ranks >= the actor.
+  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
+
+  const result = await c.env.DB.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?')
+    .bind(normalizedRole, nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('User not found'), 404);
+  audit(c, { action: 'user.role_change', targetType: 'user', targetId: id, level: 'warn', message: `Role → ${normalizedRole}`, meta: { role: normalizedRole } });
   return c.json({ message: 'Role updated' });
 });
 
@@ -246,8 +298,20 @@ userManagementRoutes.put('/:id/active', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   const body = await c.req.json<{ isActive?: boolean }>();
-  await c.env.DB.prepare('UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?')
+  if (typeof body.isActive !== 'boolean') {
+    return c.json(errMsg('isActive (boolean) is required'), 400);
+  }
+
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
+  if (!target) return c.json(errMsg('User not found'), 404);
+  // Privilege guard: can't (de)activate a user who ranks >= the actor.
+  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+    return c.json(errMsg('Forbidden'), 403);
+  }
+
+  const result = await c.env.DB.prepare('UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?')
     .bind(body.isActive ? 1 : 0, nowIso(), id).run();
-  audit(c, { action: 'user.active_toggle', targetType: 'user', targetId: id, message: body.isActive ? 'Activated user' : 'Deactivated user', meta: { isActive: !!body.isActive } });
+  if (result.meta.changes === 0) return c.json(errMsg('User not found'), 404);
+  audit(c, { action: 'user.active_toggle', targetType: 'user', targetId: id, message: body.isActive ? 'Activated user' : 'Deactivated user', meta: { isActive: body.isActive } });
   return c.json({ message: 'Status updated' });
 });

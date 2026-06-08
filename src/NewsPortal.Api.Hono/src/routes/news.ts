@@ -81,27 +81,43 @@ function mapArticle(row: ArticleRow) {
  * For a page of PRIMARY articles, attach the source names of their cross-source
  * duplicates (the "also on <source>" hint). One extra D1 read for the whole page.
  */
-async function withAlsoOn<T extends { id: number; sourceName: string | null; alsoOn: string[] }>(
+async function withAlsoOn<T extends { id: number; sourceId: number; sourceName: string | null; alsoOn: string[] }>(
   env: Env['Bindings'],
   items: T[]
 ): Promise<T[]> {
   if (items.length === 0) return items;
   const placeholders = items.map(() => '?').join(',');
+  // Carry each duplicate's source id alongside its name (id|name pairs). Two distinct
+  // sources can share a display name, so exclusion must be by source_id equality — not
+  // by the name string — otherwise we'd drop a genuine cross-source outlet that merely
+  // shares its name with the primary's source.
   const rows = await env.DB.prepare(
-    `SELECT a.duplicate_of AS pid, GROUP_CONCAT(DISTINCT s.name) AS srcs
+    `SELECT a.duplicate_of AS pid, GROUP_CONCAT(DISTINCT s.id || '|' || s.name) AS srcs
      FROM news_articles a
      INNER JOIN news_sources s ON s.id = a.source_id
      WHERE a.is_active = 1 AND a.duplicate_of IN (${placeholders})
      GROUP BY a.duplicate_of`
   ).bind(...items.map((i) => i.id)).all<{ pid: number; srcs: string | null }>();
 
-  const byPrimary = new Map<number, string[]>();
+  const byPrimary = new Map<number, { id: number; name: string }[]>();
   for (const r of rows.results ?? []) {
-    byPrimary.set(r.pid, (r.srcs ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+    const pairs = (r.srcs ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const sep = entry.indexOf('|');
+        return { id: parseInt(entry.slice(0, sep), 10), name: entry.slice(sep + 1) };
+      });
+    byPrimary.set(r.pid, pairs);
   }
   // Exclude the primary's OWN source — "also on" should only name OTHER outlets, so a
   // collapsed same-source duplicate shows no (redundant) hint, only true cross-source ones.
-  for (const it of items) it.alsoOn = (byPrimary.get(it.id) ?? []).filter((name) => name !== it.sourceName);
+  // Match by source id (names are not unique across sources).
+  for (const it of items)
+    it.alsoOn = (byPrimary.get(it.id) ?? [])
+      .filter((src) => src.id !== it.sourceId)
+      .map((src) => src.name);
   return items;
 }
 
@@ -149,13 +165,23 @@ newsRoutes.get('/latest', async (c) => {
 // ----------------------------------------------------------------------------
 newsRoutes.get('/featured', async (c) => {
   const count = Math.min(100, Math.max(1, parseInt(c.req.query('count') ?? '5') || 5));
-  const rows = await c.env.DB.prepare(
-    `${ARTICLE_SELECT}
-     WHERE a.is_active = 1 AND a.is_featured = 1
-     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
-     LIMIT ?`
-  ).bind(count).all<ArticleRow>();
-  return c.json((rows.results ?? []).map(mapArticle));
+
+  const result = await cacheOrCompute(
+    c.env.CACHE_KV,
+    `news:featured:${count}`,
+    async () => {
+      const rows = await c.env.DB.prepare(
+        `${ARTICLE_SELECT}
+         WHERE a.is_active = 1 AND a.is_featured = 1
+         ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
+         LIMIT ?`
+      ).bind(count).all<ArticleRow>();
+      return (rows.results ?? []).map(mapArticle);
+    },
+    { ttlSeconds: 120 }
+  );
+
+  return c.json(result);
 });
 
 // ----------------------------------------------------------------------------
@@ -169,18 +195,27 @@ newsRoutes.get('/category/:slug', async (c) => {
     .bind(slug).first<{ id: number }>();
   if (!category) return c.json(errMsg('Category not found'), 404);
 
-  const [rows, countRow] = await Promise.all([
-    c.env.DB.prepare(
-      `${ARTICLE_SELECT}
-       WHERE a.is_active = 1 AND a.duplicate_of IS NULL AND a.category_id = ?
-       ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
-       LIMIT ? OFFSET ?`
-    ).bind(category.id, size, offset).all<ArticleRow>(),
-    c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND duplicate_of IS NULL AND category_id = ?')
-      .bind(category.id).first<{ count: number }>(),
-  ]);
+  const result = await cacheOrCompute(
+    c.env.CACHE_KV,
+    cacheKeys.newsCategory(slug, page, size),
+    async () => {
+      const [rows, countRow] = await Promise.all([
+        c.env.DB.prepare(
+          `${ARTICLE_SELECT}
+           WHERE a.is_active = 1 AND a.duplicate_of IS NULL AND a.category_id = ?
+           ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
+           LIMIT ? OFFSET ?`
+        ).bind(category.id, size, offset).all<ArticleRow>(),
+        c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND duplicate_of IS NULL AND category_id = ?')
+          .bind(category.id).first<{ count: number }>(),
+      ]);
+      const items = await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle));
+      return paged(items, countRow?.count ?? 0, page, size);
+    },
+    { ttlSeconds: 120 }
+  );
 
-  return c.json(paged(await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle)), countRow?.count ?? 0, page, size));
+  return c.json(result);
 });
 
 // ----------------------------------------------------------------------------

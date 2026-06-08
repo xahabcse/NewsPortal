@@ -4,7 +4,7 @@
 
 import type { Env } from '../lib/env';
 import { parseFeed, canonicalize, type FeedItem } from '../lib/rss';
-import { loadDedupContext, isDuplicate, findClusterPrimary } from '../lib/dedup';
+import { loadDedupContext, isDuplicate, findClusterPrimary, tokenizeTitle, clusterTokensFromTitle } from '../lib/dedup';
 import { categorize } from '../lib/categorizer';
 import { uniqueSlug } from '../lib/slug';
 import { uploadFromUrl } from '../lib/cloudinary';
@@ -35,11 +35,17 @@ const SOURCE_COLUMNS = `id, name, slug, base_url, fetch_method, rss_feed_url, ap
 const MAX_SOURCES_PER_RUN = 5;      // process the few stalest sources each run; */5 cron covers the rest
 const MAX_ARTICLES_PER_SOURCE = 15;
 
+// A 200-but-zero-items response is treated as a soft (non-failure) signal until it
+// recurs this many runs in a row — only THEN does it count as a real failure that can
+// trip the circuit breaker. This keeps a transient empty cycle or one-off parser drift
+// from degrading an otherwise-healthy source.
+const ZERO_ITEM_FAILURE_AFTER = 4;
+
 // Cloudflare free plan caps each Worker invocation at TWO independent budgets:
 //
 //  - SUBREQUEST_BUDGET: the 50-subrequest/invocation cap. EVERY outbound call counts —
 //    feed fetch, article-page fetch, Cloudinary upload, AND every D1 query / KV op. To
-//    stay well clear of the cap we (a) batch D1 work hard (dedup = 2 reads/source,
+//    stay well clear of the cap we (a) batch D1 work hard (dedup = 3 reads/source,
 //    inserts + bookkeeping = 1 batch each) and (b) decrement this budget on each call.
 //  - EXTRACTION_BUDGET: a proxy for the 10ms ACTIVE-CPU cap. A full article-page
 //    HTMLRewriter/JSON-LD parse is the dominant CPU cost, so we cap how many page
@@ -57,6 +63,11 @@ const MIN_SUBREQUEST_RESERVE = 4;   // never spend optional subrequests (bodies/
 const BACKFILL_SUBREQUEST_BUDGET = 45;
 const BACKFILL_EXTRACTION_BUDGET = 8;
 
+// Hard ceiling for a fetched article page. Applied to the Content-Length hint when
+// present AND to the materialized response text (chunked responses omit Content-Length),
+// so an oversized streamed page can't blow past the budget before extraction.
+const MAX_BODY_FETCH_BYTES = 6_000_000;
+
 type Budget = { remaining: number; extractions: number };
 
 export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sourcesProcessed: number; articlesNew: number }> {
@@ -70,9 +81,9 @@ export async function runScheduledFetch(env: Env['Bindings']): Promise<{ sources
   `).bind(MAX_SOURCES_PER_RUN).all<SourceRow>();
 
   // Keep only sources whose fetch interval has elapsed.
-  const dueSources = (sources.results ?? []).filter((s) => {
-    const dueAt = s.last_fetched_at
-      ? new Date(s.last_fetched_at).getTime() + s.fetch_interval_minutes * 60 * 1000
+  const dueSources = (sources.results ?? []).filter((source) => {
+    const dueAt = source.last_fetched_at
+      ? new Date(source.last_fetched_at).getTime() + source.fetch_interval_minutes * 60 * 1000
       : 0;
     return dueAt <= Date.now();
   });
@@ -118,11 +129,11 @@ export async function runBodyBackfill(env: Env['Bindings']): Promise<{ filled: n
  * using whatever budget the main loop left behind. A 6-hour per-row cooldown (via
  * updated_at) stops a permanently-unextractable URL from being retried every run.
  */
-async function backfillRecentBodies(env: Env['Bindings'], budget: Budget, maxItems = 10): Promise<number> {
+async function backfillRecentBodies(env: Env['Bindings'], budget: Budget, maxRowsToScan = 10): Promise<number> {
   if (budget.remaining <= MIN_SUBREQUEST_RESERVE || budget.extractions <= 0) return 0;
   const recentCutoffIso = new Date(Date.now() - 3 * 86400000).toISOString();
   const retryCooldownIso = new Date(Date.now() - 6 * 3600000).toISOString();
-  const limit = Math.min(budget.remaining - MIN_SUBREQUEST_RESERVE, budget.extractions, maxItems);
+  const limit = Math.min(budget.remaining - MIN_SUBREQUEST_RESERVE, budget.extractions, maxRowsToScan);
 
   // Exclude SPA sources (can't be extracted); skip the clause entirely when the list
   // is empty since `NOT IN ()` is a SQL syntax error.
@@ -144,27 +155,27 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget, maxIte
     .all<{ id: number; source_url: string; source_slug: string; source_base_url: string }>();
 
   let updated = 0;
-  for (const a of rows.results ?? []) {
+  for (const article of rows.results ?? []) {
     if (budget.remaining <= MIN_SUBREQUEST_RESERVE - 2 || budget.extractions <= 0) break;
     budget.remaining--;
     budget.extractions--;
-    const { body, reason } = await fetchArticleBody(a.source_url, a.source_slug, a.source_base_url);
+    const { body, reason } = await fetchArticleBody(article.source_url, article.source_slug, article.source_base_url);
     const now = nowIso();
     if (body) {
       await env.DB.prepare('UPDATE news_articles SET content = ?, plain_text = ?, updated_at = ? WHERE id = ?')
-        .bind(body.contentHtml, body.plainText, now, a.id).run();
+        .bind(body.contentHtml, body.plainText, now, article.id).run();
       updated++;
     } else {
       // Stamp updated_at so this row enters the retry cooldown instead of being
       // re-attempted (and burning budget) on every single run.
-      await env.DB.prepare('UPDATE news_articles SET updated_at = ? WHERE id = ?').bind(now, a.id).run();
+      await env.DB.prepare('UPDATE news_articles SET updated_at = ? WHERE id = ?').bind(now, article.id).run();
       // Surface the failure in the central log (extraction category).
       if (reason) {
         await writeLog(env, {
           category: 'extraction',
           level: 'warn',
-          sourceSlug: a.source_slug,
-          url: a.source_url,
+          sourceSlug: article.source_slug,
+          url: article.source_url,
           message: `Backfill extraction failed (${reason})`,
           error: reason,
         });
@@ -176,9 +187,9 @@ async function backfillRecentBodies(env: Env['Bindings'], budget: Budget, maxIte
 
 /** Manually fetch a single source (called from POST /newssources/:id/fetch). */
 export async function fetchSourceNow(env: Env['Bindings'], sourceId: number, jobId?: number): Promise<void> {
-  const s = await env.DB.prepare(`SELECT ${SOURCE_COLUMNS} FROM news_sources WHERE id = ? LIMIT 1`)
+  const source = await env.DB.prepare(`SELECT ${SOURCE_COLUMNS} FROM news_sources WHERE id = ? LIMIT 1`)
     .bind(sourceId).first<SourceRow>();
-  if (!s) return;
+  if (!source) return;
 
   if (jobId) {
     await env.DB.prepare('UPDATE source_fetch_jobs SET status = 1, started_at = ? WHERE id = ?')
@@ -188,7 +199,7 @@ export async function fetchSourceNow(env: Env['Bindings'], sourceId: number, job
   // A manual single-source fetch runs in its own invocation with a fresh budget, so
   // it may use the whole extraction budget.
   const budget: Budget = { remaining: SUBREQUEST_BUDGET, extractions: EXTRACTION_BUDGET };
-  const result = await fetchOneSource(env, s, budget, EXTRACTION_BUDGET);
+  const result = await fetchOneSource(env, source, budget, EXTRACTION_BUDGET);
 
   if (jobId) {
     await env.DB.prepare(
@@ -216,12 +227,12 @@ type ResolvedBody = { contentHtml: string; plainText: string; images: string[] }
 
 async function fetchOneSource(
   env: Env['Bindings'],
-  s: SourceRow,
+  source: SourceRow,
   budget: Budget,
   extractionCap: number
 ): Promise<FetchResult> {
   const startTime = Date.now();
-  const feedUrl = s.fetch_method === 2 ? s.api_endpoint : s.rss_feed_url;
+  const feedUrl = source.fetch_method === 2 ? source.api_endpoint : source.rss_feed_url;
   if (!feedUrl) return { totalCount: 0, newCount: 0, updatedCount: 0, error: 'No URL configured' };
 
   // --- Fetch the feed -------------------------------------------------------
@@ -229,28 +240,30 @@ async function fetchOneSource(
   try {
     budget.remaining--; // the feed fetch is one subrequest
     res = await fetch(feedUrl, { headers: { 'User-Agent': 'NewsPortalBot/1.0 (+https://news.xahabcse.me)' } });
-  } catch (e: any) {
-    return await recordFailure(env, s, budget, startTime, e.message ?? 'Network error');
+  } catch (err: any) {
+    return await recordFailure(env, source, budget, startTime, err.message ?? 'Network error');
   }
   if (res.ok === false) {
-    return await recordFailure(env, s, budget, startTime, `HTTP ${res.status}`);
+    return await recordFailure(env, source, budget, startTime, `HTTP ${res.status}`);
   }
 
   // --- Parse the feed -------------------------------------------------------
   let items: FeedItem[];
   try {
-    items = s.fetch_method === 2 && s.slug === 'the-guardian'
+    items = source.fetch_method === 2 && source.slug === 'the-guardian'
       ? await parseGuardian(res)
       : parseFeed(await res.text());
-  } catch (e: any) {
-    return await recordFailure(env, s, budget, startTime, e.message ?? 'Parse error');
+  } catch (err: any) {
+    return await recordFailure(env, source, budget, startTime, err.message ?? 'Parse error');
   }
 
-  // A 200 response that yields zero items is a silently-broken feed — treat it as a
-  // soft failure so the circuit breaker can eventually trip, rather than reporting
-  // green health forever.
+  // A 200 response that yields zero items is usually transient (an empty cycle) or
+  // parser drift, NOT a dead source. Don't bump the failure counter the way a real
+  // network/HTTP/parse error does — that would let a single empty cycle, or a feed-
+  // format tweak, drag a healthy source toward the circuit breaker. Only after
+  // ZERO_ITEM_FAILURE_AFTER consecutive zero-item runs do we treat it as a failure.
   if (items.length === 0) {
-    return await recordFailure(env, s, budget, startTime, 'Feed returned no items');
+    return await recordZeroItems(env, source, budget, startTime);
   }
 
   items = items.slice(0, MAX_ARTICLES_PER_SOURCE);
@@ -260,12 +273,12 @@ async function fetchOneSource(
   const cats = await env.DB.prepare('SELECT id, slug FROM categories WHERE is_active = 1').all<{ id: number; slug: string }>();
   const categoryIdBySlug = new Map(cats.results?.map((c) => [c.slug, c.id]));
 
-  // --- Dedup (two D1 reads for the whole batch) -----------------------------
+  // --- Dedup (three D1 reads for the whole batch) ---------------------------
   const canonicalByItem = new Map<FeedItem, string>();
   for (const item of items) canonicalByItem.set(item, canonicalize(item.link));
 
-  budget.remaining -= 3; // loadDedupContext now does 3 reads (canonicals + source titles + global primaries)
-  const dedupContext = await loadDedupContext(env, [...canonicalByItem.values()], s.id);
+  budget.remaining -= 3; // loadDedupContext does 3 reads (canonicals + source titles + global primaries)
+  const dedupContext = await loadDedupContext(env, [...canonicalByItem.values()], source.id);
   // Accept items one at a time, folding each accepted item back into the context so
   // later items in THIS SAME batch dedup against it too. Without this, a feed that
   // lists the same story twice (different URLs, ~identical titles — common with
@@ -276,7 +289,8 @@ async function fetchOneSource(
     if (isDuplicate(dedupContext, canonical, item.title)) continue;
     newItems.push(item);
     dedupContext.existingCanonicalUrls.add(canonical);
-    dedupContext.recentSourceTitles.push(item.title);
+    // recentSourceTitles holds precomputed token sets (tokenized once); push the same shape.
+    dedupContext.recentSourceTitles.push(tokenizeTitle(item.title));
   }
 
   // --- Resolve bodies (feed body first, then bounded page extraction) -------
@@ -288,7 +302,7 @@ async function fetchOneSource(
   // 1) Cheap path: full body shipped in the feed (<content:encoded>). No budget cost.
   const needsPageFetch: FeedItem[] = [];
   for (const item of newItems) {
-    const feedBody = item.contentEncoded ? extractFromFeedHtml(item.contentEncoded, s.base_url) : null;
+    const feedBody = item.contentEncoded ? extractFromFeedHtml(item.contentEncoded, source.base_url) : null;
     if (feedBody) {
       bodyByItem.set(item, feedBody);
       feedBodyCount++;
@@ -299,7 +313,7 @@ async function fetchOneSource(
 
   // 2) Expensive path: fetch the article page, gated by both budgets + per-source cap.
   const BODY_CONCURRENCY = 5;
-  const skipPageFetch = isSpaSource(s.slug);
+  const skipPageFetch = isSpaSource(source.slug);
   for (let i = 0; i < needsPageFetch.length && !skipPageFetch; i += BODY_CONCURRENCY) {
     const batch = needsPageFetch.slice(i, i + BODY_CONCURRENCY);
     const bodies = await Promise.all(
@@ -314,18 +328,26 @@ async function fetchOneSource(
         budget.remaining--;
         budget.extractions--;
         extractedBodyCount++;
-        return fetchArticleBody(item.link, s.slug, s.base_url);
+        return fetchArticleBody(item.link, source.slug, source.base_url);
       })
     );
-    batch.forEach((item, j) => {
-      bodyByItem.set(item, bodies[j].body);
-      if (bodies[j].reason) extractionFailures.push({ url: item.link, reason: bodies[j].reason! });
+    batch.forEach((item, batchIndex) => {
+      bodyByItem.set(item, bodies[batchIndex].body);
+      if (bodies[batchIndex].reason) extractionFailures.push({ url: item.link, reason: bodies[batchIndex].reason! });
     });
   }
 
   // --- Build rows (resolve images, slug, category) --------------------------
   const insertStatements: D1PreparedStatement[] = [];
-  for (const item of newItems) {
+  // In-batch cross-source clustering: findClusterPrimary only sees the DB snapshot, so two
+  // same-story items arriving in THIS batch (from sources processed earlier in the same
+  // cycle, or the same wire copy republished) would both pass as primaries. Fold each
+  // accepted NEW primary into the dedup context under a sentinel id = -(insertIndex + 1)
+  // so later same-batch items cluster onto it. The sentinel lands in `duplicate_of`; we
+  // resolve it to the real inserted id after the batch (its row id isn't known until then).
+  const sentinelDupByIndex = new Map<number, number>(); // insertIndex -> sentinel primary index
+  for (let insertIndex = 0; insertIndex < newItems.length; insertIndex++) {
+    const item = newItems[insertIndex];
     const canonical = canonicalByItem.get(item)!;
     const body = bodyByItem.get(item) ?? null;
 
@@ -341,13 +363,24 @@ async function fetchOneSource(
     let imageUrl = item.imageUrl ?? body?.images[0] ?? null;
     if (imageUrl && budget.remaining > MIN_SUBREQUEST_RESERVE) {
       budget.remaining--;
-      const cdnUrl = await uploadFromUrl(env, imageUrl, `${s.slug}/${slug}`).catch(() => null);
+      const cdnUrl = await uploadFromUrl(env, imageUrl, `${source.slug}/${slug}`).catch(() => null);
       if (cdnUrl) imageUrl = cdnUrl;
     }
 
-    // Cross-source dedup: if this is the same story as a recent primary from another
-    // source, store it but point it at that primary so browse feeds show one card.
-    const dupOf = findClusterPrimary(dedupContext, item.title);
+    // Cross-source dedup: if this is the same story as a recent primary (DB snapshot OR a
+    // primary already accepted earlier in THIS batch), store it but point it at that
+    // primary so browse feeds show one card.
+    const matchedPrimaryId = findClusterPrimary(dedupContext, item.title);
+    let dupOf: number | null = matchedPrimaryId;
+    if (matchedPrimaryId !== null && matchedPrimaryId < 0) {
+      // Matched an in-batch primary (sentinel) — defer to post-insert id resolution.
+      sentinelDupByIndex.set(insertIndex, -matchedPrimaryId - 1);
+      dupOf = null;
+    } else if (matchedPrimaryId === null) {
+      // New primary this batch — register it so later same-batch items can cluster onto it.
+      const tokens = clusterTokensFromTitle(item.title);
+      if (tokens.size >= 3) dedupContext.recentPrimaries.push({ id: -(insertIndex + 1), tokens });
+    }
 
     const now = nowIso();
     insertStatements.push(
@@ -368,7 +401,7 @@ async function fetchOneSource(
         item.author,
         item.publishedAt?.toISOString() ?? null,
         now,
-        s.id,
+        source.id,
         categoryId,
         dupOf,
         now,
@@ -378,27 +411,45 @@ async function fetchOneSource(
 
   // --- Persist: one batch for inserts, one batch for bookkeeping ------------
   let newCount = 0;
+  // Resolve in-batch sentinel duplicates to the real inserted primary ids; fold the
+  // UPDATEs into the bookkeeping batch below so they cost no extra subrequest.
+  const dupResolveStatements: D1PreparedStatement[] = [];
   if (insertStatements.length > 0) {
     budget.remaining--;
     const results = await env.DB.batch(insertStatements);
     newCount = results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+    for (const [insertIndex, primaryInsertIndex] of sentinelDupByIndex) {
+      const primaryId = results[primaryInsertIndex]?.meta?.last_row_id;
+      const secondaryId = results[insertIndex]?.meta?.last_row_id;
+      // Only resolve when BOTH rows actually inserted (changes === 1); an IGNORE'd row
+      // has no fresh id, so leaving its duplicate_of NULL is the safe outcome.
+      if (
+        primaryId && results[primaryInsertIndex]?.meta?.changes === 1 &&
+        secondaryId && results[insertIndex]?.meta?.changes === 1
+      ) {
+        dupResolveStatements.push(
+          env.DB.prepare('UPDATE news_articles SET duplicate_of = ? WHERE id = ?').bind(primaryId, secondaryId)
+        );
+      }
+    }
   }
 
   const durationMs = Date.now() - startTime;
   const details = JSON.stringify({ feedBodies: feedBodyCount, extractedBodies: extractedBodyCount });
   budget.remaining--;
   await env.DB.batch([
-    markSuccessStatement(env, s.id),
-    logFetchStatement(env, s, durationMs, items.length, newCount, 0, true, null, details),
+    markSuccessStatement(env, source.id),
+    logFetchStatement(env, source, durationMs, items.length, newCount, 0, true, null, details),
+    ...dupResolveStatements,
     // Per-article extraction failures (capped) → central app_logs, same round-trip.
-    ...extractionFailures.slice(0, 12).map((f) =>
+    ...extractionFailures.slice(0, 12).map((failure) =>
       logInsert(env, {
         category: 'extraction',
         level: 'warn',
-        sourceSlug: s.slug,
-        url: f.url,
-        message: `Body extraction failed (${f.reason})`,
-        error: f.reason,
+        sourceSlug: source.slug,
+        url: failure.url,
+        message: `Body extraction failed (${failure.reason})`,
+        error: failure.reason,
       })
     ),
   ]);
@@ -406,20 +457,63 @@ async function fetchOneSource(
   return { totalCount: items.length, newCount, updatedCount: 0 };
 }
 
-/** Record a feed-level failure (network/HTTP/parse/empty) + its log, in one batch. */
+/** Record a feed-level failure (network/HTTP/parse) + its log, in one batch. */
 async function recordFailure(
   env: Env['Bindings'],
-  s: SourceRow,
+  source: SourceRow,
   budget: Budget,
   startTime: number,
   error: string
 ): Promise<FetchResult> {
   budget.remaining--;
   await env.DB.batch([
-    markFailureStatement(env, s, error),
-    logFetchStatement(env, s, Date.now() - startTime, 0, 0, 0, false, error, null),
+    markFailureStatement(env, source, error),
+    logFetchStatement(env, source, Date.now() - startTime, 0, 0, 0, false, error, null),
   ]);
   return { totalCount: 0, newCount: 0, updatedCount: 0, error };
+}
+
+/**
+ * Record a 200-but-zero-items response. Unlike recordFailure this does NOT immediately
+ * bump consecutive_failures: a single empty cycle or transient parser drift should not
+ * degrade a healthy source. We only escalate to a real failure once the source has
+ * returned zero items ZERO_ITEM_FAILURE_AFTER runs in a row (counted from the recent
+ * fetch logs). Otherwise we log it as a soft, non-failing zero-item run and leave the
+ * source's health/breaker state untouched.
+ */
+async function recordZeroItems(
+  env: Env['Bindings'],
+  source: SourceRow,
+  budget: Budget,
+  startTime: number
+): Promise<FetchResult> {
+  // Look at the most recent prior runs: if the last (ZERO_ITEM_FAILURE_AFTER - 1) were
+  // ALL zero-item runs too, this one makes the streak long enough to count as a failure.
+  budget.remaining--;
+  const recent = await env.DB.prepare(
+    `SELECT articles_fetched FROM news_fetch_logs
+     WHERE source_id = ? ORDER BY fetched_at DESC LIMIT ?`
+  ).bind(source.id, ZERO_ITEM_FAILURE_AFTER - 1).all<{ articles_fetched: number }>();
+
+  const priorRuns = recent.results ?? [];
+  const streakTripsBreaker =
+    priorRuns.length >= ZERO_ITEM_FAILURE_AFTER - 1 &&
+    priorRuns.every((run) => (run.articles_fetched ?? 0) === 0);
+
+  if (streakTripsBreaker) {
+    return await recordFailure(env, source, budget, startTime, 'Feed returned no items');
+  }
+
+  // Soft signal: a non-failing zero-item run. Leave consecutive_failures/health as-is
+  // (don't mark success either — there were no articles), but log it so the streak is
+  // visible to the next run and to the log viewer.
+  budget.remaining--;
+  await env.DB.batch([
+    env.DB.prepare('UPDATE news_sources SET last_fetched_at = ?, updated_at = ? WHERE id = ?')
+      .bind(nowIso(), nowIso(), source.id),
+    logFetchStatement(env, source, Date.now() - startTime, 0, 0, 0, true, 'Feed returned no items', null),
+  ]);
+  return { totalCount: 0, newCount: 0, updatedCount: 0 };
 }
 
 /**
@@ -445,29 +539,38 @@ async function fetchArticleBody(
     if (res.ok === false) return { body: null, reason: `http_${res.status}` };
     // Hard ceiling on download size. The extractor gates the HTMLRewriter path to
     // <=1.5MB; the cheap JSON-LD path tolerates larger pages (CNN ~4MB).
-    const contentLength = parseInt(res.headers.get('content-length') ?? '0', 10);
-    if (contentLength > 6_000_000) return { body: null, reason: 'too_large' };
-    const result = await extractArticleForSource(await res.text(), slug, baseUrl);
+    //
+    // Content-Length is only a pre-download hint and is ABSENT on chunked/streamed
+    // responses, so don't rely on it to bound size: a missing header is treated as
+    // "unknown" (we still download), and the real protection is the post-download
+    // length cap on the materialized text below.
+    const declaredLength = res.headers.get('content-length');
+    if (declaredLength && parseInt(declaredLength, 10) > MAX_BODY_FETCH_BYTES) {
+      return { body: null, reason: 'too_large' };
+    }
+    const html = await res.text();
+    if (html.length > MAX_BODY_FETCH_BYTES) return { body: null, reason: 'too_large' };
+    const result = await extractArticleForSource(html, slug, baseUrl);
     return { body: result, reason: result ? null : 'no_body' };
-  } catch (e: any) {
-    return { body: null, reason: e?.name === 'TimeoutError' ? 'timeout' : 'fetch_error' };
+  } catch (err: any) {
+    return { body: null, reason: err?.name === 'TimeoutError' ? 'timeout' : 'fetch_error' };
   }
 }
 
 async function parseGuardian(res: Response): Promise<FeedItem[]> {
   const json = (await res.json()) as any;
   const results = json?.response?.results ?? [];
-  return results.map((r: any): FeedItem => {
-    const published = r.webPublicationDate ? new Date(r.webPublicationDate) : null;
+  return results.map((result: any): FeedItem => {
+    const published = result.webPublicationDate ? new Date(result.webPublicationDate) : null;
     return {
-      title: r.webTitle ?? '',
-      link: r.webUrl ?? '',
-      description: r.fields?.trailText ?? null,
+      title: result.webTitle ?? '',
+      link: result.webUrl ?? '',
+      description: result.fields?.trailText ?? null,
       contentEncoded: null,
       publishedAt: published && !isNaN(published.getTime()) ? published : null,
-      author: r.fields?.byline ?? null,
-      imageUrl: r.fields?.thumbnail ?? null,
-      guid: r.id ?? null,
+      author: result.fields?.byline ?? null,
+      imageUrl: result.fields?.thumbnail ?? null,
+      guid: result.id ?? null,
     };
   });
 }
@@ -484,9 +587,9 @@ function markSuccessStatement(env: Env['Bindings'], sourceId: number) {
   ).bind(now, now, now, sourceId);
 }
 
-function markFailureStatement(env: Env['Bindings'], s: SourceRow, error: string) {
+function markFailureStatement(env: Env['Bindings'], source: SourceRow, error: string) {
   const now = nowIso();
-  const threshold = s.circuit_breaker_threshold ?? 5;
+  const threshold = source.circuit_breaker_threshold ?? 5;
   // Increment via a SQL expression (not a stale in-memory snapshot) so a concurrent
   // manual fetch can't clobber the counter, and trip the breaker at the per-source
   // configured threshold.
@@ -497,12 +600,12 @@ function markFailureStatement(env: Env['Bindings'], s: SourceRow, error: string)
        health_status = CASE WHEN consecutive_failures + 1 >= ? THEN 1 ELSE 0 END,
        last_error_code = 'fetch_failed', last_error_message = ?, updated_at = ?
      WHERE id = ?`
-  ).bind(now, now, threshold, error.slice(0, 1000), now, s.id);
+  ).bind(now, now, threshold, error.slice(0, 1000), now, source.id);
 }
 
 function logFetchStatement(
   env: Env['Bindings'],
-  s: SourceRow,
+  source: SourceRow,
   durationMs: number,
   fetched: number,
   newCount: number,
@@ -515,5 +618,5 @@ function logFetchStatement(
     `INSERT INTO news_fetch_logs (id, source_id, source_name, fetched_at, duration_ms,
        articles_fetched, new_articles, updated_articles, success, error_message, details)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(crypto.randomUUID(), s.id, s.name, nowIso(), durationMs, fetched, newCount, updated, success ? 1 : 0, error, details);
+  ).bind(crypto.randomUUID(), source.id, source.name, nowIso(), durationMs, fetched, newCount, updated, success ? 1 : 0, error, details);
 }

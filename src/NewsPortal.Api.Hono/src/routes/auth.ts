@@ -7,6 +7,13 @@ import { nowIso } from '../lib/db';
 
 export const authRoutes = new Hono<Env>();
 
+// A real-shaped bcrypt hash (cost 10) of a throwaway value. When login can't
+// find the user we still run a bcrypt.compare against this so the response time
+// matches the "user exists, wrong password" path and doesn't leak account
+// existence via timing. Must be a valid, non-empty hash so verifyPassword does
+// the work instead of short-circuiting on an empty string.
+const DUMMY_PASSWORD_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8Dhb3jBh3kQ3wnq3FmK1qBQ4Z6QY2e';
+
 // ----------------------------------------------------------------------------
 // DB shapes & helpers
 // ----------------------------------------------------------------------------
@@ -65,7 +72,7 @@ function toAuthSession(row: UserRow, token: string) {
 
 async function findUser(env: Env['Bindings'], idOrName: string | number): Promise<UserRow | null> {
   if (typeof idOrName === 'number') {
-    return env.DB.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').bind(idOrName).first<UserRow>();
+    return env.DB.prepare('SELECT * FROM users WHERE id = ? AND is_active = 1 LIMIT 1').bind(idOrName).first<UserRow>();
   }
   return env.DB.prepare(
     'SELECT * FROM users WHERE (username = ?1 OR email = ?1) AND is_active = 1 LIMIT 1'
@@ -85,7 +92,12 @@ authRoutes.post('/login', async (c) => {
   }
 
   const user = await findUser(c.env, identifier);
-  if (!user) return c.json(errMsg('Invalid username or password'), 401);
+  if (!user) {
+    // Constant-work compare so a missing account takes the same time as a
+    // wrong password — don't reveal account existence via response timing.
+    await verifyPassword(password, DUMMY_PASSWORD_HASH);
+    return c.json(errMsg('Invalid username or password'), 401);
+  }
 
   const ok = await verifyPassword(password, user.password_hash);
   if (ok === false) return c.json(errMsg('Invalid username or password'), 401);
@@ -225,7 +237,18 @@ authRoutes.post('/google', async (c) => {
   let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ? LIMIT 1').bind(email).first<UserRow>();
 
   if (!user) {
-    const username = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 30) || `user${Date.now()}`;
+    const baseUsername = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 30) || `user${Date.now()}`;
+    // The local-part of two different Google emails can collide (or clash with
+    // an existing local account), and username is UNIQUE — a raw INSERT would
+    // 500. Probe for a free username, appending a short UUID-derived suffix
+    // until it's unique so a legit Google sign-in never fails on collision.
+    let username = baseUsername;
+    while (
+      await c.env.DB.prepare('SELECT id FROM users WHERE username = ? LIMIT 1').bind(username).first()
+    ) {
+      const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 6);
+      username = `${baseUsername.slice(0, 30 - suffix.length - 1)}_${suffix}`;
+    }
     const firstName = payload.given_name ?? 'Google';
     const lastName = payload.family_name ?? 'User';
     const now = nowIso();

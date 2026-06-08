@@ -7,9 +7,13 @@ const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODE
 async function call(prompt: string, apiKey: string, opts: { maxOutputTokens?: number } = {}): Promise<string | null> {
   if (!apiKey) return null;
   try {
-    const res = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+    const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Pass the key as a header (not a ?key= query param) so it can't leak into request/access logs.
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
