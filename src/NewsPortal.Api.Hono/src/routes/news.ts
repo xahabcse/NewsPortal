@@ -395,50 +395,85 @@ newsRoutes.post('/search', async (c) => {
 // ----------------------------------------------------------------------------
 newsRoutes.get('/daily-highlights', async (c) => {
   const days = Math.min(30, Math.max(1, parseInt(c.req.query('days') ?? '7') || 7));
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  // Per-category top article per day. Heavy query but capped at 30 days × 10 categories.
-  const rows = await c.env.DB.prepare(
-    `${ARTICLE_SELECT}
-     WHERE a.is_active = 1
-       AND COALESCE(a.published_at, a.fetched_at) >= ?
-     ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.view_count DESC
-     LIMIT 500`
-  ).bind(cutoff).all<ArticleRow>();
+  const result = await cacheOrCompute(
+    c.env.CACHE_KV,
+    `news:daily:${days}`,
+    async () => {
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+      // Bucket by Bangladesh-local day (UTC+6). substr+replace strips the trailing
+      // 'Z'/millis so SQLite's date() parses the timestamp reliably before the +6h shift.
+      const dayExpr = `date(replace(substr(COALESCE(a.published_at, a.fetched_at), 1, 19), 'T', ' '), '+6 hours')`;
+      // DYNAMIC "what happened all day" digest. Importance is driven by how many sources ran
+      // the same story (the cross-source dedup cluster size) — a story on 4 sites is bigger
+      // than one on 1 — then view_count, then recency. Per local day we keep:
+      //   • each category's top story  → full topic coverage, AND
+      //   • every multi-source story (source_count >= 2) → the day's genuinely big stories,
+      // so a busy day surfaces more and a quiet day fewer (dynamic count). Window ranks also
+      // guarantee EVERY day in the range is represented (the old LIMIT-500 scan reached ~2 days).
+      const rows = await c.env.DB.prepare(
+        `WITH dupcounts AS (
+           SELECT duplicate_of AS pid, COUNT(*) AS dups
+           FROM news_articles WHERE duplicate_of IS NOT NULL AND is_active = 1
+           GROUP BY duplicate_of
+         ),
+         ranked AS (
+           SELECT a.id, a.title, a.slug, a.summary, a.source_id, a.category_id,
+                  a.view_count, a.published_at, a.fetched_at,
+                  s.name AS source_name,
+                  c.name AS category_name, c.name_bn AS category_name_bn, c.slug AS category_slug,
+                  c.icon AS category_icon, c.color AS category_color,
+                  (1 + COALESCE(d.dups, 0)) AS source_count,
+                  ${dayExpr} AS local_day,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY ${dayExpr}, a.category_id
+                    ORDER BY (1 + COALESCE(d.dups, 0)) DESC, a.view_count DESC, COALESCE(a.published_at, a.fetched_at) DESC
+                  ) AS cat_rank
+           FROM news_articles a
+           INNER JOIN news_sources s ON s.id = a.source_id
+           LEFT JOIN categories c ON c.id = a.category_id
+           LEFT JOIN dupcounts d ON d.pid = a.id
+           WHERE a.is_active = 1 AND a.duplicate_of IS NULL AND a.category_id IS NOT NULL
+             AND COALESCE(a.published_at, a.fetched_at) >= ?
+         )
+         SELECT * FROM ranked
+         WHERE cat_rank = 1 OR source_count >= 2
+         ORDER BY local_day DESC, source_count DESC, view_count DESC, COALESCE(published_at, fetched_at) DESC
+         LIMIT ?`
+      ).bind(cutoff, days * 40).all<Row & { local_day: string; source_count: number; cat_rank: number }>();
 
-  // Group into { date, highlights: [{ categoryId, ..., articleId, ... }] }
-  const byDay: Record<string, any[]> = {};
-  const seenCategoryPerDay: Record<string, Set<number>> = {};
-  for (const r of rows.results ?? []) {
-    const ts = r.published_at ?? r.fetched_at;
-    const date = ts.slice(0, 10);
-    if (!byDay[date]) {
-      byDay[date] = [];
-      seenCategoryPerDay[date] = new Set();
-    }
-    if (r.category_id == null || seenCategoryPerDay[date].has(r.category_id)) continue;
-    seenCategoryPerDay[date].add(r.category_id);
-    byDay[date].push({
-      categoryId: r.category_id,
-      categoryName: r.category_name ?? '',
-      categoryNameBn: r.category_name_bn ?? '',
-      categorySlug: r.category_slug ?? '',
-      categoryIcon: r.category_icon ?? null,
-      categoryColor: r.category_color ?? null,
-      articleId: r.id,
-      title: r.title,
-      slug: r.slug,
-      summary: r.summary,
-      sourceId: r.source_id,
-      sourceName: r.source_name ?? '',
-      publishedAt: r.published_at,
-      viewCount: r.view_count,
-    });
-  }
+      // Group by local day; cap per day (busy days stay digestible, quiet days show what they have).
+      const MAX_PER_DAY = 24;
+      const byDay = new Map<string, any[]>();
+      for (const r of rows.results ?? []) {
+        const date = (r.local_day as string) || (r.published_at ?? r.fetched_at)!.slice(0, 10);
+        const list = byDay.get(date) ?? byDay.set(date, []).get(date)!;
+        if (list.length >= MAX_PER_DAY) continue;
+        list.push({
+          categoryId: r.category_id,
+          categoryName: r.category_name ?? '',
+          categoryNameBn: r.category_name_bn ?? '',
+          categorySlug: r.category_slug ?? '',
+          categoryIcon: r.category_icon ?? null,
+          categoryColor: r.category_color ?? null,
+          articleId: r.id,
+          title: r.title,
+          slug: r.slug,
+          summary: r.summary,
+          sourceId: r.source_id,
+          sourceName: r.source_name ?? '',
+          publishedAt: r.published_at,
+          viewCount: r.view_count,
+          sourceCount: r.source_count ?? 1,
+        });
+      }
 
-  const result = Object.entries(byDay)
-    .sort(([a], [b]) => (a < b ? 1 : -1))
-    .map(([date, highlights]) => ({ date, highlights }));
+      return [...byDay.entries()]
+        .sort(([a], [b]) => (a < b ? 1 : -1))
+        .map(([date, highlights]) => ({ date, highlights }));
+    },
+    { ttlSeconds: 600 }
+  );
 
   return c.json(result);
 });

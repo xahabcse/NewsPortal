@@ -65,7 +65,7 @@ const TimelinePage = () => {
                 description="Day-wise national and international news highlights"
             />
             <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-                <div className="max-w-5xl mx-auto">
+                <div className="max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-4">
@@ -74,9 +74,9 @@ const TimelinePage = () => {
                                 <p className="text-secondary text-sm">
                                     {loading ? 'Loading timeline…' : (
                                         <>
-                                            Showing{' '}
+                                            Everything that happened, day by day — biggest stories first.{' '}
                                             <span className="text-accent font-semibold">{totalShown}</span>
-                                            {' '}highlights across{' '}
+                                            {' '}stories across{' '}
                                             <span className="text-accent font-semibold">{filteredHighlights.length}</span>
                                             {' '}days.
                                         </>
