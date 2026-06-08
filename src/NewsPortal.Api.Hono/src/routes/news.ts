@@ -81,7 +81,7 @@ function mapArticle(row: ArticleRow) {
  * For a page of PRIMARY articles, attach the source names of their cross-source
  * duplicates (the "also on <source>" hint). One extra D1 read for the whole page.
  */
-async function withAlsoOn<T extends { id: number; alsoOn: string[] }>(
+async function withAlsoOn<T extends { id: number; sourceName: string | null; alsoOn: string[] }>(
   env: Env['Bindings'],
   items: T[]
 ): Promise<T[]> {
@@ -99,7 +99,9 @@ async function withAlsoOn<T extends { id: number; alsoOn: string[] }>(
   for (const r of rows.results ?? []) {
     byPrimary.set(r.pid, (r.srcs ?? '').split(',').map((s) => s.trim()).filter(Boolean));
   }
-  for (const it of items) it.alsoOn = byPrimary.get(it.id) ?? [];
+  // Exclude the primary's OWN source — "also on" should only name OTHER outlets, so a
+  // collapsed same-source duplicate shows no (redundant) hint, only true cross-source ones.
+  for (const it of items) it.alsoOn = (byPrimary.get(it.id) ?? []).filter((name) => name !== it.sourceName);
   return items;
 }
 
