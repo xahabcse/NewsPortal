@@ -33,6 +33,28 @@ function mapAdminArticle(r: Row) {
   };
 }
 
+// POST /set-duplicates — bulk-tag cross-source duplicates: point each secondary article
+// at its primary (the original story). Used by the one-time dedup backfill; clustering is
+// computed client-side (Workers have a tight CPU budget), so this endpoint only APPLIES
+// the result. Only tags rows that are currently primaries, so it can't create chains.
+adminArticlesRoutes.post('/set-duplicates', requireRole('Admin'), async (c) => {
+  const body = await c.req.json<{ pairs?: { secondaryId?: number; primaryId?: number }[] }>();
+  const pairs = (body.pairs ?? []).filter(
+    (p) => Number.isInteger(p.secondaryId) && Number.isInteger(p.primaryId) && p.secondaryId !== p.primaryId
+  );
+  if (pairs.length === 0) return c.json(errMsg('pairs[] required'), 400);
+  if (pairs.length > 1000) return c.json(errMsg('too many pairs (max 1000 per call)'), 400);
+
+  const stmts = pairs.map((p) =>
+    c.env.DB.prepare('UPDATE news_articles SET duplicate_of = ? WHERE id = ? AND duplicate_of IS NULL')
+      .bind(p.primaryId, p.secondaryId)
+  );
+  const results = await c.env.DB.batch(stmts);
+  const updated = results.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+  await invalidateNewsCache(c.env);
+  return c.json({ message: 'Duplicates tagged', updated, requested: pairs.length });
+});
+
 // GET / — full list (includes inactive)
 adminArticlesRoutes.get('/', async (c) => {
   const { page, size, offset } = paginate(c.req.query('page'), c.req.query('pageSize'), 20);

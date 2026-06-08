@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, type FC } from 'react';
 import toast from 'react-hot-toast';
+import { Layers } from 'lucide-react';
 import BookmarkButton from './BookmarkButton';
 
 interface NewsCardProps {
@@ -17,6 +18,8 @@ interface NewsCardProps {
     onBookmarkToggle?: (articleId: number, isBookmarked: boolean) => void;
     showBookmark?: boolean;
     onCardClick?: () => void;
+    /** Other sources running the same story (cross-source duplicates) — shows an "also on" hint. */
+    alsoOn?: string[];
 }
 
 const ImagePlaceholder: FC<{ category: string }> = ({ category }) => (
@@ -47,7 +50,8 @@ const NewsCard: FC<NewsCardProps> = ({
     isBookmarked = false,
     onBookmarkToggle,
     showBookmark = false,
-    onCardClick
+    onCardClick,
+    alsoOn = []
 }) => {
     const navigate = useNavigate();
     const [imgFailed, setImgFailed] = useState(false);
@@ -160,6 +164,14 @@ const NewsCard: FC<NewsCardProps> = ({
                     <span className="hidden md:inline w-1 h-1 rounded-full bg-secondary/30"></span>
                     <span className="hidden md:inline">{readingTime} min read</span>
                 </div>
+
+                {/* Cross-source duplicates — "also on X · Y" */}
+                {alsoOn.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1.5 text-[10px] md:text-[11px] text-secondary/70" title={`Also reported by ${alsoOn.join(', ')}`}>
+                        <Layers className="w-3 h-3 shrink-0" strokeWidth={1.75} />
+                        <span className="truncate">Also on {alsoOn.slice(0, 2).join(' · ')}{alsoOn.length > 2 ? ` +${alsoOn.length - 2}` : ''}</span>
+                    </div>
+                )}
 
                 {/* Summary — desktop only */}
                 <p className="hidden md:block text-sm text-secondary line-clamp-3 mt-3 mb-6">

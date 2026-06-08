@@ -103,6 +103,7 @@ const CategoryPage = () => {
                                     thumbnailUrl={article.thumbnailUrl}
                                     slug={article.slug}
                                     articleId={article.id}
+                                    alsoOn={article.alsoOn}
                                     showBookmark
                                 />
                             ))}

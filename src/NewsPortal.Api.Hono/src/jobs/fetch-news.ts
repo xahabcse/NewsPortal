@@ -4,7 +4,7 @@
 
 import type { Env } from '../lib/env';
 import { parseFeed, canonicalize, type FeedItem } from '../lib/rss';
-import { loadDedupContext, isDuplicate } from '../lib/dedup';
+import { loadDedupContext, isDuplicate, findClusterPrimary } from '../lib/dedup';
 import { categorize } from '../lib/categorizer';
 import { uniqueSlug } from '../lib/slug';
 import { uploadFromUrl } from '../lib/cloudinary';
@@ -264,7 +264,7 @@ async function fetchOneSource(
   const canonicalByItem = new Map<FeedItem, string>();
   for (const item of items) canonicalByItem.set(item, canonicalize(item.link));
 
-  budget.remaining -= 2;
+  budget.remaining -= 3; // loadDedupContext now does 3 reads (canonicals + source titles + global primaries)
   const dedupContext = await loadDedupContext(env, [...canonicalByItem.values()], s.id);
   // Accept items one at a time, folding each accepted item back into the context so
   // later items in THIS SAME batch dedup against it too. Without this, a feed that
@@ -345,13 +345,17 @@ async function fetchOneSource(
       if (cdnUrl) imageUrl = cdnUrl;
     }
 
+    // Cross-source dedup: if this is the same story as a recent primary from another
+    // source, store it but point it at that primary so browse feeds show one card.
+    const dupOf = findClusterPrimary(dedupContext, item.title);
+
     const now = nowIso();
     insertStatements.push(
       env.DB.prepare(
         `INSERT OR IGNORE INTO news_articles (title, slug, canonical_url, summary, content, plain_text, source_url,
            original_image_url, author, published_at, fetched_at,
-           view_count, is_featured, source_id, category_id, created_at, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 1)`
+           view_count, is_featured, source_id, category_id, duplicate_of, created_at, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 1)`
       ).bind(
         item.title.slice(0, 500),
         slug,
@@ -366,6 +370,7 @@ async function fetchOneSource(
         now,
         s.id,
         categoryId,
+        dupOf,
         now,
       )
     );

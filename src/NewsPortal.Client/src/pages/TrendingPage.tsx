@@ -15,6 +15,7 @@ interface NewsArticle {
     sourceName: string;
     categoryName: string | null;
     viewCount?: number;
+    alsoOn?: string[];
 }
 
 const TrendingPage = () => {
@@ -210,6 +211,7 @@ const TrendingPage = () => {
                                     slug={article.slug}
                                     sourceUrl={article.sourceUrl}
                                     articleId={article.id}
+                                    alsoOn={article.alsoOn}
                                     showBookmark
                                 />
                             </div>
