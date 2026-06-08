@@ -25,7 +25,10 @@ export async function uploadFromUrl(env: Env['Bindings'], imageUrl: string, publ
 
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = UPLOAD_FOLDER;
-  const publicId = publicIdHint ? `${folder}/${publicIdHint}` : undefined;
+  // public_id must NOT repeat the folder — Cloudinary prepends `folder` to it.
+  // Combining them produced a doubled `newsportal/newsportal/...` path; the hint
+  // alone lands the asset at `newsportal/<sourceSlug>/<articleSlug>`.
+  const publicId = publicIdHint || undefined;
 
   // The string to sign is the alphabetically-sorted params (without api_key/file/signature).
   const params: Record<string, string> = { folder, timestamp: String(timestamp) };
