@@ -4,13 +4,35 @@ import { errMsg } from '../lib/response';
 import { requireAuth, requireRole } from '../lib/auth';
 import { nowIso } from '../lib/db';
 import { summarize, translate, sentimentBatch } from '../lib/gemini';
+import { cacheOrCompute } from '../lib/cache';
 
 export const aiRoutes = new Hono<Env>();
+
+// These endpoints spend the paid Gemini quota, so they must stay accessible to
+// readers (the AI Summary button) but be shielded from a single user/script
+// hammering them. Best-effort KV fixed-window limiter — KV has no atomic
+// increment, so a tiny over-count under concurrency is acceptable for quota
+// protection. Window is shared across a user's AI calls.
+const AI_RATE_LIMIT = 30;        // max AI calls
+const AI_RATE_WINDOW_SEC = 300;  // per 5 minutes, per user
+
+async function withinAiRateLimit(kv: KVNamespace, userId: number | undefined): Promise<boolean> {
+  if (!userId) return true; // requireAuth guarantees a user; be permissive if somehow absent
+  const key = `rl:ai:${userId}`;
+  const current = await kv.get(key);
+  const count = current ? parseInt(current, 10) : 0;
+  if (count >= AI_RATE_LIMIT) return false;
+  await kv.put(key, String(count + 1), { expirationTtl: AI_RATE_WINDOW_SEC });
+  return true;
+}
 
 // POST /summarize/:id?mode=paragraph|bullets
 aiRoutes.post('/summarize/:id', requireAuth, async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+  if (!(await withinAiRateLimit(c.env.CACHE_KV, c.get('userId')))) {
+    return c.json(errMsg('Too many AI requests — please wait a moment'), 429);
+  }
   const mode = (c.req.query('mode') === 'bullets' ? 'bullets' : 'paragraph') as 'bullets' | 'paragraph';
 
   const article = await c.env.DB.prepare(
@@ -32,6 +54,9 @@ aiRoutes.post('/summarize/:id', requireAuth, async (c) => {
 aiRoutes.post('/translate/:id', requireAuth, async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
+  if (!(await withinAiRateLimit(c.env.CACHE_KV, c.get('userId')))) {
+    return c.json(errMsg('Too many AI requests — please wait a moment'), 429);
+  }
   const target = c.req.query('target') ?? 'en';
 
   const article = await c.env.DB.prepare(
@@ -70,25 +95,35 @@ aiRoutes.get('/sentiment/article/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
 
-  const rows = await c.env.DB.prepare(
-    'SELECT content FROM comments WHERE article_id = ? AND is_active = 1 AND is_deleted = 0 LIMIT 50'
-  ).bind(id).all<{ content: string }>();
+  // Cache per article — this endpoint is PUBLIC and auto-loads on every article view,
+  // and each miss spends a Gemini sentiment call. Comment sentiment changes slowly, so
+  // a 30-min cache slashes quota use while keeping the badge live (self-heals on TTL).
+  const payload = await cacheOrCompute(
+    c.env.CACHE_KV,
+    `ai:sentiment:${id}`,
+    async () => {
+      const rows = await c.env.DB.prepare(
+        'SELECT content FROM comments WHERE article_id = ? AND is_active = 1 AND is_deleted = 0 LIMIT 50'
+      ).bind(id).all<{ content: string }>();
+      const comments = (rows.results ?? []).map((row) => row.content);
+      if (!comments.length) return { positive: 0, negative: 0, neutral: 0, total: 0, source: 'empty' };
 
-  const comments = (rows.results ?? []).map((r) => r.content);
-  if (!comments.length) return c.json({ positive: 0, negative: 0, neutral: 0, total: 0, source: 'empty' });
-
-  const result = await sentimentBatch(c.env.GEMINI_API_KEY, comments);
-  if (!result) {
-    // Lightweight keyword fallback.
-    const posWords = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful'];
-    const negWords = ['bad', 'terrible', 'awful', 'hate', 'wrong', 'worst'];
-    let positiveCount = 0, negativeCount = 0;
-    for (const comment of comments) {
-      const lower = comment.toLowerCase();
-      if (posWords.some((w) => lower.includes(w))) positiveCount++;
-      else if (negWords.some((w) => lower.includes(w))) negativeCount++;
-    }
-    return c.json({ positive: positiveCount, negative: negativeCount, neutral: comments.length - positiveCount - negativeCount, total: comments.length, source: 'fallback' });
-  }
-  return c.json({ ...result, total: comments.length, source: 'gemini' });
+      const result = await sentimentBatch(c.env.GEMINI_API_KEY, comments);
+      if (!result) {
+        // Lightweight keyword fallback.
+        const posWords = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful'];
+        const negWords = ['bad', 'terrible', 'awful', 'hate', 'wrong', 'worst'];
+        let positiveCount = 0, negativeCount = 0;
+        for (const comment of comments) {
+          const lower = comment.toLowerCase();
+          if (posWords.some((w) => lower.includes(w))) positiveCount++;
+          else if (negWords.some((w) => lower.includes(w))) negativeCount++;
+        }
+        return { positive: positiveCount, negative: negativeCount, neutral: comments.length - positiveCount - negativeCount, total: comments.length, source: 'fallback' };
+      }
+      return { ...result, total: comments.length, source: 'gemini' };
+    },
+    { ttlSeconds: 1800 }
+  );
+  return c.json(payload);
 });
