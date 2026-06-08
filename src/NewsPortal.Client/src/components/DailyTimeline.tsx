@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Layers, Clock } from 'lucide-react';
 import type { DailyHighlight } from '../services/api';
 
 interface Props {
@@ -6,243 +7,102 @@ interface Props {
     loading: boolean;
 }
 
+function formatDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+    if (dd.getTime() === today.getTime()) return 'Today';
+    if (dd.getTime() === yesterday.getTime()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatTime(iso: string | null): string {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
+}
+
 const DailyTimeline = ({ highlights, loading }: Props) => {
     const navigate = useNavigate();
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const articleDate = new Date(date);
-        articleDate.setHours(0, 0, 0, 0);
-
-        if (articleDate.getTime() === today.getTime()) return 'Today';
-        if (articleDate.getTime() === yesterday.getTime()) return 'Yesterday';
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    const formatShortDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    };
-
     if (loading) {
         return (
-            <div className="mb-8">
-                <div className="relative">
-                    <div className="absolute left-1/2 -translate-x-1/2 w-0.5 h-full bg-glass-border hidden md:block"></div>
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="relative flex items-center mb-8">
-                            <div className={`w-full md:w-[calc(50%-2rem)] ${i % 2 === 0 ? 'md:mr-auto md:pr-8' : 'md:ml-auto md:pl-8'}`}>
-                                <div className="glass-morphism border border-glass-border rounded-xl p-4 animate-pulse">
-                                    <div className="h-3 bg-white/10 rounded w-20 mb-3"></div>
-                                    <div className="h-4 bg-white/10 rounded w-full mb-2"></div>
-                                    <div className="h-3 bg-white/5 rounded w-3/4"></div>
+            <div className="space-y-8">
+                {Array.from({ length: 2 }).map((_, i) => (
+                    <section key={i}>
+                        <div className="h-5 w-32 bg-white/10 rounded mb-4 animate-pulse" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            {Array.from({ length: 6 }).map((_, j) => (
+                                <div key={j} className="glass-morphism border border-glass-border rounded-xl p-3.5 animate-pulse">
+                                    <div className="h-3 w-20 bg-white/10 rounded mb-3" />
+                                    <div className="h-4 w-full bg-white/10 rounded mb-2" />
+                                    <div className="h-3 w-2/3 bg-white/5 rounded" />
                                 </div>
-                            </div>
-                            <div className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white/10 rounded-full hidden md:block"></div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </section>
+                ))}
             </div>
         );
     }
 
     if (highlights.length === 0) return null;
 
-    // Flatten all highlights into timeline nodes for alternating layout
-    const timelineNodes: { day: DailyHighlight; highlightIndex: number; globalIndex: number }[] = [];
-    let globalIdx = 0;
-    highlights.forEach((day) => {
-        day.highlights.forEach((_, hIdx) => {
-            timelineNodes.push({ day, highlightIndex: hIdx, globalIndex: globalIdx });
-            globalIdx++;
-        });
-    });
-
     return (
-        <div className="mb-8">
-            {/* Timeline */}
-            <div className="relative">
-                {/* Center vertical line - desktop only */}
-                <div className="absolute left-1/2 -translate-x-1/2 w-0.5 bg-gradient-to-b from-accent/50 via-glass-border to-transparent h-full hidden md:block"></div>
+        <div className="space-y-8 pb-8">
+            {highlights.map((day) => (
+                <section key={day.date}>
+                    {/* Day header — sticky so the current day's label stays in view while scanning */}
+                    <div className="sticky top-0 z-10 flex items-center gap-3 mb-4 py-2 bg-background/85 backdrop-blur-sm">
+                        <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0" />
+                        <h2 className="font-serif text-lg sm:text-xl font-bold text-white whitespace-nowrap">{formatDay(day.date)}</h2>
+                        <span className="text-[11px] text-secondary whitespace-nowrap">
+                            {day.highlights.length} {day.highlights.length === 1 ? 'story' : 'stories'}
+                        </span>
+                        <span className="flex-1 h-px bg-glass-border" />
+                    </div>
 
-                {/* Mobile vertical line - left aligned */}
-                <div className="absolute left-4 w-0.5 bg-gradient-to-b from-accent/50 via-glass-border to-transparent h-full md:hidden"></div>
-
-                {timelineNodes.map((node) => {
-                    const h = node.day.highlights[node.highlightIndex];
-                    const isLeft = node.globalIndex % 2 === 0;
-                    const isFirstOfDay = node.highlightIndex === 0;
-
-                    return (
-                        <div key={`${node.day.date}-${h.categoryId}-${h.articleId}`} className="relative mb-6">
-                            {/* Date label - shown on first highlight of each day */}
-                            {isFirstOfDay && (
-                                <div className="text-center mb-2">
-                                    <span className="inline-block text-[10px] font-bold text-accent uppercase tracking-widest bg-[var(--color-bg)] px-3 relative z-10">
-                                        {formatDate(node.day.date)}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Desktop layout - alternating */}
-                            <div className="hidden md:flex items-center">
-                                {/* Left content */}
-                                <div className={`w-[calc(50%-2rem)] ${isLeft ? '' : 'opacity-0 pointer-events-none'}`}>
-                                    {isLeft && (
-                                        <button
-                                            onClick={() => navigate(`/news/${h.slug}`)}
-                                            className="block w-full text-right group"
-                                        >
-                                            <div
-                                                className="glass-morphism border rounded-xl p-4 transition-all hover:scale-[1.02] hover:border-opacity-60"
-                                                style={{ borderColor: h.categoryColor || '#6c757d' }}
-                                            >
-                                                <div className="flex items-center justify-end gap-2 mb-2">
-                                                    <span className="text-[10px] text-secondary/60">
-                                                        {h.sourceName}
-                                                    </span>
-                                                    <span
-                                                        className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-                                                        style={{
-                                                            color: h.categoryColor || '#9ca3af',
-                                                            backgroundColor: `${h.categoryColor || '#6c757d'}20`
-                                                        }}
-                                                    >
-                                                        {h.categoryName}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-secondary group-hover:text-white transition-colors line-clamp-2">
-                                                    {h.title}
-                                                </p>
-                                                {h.summary && (
-                                                    <p className="text-xs text-secondary/50 mt-1 line-clamp-1">
-                                                        {h.summary}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Center node */}
-                                <div className="flex-shrink-0 w-16 flex items-center justify-center relative z-10">
-                                    <div className="relative">
-                                        <div
-                                            className="w-4 h-4 rounded-full border-2 bg-[var(--color-bg)]"
-                                            style={{ borderColor: h.categoryColor || '#6c757d' }}
-                                        ></div>
-                                        <div
-                                            className="absolute inset-1 rounded-full"
-                                            style={{ backgroundColor: h.categoryColor || '#6c757d' }}
-                                        ></div>
-                                    </div>
-                                    {/* Connecting line to card */}
-                                    <div
-                                        className={`absolute top-1/2 -translate-y-1/2 h-px w-6 ${isLeft ? 'right-10' : 'left-10'}`}
-                                        style={{ backgroundColor: h.categoryColor || '#6c757d', opacity: 0.4 }}
-                                    ></div>
-                                </div>
-
-                                {/* Right content */}
-                                <div className={`w-[calc(50%-2rem)] ${!isLeft ? '' : 'opacity-0 pointer-events-none'}`}>
-                                    {!isLeft && (
-                                        <button
-                                            onClick={() => navigate(`/news/${h.slug}`)}
-                                            className="block w-full text-left group"
-                                        >
-                                            <div
-                                                className="glass-morphism border rounded-xl p-4 transition-all hover:scale-[1.02] hover:border-opacity-60"
-                                                style={{ borderColor: h.categoryColor || '#6c757d' }}
-                                            >
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span
-                                                        className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-                                                        style={{
-                                                            color: h.categoryColor || '#9ca3af',
-                                                            backgroundColor: `${h.categoryColor || '#6c757d'}20`
-                                                        }}
-                                                    >
-                                                        {h.categoryName}
-                                                    </span>
-                                                    <span className="text-[10px] text-secondary/60">
-                                                        {h.sourceName}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-secondary group-hover:text-white transition-colors line-clamp-2">
-                                                    {h.title}
-                                                </p>
-                                                {h.summary && (
-                                                    <p className="text-xs text-secondary/50 mt-1 line-clamp-1">
-                                                        {h.summary}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Mobile layout - single column */}
-                            <div className="md:hidden flex items-start gap-4 pl-1">
-                                {/* Node */}
-                                <div className="flex-shrink-0 relative z-10 mt-4">
-                                    <div className="relative">
-                                        <div
-                                            className="w-3.5 h-3.5 rounded-full border-2 bg-[var(--color-bg)]"
-                                            style={{ borderColor: h.categoryColor || '#6c757d' }}
-                                        ></div>
-                                        <div
-                                            className="absolute inset-1 rounded-full"
-                                            style={{ backgroundColor: h.categoryColor || '#6c757d' }}
-                                        ></div>
-                                    </div>
-                                </div>
-
-                                {/* Card */}
+                    {/* Story grid — ordered by importance (multi-source first) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {day.highlights.map((h) => {
+                            const color = h.categoryColor || '#6c757d';
+                            return (
                                 <button
+                                    key={`${h.categoryId}-${h.articleId}`}
                                     onClick={() => navigate(`/news/${h.slug}`)}
-                                    className="flex-1 text-left group"
+                                    className="text-left group glass-morphism border border-glass-border rounded-xl p-3.5 transition-all hover:bg-white/[0.04] hover:-translate-y-0.5"
+                                    style={{ borderLeftWidth: '3px', borderLeftColor: color }}
                                 >
-                                    <div
-                                        className="glass-morphism border rounded-xl p-3 transition-all active:scale-[0.98]"
-                                        style={{ borderColor: h.categoryColor || '#6c757d' }}
-                                    >
-                                        <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                                        <span
+                                            className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                                            style={{ color, backgroundColor: `${color}1f` }}
+                                        >
+                                            {h.categoryName}
+                                        </span>
+                                        {(h.sourceCount ?? 1) >= 2 && (
                                             <span
-                                                className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-                                                style={{
-                                                    color: h.categoryColor || '#9ca3af',
-                                                    backgroundColor: `${h.categoryColor || '#6c757d'}20`
-                                                }}
+                                                className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/25"
+                                                title={`Covered by ${h.sourceCount} sources`}
                                             >
-                                                {h.categoryName}
+                                                <Layers className="w-2.5 h-2.5" strokeWidth={2} /> {h.sourceCount} sources
                                             </span>
-                                            <span className="text-[9px] text-secondary/60">
-                                                {h.sourceName}
-                                            </span>
-                                            <span className="text-[9px] text-secondary/40 ml-auto">
-                                                {formatShortDate(node.day.date)}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-secondary group-hover:text-white transition-colors line-clamp-2">
-                                            {h.title}
-                                        </p>
+                                        )}
+                                        <span className="inline-flex items-center gap-0.5 text-[10px] text-secondary/60 ml-auto whitespace-nowrap">
+                                            <Clock className="w-3 h-3" strokeWidth={1.75} /> {formatTime(h.publishedAt)}
+                                        </span>
                                     </div>
+                                    <p className="text-sm font-medium text-white/90 group-hover:text-accent transition-colors line-clamp-2 leading-snug">
+                                        {h.title}
+                                    </p>
+                                    <p className="text-[11px] text-secondary/70 mt-1.5 truncate">{h.sourceName}</p>
                                 </button>
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {/* Bottom cap */}
-                <div className="hidden md:flex justify-center pb-2">
-                    <div className="w-2 h-2 rounded-full bg-glass-border"></div>
-                </div>
-            </div>
+                            );
+                        })}
+                    </div>
+                </section>
+            ))}
         </div>
     );
 };

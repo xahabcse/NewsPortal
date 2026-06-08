@@ -75,6 +75,8 @@ export interface CategoryHighlight {
     sourceName: string;
     publishedAt: string | null;
     viewCount: number;
+    /** How many sources ran this same story (cross-source cluster size). >1 = bigger story. */
+    sourceCount?: number;
 }
 
 export interface DailyHighlight {
