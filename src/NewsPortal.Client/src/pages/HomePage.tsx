@@ -160,9 +160,9 @@ const HomePage = () => {
                   <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" strokeWidth={1.75} />
                   <span className="text-accent">{bengaliDate}</span>
                   <span className="text-white/20">•</span>
-                  <span className="text-white/70">{hijriDate}</span>
+                  <span className="text-secondary">{hijriDate}</span>
                   <span className="text-white/20">•</span>
-                  <span className="text-white/70">{banglaDate}</span>
+                  <span className="text-secondary">{banglaDate}</span>
                 </p>
                 <p className="text-[11px] sm:text-sm font-semibold mb-1.5 flex items-center gap-1.5">
                   <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent shrink-0" strokeWidth={1.75} />

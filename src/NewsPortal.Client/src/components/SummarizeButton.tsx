@@ -33,7 +33,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
                 <button
                     onClick={handleSummarize}
                     disabled={loading}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all border ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-sm transition-all border ${
                         summary
                             ? 'bg-purple-500/15 border-purple-500/40 text-purple-400'
                             : 'bg-white/5 border-glass-border text-secondary hover:text-white hover:bg-white/10'

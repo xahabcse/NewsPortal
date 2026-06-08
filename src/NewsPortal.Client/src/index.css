@@ -221,5 +221,6 @@ body {
 /* Light mode prose */
 [data-theme="light"] .prose-invert { --tw-prose-body: rgb(var(--text-primary)); }
 [data-theme="light"] .text-white\/90 { color: rgb(var(--text-primary) / 0.9) !important; }
+[data-theme="light"] .text-white\/70 { color: rgb(var(--text-primary) / 0.7) !important; }
 [data-theme="light"] .text-secondary\/50 { color: rgb(var(--color-secondary) / 0.5) !important; }
 [data-theme="light"] .text-secondary\/70 { color: rgb(var(--color-secondary) / 0.7) !important; }
