@@ -22,6 +22,20 @@ function rankOf(role: string | undefined | null): number {
   return ROLE_RANK[role ?? ''] ?? 0;
 }
 
+/**
+ * Whether an actor may assign `targetRole`, or manage a user who currently HAS
+ * `targetRole`. The rule: nobody may act on a role that ranks ABOVE their own, and
+ * only a SuperAdmin may act on its OWN tier — so SuperAdmins can create/manage other
+ * SuperAdmins, while an Admin still can't touch a peer Admin or a SuperAdmin.
+ */
+function canActOnRole(actorRole: string | undefined | null, targetRole: string | undefined | null): boolean {
+  const actor = rankOf(actorRole);
+  const target = rankOf(targetRole);
+  if (target > actor) return false;
+  if (target === actor && actorRole !== 'SuperAdmin') return false;
+  return true;
+}
+
 function mapUser(row: Row) {
   return {
     id: row.id,
@@ -102,9 +116,9 @@ userManagementRoutes.post('/', async (c) => {
   }
 
   const normalizedRole = normalizeRole(role);
-  // Privilege escalation guard: an actor can never grant a role whose rank is
-  // >= their own (e.g. an Admin can't create another Admin or a SuperAdmin).
-  if (rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+  // Privilege escalation guard: an actor can't grant a role above their own; only a
+  // SuperAdmin may grant its own tier (so a SuperAdmin can create another SuperAdmin).
+  if (!canActOnRole(c.get('role'), normalizedRole)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
@@ -159,9 +173,9 @@ userManagementRoutes.put('/:id', async (c) => {
     return c.json(errMsg('Invalid role'), 400);
   }
   const normalizedRole = role ? normalizeRole(role) : null;
-  // Privilege escalation guard: when a role is being assigned it must rank below
-  // the actor's own role.
-  if (normalizedRole && rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+  // Privilege escalation guard: a role being assigned can't rank above the actor's own;
+  // only a SuperAdmin may assign its own tier.
+  if (normalizedRole && !canActOnRole(c.get('role'), normalizedRole)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
@@ -211,8 +225,9 @@ userManagementRoutes.delete('/:id', async (c) => {
   const existing = await c.env.DB.prepare('SELECT id, username, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; username: string; role: string }>();
   if (!existing) return c.json(errMsg('User not found'), 404);
 
-  // Privilege guard: never delete a user whose current role ranks >= the actor's.
-  if (rankOf(existing.role) >= rankOf(c.get('role'))) {
+  // Privilege guard: can't delete a user who ranks above the actor; only a SuperAdmin
+  // may delete a peer SuperAdmin (self-deletion is still blocked above).
+  if (!canActOnRole(c.get('role'), existing.role)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
@@ -252,8 +267,9 @@ userManagementRoutes.post('/:id/reset-password', async (c) => {
 
   const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
   if (!target) return c.json(errMsg('User not found'), 404);
-  // Privilege guard: can't reset the password of a user who ranks >= the actor.
-  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+  // Privilege guard: can't reset the password of a user ranking above the actor;
+  // only a SuperAdmin may reset a peer SuperAdmin.
+  if (!canActOnRole(c.get('role'), target.role)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
@@ -274,15 +290,17 @@ userManagementRoutes.put('/:id/role', async (c) => {
     return c.json(errMsg('Invalid role'), 400);
   }
   const normalizedRole = normalizeRole(body.role as string);
-  // Privilege guard: can't grant a role that ranks >= the actor's own role.
-  if (rankOf(normalizedRole) >= rankOf(c.get('role'))) {
+  // Privilege guard: can't grant a role above the actor's own; only a SuperAdmin
+  // may grant its own tier.
+  if (!canActOnRole(c.get('role'), normalizedRole)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
   const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
   if (!target) return c.json(errMsg('User not found'), 404);
-  // Privilege guard: can't change the role of a user who ranks >= the actor.
-  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+  // Privilege guard: can't change the role of a user ranking above the actor;
+  // only a SuperAdmin may change a peer SuperAdmin.
+  if (!canActOnRole(c.get('role'), target.role)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
@@ -304,8 +322,9 @@ userManagementRoutes.put('/:id/active', async (c) => {
 
   const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ? LIMIT 1').bind(id).first<{ id: number; role: string }>();
   if (!target) return c.json(errMsg('User not found'), 404);
-  // Privilege guard: can't (de)activate a user who ranks >= the actor.
-  if (rankOf(target.role) >= rankOf(c.get('role'))) {
+  // Privilege guard: can't (de)activate a user ranking above the actor; only a
+  // SuperAdmin may (de)activate a peer SuperAdmin.
+  if (!canActOnRole(c.get('role'), target.role)) {
     return c.json(errMsg('Forbidden'), 403);
   }
 
