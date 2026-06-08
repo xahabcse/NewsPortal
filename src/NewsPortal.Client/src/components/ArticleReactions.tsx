@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ThumbsUp } from 'lucide-react';
 import { axiosInstance } from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -70,7 +71,9 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
                             : 'bg-white/5 border-glass-border text-secondary hover:text-white hover:bg-white/10'
                     }`}
                 >
-                    <span className="text-base">{userReactionInfo?.emoji || '\uD83D\uDC4D'}</span>
+                    {userReactionInfo
+                        ? <span className="text-base leading-none">{userReactionInfo.emoji}</span>
+                        : <ThumbsUp className="w-4 h-4" strokeWidth={1.75} />}
                     <span>{data.userReaction ? userReactionInfo?.label : 'React'}</span>
                     {data.total > 0 && (
                         <span className="ml-0.5 text-xs opacity-70">{data.total}</span>
