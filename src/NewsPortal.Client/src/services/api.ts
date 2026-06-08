@@ -24,6 +24,8 @@ export interface NewsArticle {
     publishedAt: string;
     sourceName: string;
     categoryName: string | null;
+    /** Other sources that ran the same story (cross-source duplicates), for the "also on" hint. */
+    alsoOn?: string[];
 }
 
 export interface PagedResult<T> {

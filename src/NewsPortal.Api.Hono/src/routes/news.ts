@@ -31,6 +31,7 @@ type ArticleRow = {
   created_at: string;
   updated_at: string | null;
   is_active: number;
+  duplicate_of: number | null;
   source_name?: string | null;
   source_slug?: string | null;
   source_logo_url?: string | null;
@@ -72,7 +73,34 @@ function mapArticle(row: ArticleRow) {
     categoryColor: row.category_color ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    alsoOn: [] as string[], // cross-source duplicates' source names; filled by withAlsoOn()
   };
+}
+
+/**
+ * For a page of PRIMARY articles, attach the source names of their cross-source
+ * duplicates (the "also on <source>" hint). One extra D1 read for the whole page.
+ */
+async function withAlsoOn<T extends { id: number; alsoOn: string[] }>(
+  env: Env['Bindings'],
+  items: T[]
+): Promise<T[]> {
+  if (items.length === 0) return items;
+  const placeholders = items.map(() => '?').join(',');
+  const rows = await env.DB.prepare(
+    `SELECT a.duplicate_of AS pid, GROUP_CONCAT(DISTINCT s.name) AS srcs
+     FROM news_articles a
+     INNER JOIN news_sources s ON s.id = a.source_id
+     WHERE a.is_active = 1 AND a.duplicate_of IN (${placeholders})
+     GROUP BY a.duplicate_of`
+  ).bind(...items.map((i) => i.id)).all<{ pid: number; srcs: string | null }>();
+
+  const byPrimary = new Map<number, string[]>();
+  for (const r of rows.results ?? []) {
+    byPrimary.set(r.pid, (r.srcs ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+  }
+  for (const it of items) it.alsoOn = byPrimary.get(it.id) ?? [];
+  return items;
 }
 
 const ARTICLE_SELECT = `
@@ -99,13 +127,13 @@ newsRoutes.get('/latest', async (c) => {
       const [rows, countRow] = await Promise.all([
         c.env.DB.prepare(
           `${ARTICLE_SELECT}
-           WHERE a.is_active = 1
+           WHERE a.is_active = 1 AND a.duplicate_of IS NULL
            ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.id DESC
            LIMIT ? OFFSET ?`
         ).bind(size, offset).all<ArticleRow>(),
-        c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1').first<{ count: number }>(),
+        c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND duplicate_of IS NULL').first<{ count: number }>(),
       ]);
-      const items = (rows.results ?? []).map(mapArticle);
+      const items = await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle));
       return paged(items, countRow?.count ?? 0, page, size);
     },
     { ttlSeconds: 120 }
@@ -142,15 +170,15 @@ newsRoutes.get('/category/:slug', async (c) => {
   const [rows, countRow] = await Promise.all([
     c.env.DB.prepare(
       `${ARTICLE_SELECT}
-       WHERE a.is_active = 1 AND a.category_id = ?
+       WHERE a.is_active = 1 AND a.duplicate_of IS NULL AND a.category_id = ?
        ORDER BY COALESCE(a.published_at, a.fetched_at) DESC
        LIMIT ? OFFSET ?`
     ).bind(category.id, size, offset).all<ArticleRow>(),
-    c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND category_id = ?')
+    c.env.DB.prepare('SELECT COUNT(*) as count FROM news_articles WHERE is_active = 1 AND duplicate_of IS NULL AND category_id = ?')
       .bind(category.id).first<{ count: number }>(),
   ]);
 
-  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
+  return c.json(paged(await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle)), countRow?.count ?? 0, page, size));
 });
 
 // ----------------------------------------------------------------------------
@@ -192,12 +220,12 @@ newsRoutes.get('/trending', async (c) => {
       const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
       const rows = await c.env.DB.prepare(
         `${ARTICLE_SELECT}
-         WHERE a.is_active = 1
+         WHERE a.is_active = 1 AND a.duplicate_of IS NULL
            AND COALESCE(a.published_at, a.fetched_at) >= ?
          ORDER BY a.view_count DESC, COALESCE(a.published_at, a.fetched_at) DESC
          LIMIT ?`
       ).bind(cutoff, count).all<ArticleRow>();
-      return (rows.results ?? []).map(mapArticle);
+      return await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle));
     },
     { ttlSeconds: 300 }
   );
@@ -253,7 +281,8 @@ newsRoutes.get('/filter', async (c) => {
   const hasThumbnail = url.searchParams.get('hasThumbnail') === 'true';
   const { page, size, offset } = paginate(url.searchParams.get('page') ?? undefined, url.searchParams.get('pageSize') ?? undefined);
 
-  const where: string[] = ['a.is_active = 1'];
+  // Browse feed → show one card per story (primaries only); secondaries surface as "also on".
+  const where: string[] = ['a.is_active = 1', 'a.duplicate_of IS NULL'];
   const binds: any[] = [];
 
   if (sourceIds.length) {
@@ -295,7 +324,7 @@ newsRoutes.get('/filter', async (c) => {
       .bind(...binds).first<{ count: number }>(),
   ]);
 
-  return c.json(paged((rows.results ?? []).map(mapArticle), countRow?.count ?? 0, page, size));
+  return c.json(paged(await withAlsoOn(c.env, (rows.results ?? []).map(mapArticle)), countRow?.count ?? 0, page, size));
 });
 
 // ----------------------------------------------------------------------------
