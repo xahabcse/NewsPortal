@@ -7,13 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
 import BookmarkButton from '../components/BookmarkButton';
 import ShareButton from '../components/ShareButton';
-import TextToSpeech from '../components/TextToSpeech';
 import CommentsSection from '../components/CommentsSection';
 import ArticleReactions from '../components/ArticleReactions';
-import ReportButton from '../components/ReportButton';
-import SaveOfflineButton from '../components/SaveOfflineButton';
 import SummarizeButton from '../components/SummarizeButton';
-import TranslateButton from '../components/TranslateButton';
 import SentimentBadge from '../components/SentimentBadge';
 
 interface NewsArticleDetail {
@@ -308,7 +304,7 @@ const ArticleDetailPage = () => {
                     </span>
                 </div>
 
-                {/* Action Buttons: Reactions + Share + Listen */}
+                {/* Action Buttons: Reactions + Save + Share */}
                 <div className="flex items-center gap-x-2 gap-y-2 sm:gap-3 mt-4 flex-wrap">
                     <ArticleReactions articleId={article.id} />
                     <BookmarkButton articleId={article.id} />
@@ -317,27 +313,11 @@ const ArticleDetailPage = () => {
                         url={`${window.location.origin}/news/${article.slug}`}
                         summary={article.summary || undefined}
                     />
-                    <TextToSpeech
-                        text={article.content || article.summary || article.title}
-                        title={article.title}
-                    />
-                    <ReportButton articleId={article.id} />
-                    <SaveOfflineButton
-                        slug={article.slug}
-                        title={article.title}
-                        content={article.content}
-                        summary={article.summary}
-                        imageUrl={article.imageUrl}
-                        sourceName={article.sourceName}
-                        categoryName={article.categoryName}
-                        publishedAt={article.publishedAt}
-                    />
                 </div>
 
-                {/* AI Features + Read Original + Font Size */}
+                {/* AI Summary + Read Original + Font Size */}
                 <div className="flex items-center gap-x-2 gap-y-2 sm:gap-3 mt-3 flex-wrap">
                     <SummarizeButton articleId={article.id} />
-                    <TranslateButton articleId={article.id} originalTitle={article.title} originalSummary={article.summary} />
                     {article.sourceUrl && (
                         <a
                             href={article.sourceUrl}
