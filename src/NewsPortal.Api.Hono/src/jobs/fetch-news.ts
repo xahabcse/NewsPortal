@@ -266,7 +266,18 @@ async function fetchOneSource(
 
   budget.remaining -= 2;
   const dedupContext = await loadDedupContext(env, [...canonicalByItem.values()], s.id);
-  const newItems = items.filter((item) => !isDuplicate(dedupContext, canonicalByItem.get(item)!, item.title));
+  // Accept items one at a time, folding each accepted item back into the context so
+  // later items in THIS SAME batch dedup against it too. Without this, a feed that
+  // lists the same story twice (different URLs, ~identical titles — common with
+  // "UPDATED" reposts) would slip both past the DB-snapshot check and insert dupes.
+  const newItems: FeedItem[] = [];
+  for (const item of items) {
+    const canonical = canonicalByItem.get(item)!;
+    if (isDuplicate(dedupContext, canonical, item.title)) continue;
+    newItems.push(item);
+    dedupContext.existingCanonicalUrls.add(canonical);
+    dedupContext.recentSourceTitles.push(item.title);
+  }
 
   // --- Resolve bodies (feed body first, then bounded page extraction) -------
   const bodyByItem = new Map<FeedItem, ResolvedBody>();

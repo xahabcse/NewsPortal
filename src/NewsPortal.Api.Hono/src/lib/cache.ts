@@ -45,14 +45,21 @@ export async function cacheOrCompute<T>(
   return value;
 }
 
-/** Invalidate every key under a prefix. KV supports list+delete. */
+/** Invalidate every key under a prefix. KV supports list+delete.
+ *  Best-effort and never throws: a single transient KV delete/list failure must
+ *  not abort the remaining deletes (allSettled) nor propagate out and fail the
+ *  ingestion run that calls this AFTER its D1 writes have already committed. */
 export async function cacheInvalidatePrefix(kv: KVNamespace, prefix: string) {
-  let cursor: string | undefined;
-  do {
-    const list = await kv.list({ prefix, cursor });
-    await Promise.all(list.keys.map((k) => kv.delete(k.name)));
-    cursor = list.list_complete ? undefined : list.cursor;
-  } while (cursor);
+  try {
+    let cursor: string | undefined;
+    do {
+      const list = await kv.list({ prefix, cursor });
+      await Promise.allSettled(list.keys.map((k) => kv.delete(k.name)));
+      cursor = list.list_complete ? undefined : list.cursor;
+    } while (cursor);
+  } catch {
+    // stale keys self-heal on their TTL / the next successful invalidation
+  }
 }
 
 // Common cache key builders.

@@ -69,8 +69,8 @@ function firstSrcset(srcset: string): string | null {
 async function extractOnce(html: string, sel: string, baseUrl: string): Promise<ExtractResult> {
   type Block = { tag: string; text: string };
   const state = {
-    blocks: [] as Block[],
-    current: null as Block | null,    // currently-open block-level element (p/h2/.../figcaption)
+    blocks: [] as Block[],             // body blocks only (feeds plainText); excludes figcaption
+    stack: [] as Block[],              // currently-open block stack (deepest last)
     images: [] as string[],
     // ordered output fragments so images/captions interleave roughly in document order
     fragments: [] as string[],
@@ -78,23 +78,31 @@ async function extractOnce(html: string, sel: string, baseUrl: string): Promise<
 
   const rewriter = new HTMLRewriter();
 
+  // Open a block on the stack. Block tags nest in real article bodies
+  // (blockquote>p, li>p), and a text node inside an inner block also matches the
+  // outer block's selector — so we route each text chunk to ONLY the deepest open
+  // block whose tag equals the firing handler's tag. That fixes both failure modes
+  // of the old single-pointer approach: text after an inner block closed was dropped,
+  // and text inside an inner block (matched by two selectors) was appended twice.
   for (const tag of BLOCK_TAGS) {
     rewriter.on(`${sel} ${tag}`, {
       element(el) {
         const block: Block = { tag, text: '' };
-        state.current = block;
+        state.stack.push(block);
         state.blocks.push(block);
         el.onEndTag(() => {
+          const i = state.stack.lastIndexOf(block);
+          if (i !== -1) state.stack.splice(i, 1);
           const txt = collapse(decode(block.text));
           if (txt) {
             const outTag = block.tag === 'li' ? 'p' : block.tag; // flatten list items to paragraphs
             state.fragments.push(`<${outTag}>${escapeHtml(txt)}</${outTag}>`);
           }
-          state.current = null;
         });
       },
       text(t) {
-        if (state.current && state.current.tag !== 'figcaption') state.current.text += t.text;
+        const top = state.stack[state.stack.length - 1];
+        if (top && top.tag === tag) top.text += t.text;
       },
     });
   }
@@ -124,21 +132,22 @@ async function extractOnce(html: string, sel: string, baseUrl: string): Promise<
     },
   });
 
-  // figcaption reuses the same open-block buffering as block tags, but isn't
-  // counted toward plainText (captions aren't body prose). We track it via a
-  // separate `current` so its text doesn't bleed into adjacent paragraphs.
+  // figcaption reuses the same stack buffering as block tags, but is NOT pushed to
+  // state.blocks (captions aren't body prose, so they don't count toward plainText).
   rewriter.on(`${sel} figcaption`, {
     element(el) {
       const block: Block = { tag: 'figcaption', text: '' };
-      state.current = block;
+      state.stack.push(block);
       el.onEndTag(() => {
+        const i = state.stack.lastIndexOf(block);
+        if (i !== -1) state.stack.splice(i, 1);
         const txt = collapse(decode(block.text));
         if (txt) state.fragments.push(`<figcaption>${escapeHtml(txt)}</figcaption>`);
-        state.current = null;
       });
     },
     text(t) {
-      if (state.current && state.current.tag === 'figcaption') state.current.text += t.text;
+      const top = state.stack[state.stack.length - 1];
+      if (top && top.tag === 'figcaption') top.text += t.text;
     },
   });
 

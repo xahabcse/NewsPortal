@@ -130,7 +130,12 @@ const LogsPage = () => {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await LogService.getLogs({ category, level, search, from, to, page, pageSize: 50 });
+            // Send LOCAL-day boundaries as explicit UTC ISO so the server-side filter
+            // lines up with the local-day grouping below (a bare YYYY-MM-DD is treated
+            // as a UTC day by the API, which is off by the timezone offset).
+            const fromIso = from ? new Date(from + 'T00:00:00').toISOString() : '';
+            const toIso = to ? new Date(to + 'T23:59:59.999').toISOString() : '';
+            const res = await LogService.getLogs({ category, level, search, from: fromIso, to: toIso, page, pageSize: 50 });
             setLogs(res.items);
             setTotalPages(res.totalPages || 1);
             setTotalCount(res.totalCount);

@@ -94,7 +94,9 @@ adminArticlesRoutes.post('/', async (c) => {
   const body = await c.req.json<any>();
   if (!body.title || !body.sourceId) return c.json(errMsg('title and sourceId required'), 400);
 
-  const baseSlug = body.slug?.trim() || makeSlug(body.title);
+  // makeSlug returns '' for a whitespace/punctuation-only title; fall back to a
+  // usable base so we never insert an empty (un-routable) or '-2' slug.
+  const baseSlug = body.slug?.trim() || makeSlug(body.title) || 'article';
   let slug = baseSlug;
   // Resolve slug collisions.
   for (let i = 2; i < 100; i++) {
