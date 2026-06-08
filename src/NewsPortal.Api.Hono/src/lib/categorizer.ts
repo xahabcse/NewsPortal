@@ -96,14 +96,19 @@ const RULES: CategoryRule[] = [
 
 const DEFAULT_SLUG = 'national';
 
-/** True when the keyword is a single alphanumeric token (Unicode-aware). */
+/** True when the keyword is a single word token (Unicode-aware).
+ *  Includes \p{M} (combining marks) so Bangla virama/nukta/vowel-signs keep a
+ *  word intact — without it, every multi-letter Bangla keyword is treated as a
+ *  phrase and degrades to substring matching (e.g. গান matching আফগান). */
 function isSingleToken(keyword: string): boolean {
-  return /^[\p{L}\p{N}]+$/u.test(keyword);
+  return /^[\p{L}\p{M}\p{N}]+$/u.test(keyword);
 }
 
-/** Split text into a Set of whole-word tokens (Latin + Bangla + digits). */
+/** Split text into a Set of whole-word tokens (Latin + Bangla + digits).
+ *  \p{M} is part of a word, not a delimiter — otherwise Bangla words shatter at
+ *  every conjunct/matra (বিশ্ববিদ্যালয় → ব,শ,বব,…) and never match a keyword. */
 function tokenize(text: string): Set<string> {
-  return new Set(text.split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+  return new Set(text.split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean));
 }
 
 /** Return the best-matching category slug, or 'national' as a fallback. */
