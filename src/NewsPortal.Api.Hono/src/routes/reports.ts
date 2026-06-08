@@ -25,6 +25,11 @@ reportsRoutes.post('/', requireAuth, async (c) => {
   if (!body.articleId || !body.reason) return c.json(errMsg('articleId and reason are required'), 400);
   if (!VALID_REASONS.includes(body.reason)) return c.json(errMsg('Invalid reason'), 400);
 
+  const article = await c.env.DB.prepare(
+    'SELECT id FROM news_articles WHERE id = ? AND is_active = 1 LIMIT 1'
+  ).bind(body.articleId).first<{ id: number }>();
+  if (!article) return c.json(errMsg('Article not found'), 404);
+
   // Upsert: one report per (user, article).
   const now = nowIso();
   const existing = await c.env.DB.prepare(
@@ -75,17 +80,17 @@ reportsRoutes.get('/', requireAuth, requireRole('Admin'), async (c) => {
       .bind(...binds).first<{ count: number }>(),
   ]);
 
-  const items = (rows.results ?? []).map((r: any) => ({
-    id: r.id,
-    articleId: r.article_id,
-    userId: r.user_id,
-    reason: r.reason,
-    details: r.details,
-    status: r.status,
-    createdAt: r.created_at,
-    articleTitle: r.article_title,
-    articleSlug: r.article_slug,
-    reporterUsername: r.reporter_username,
+  const items = (rows.results ?? []).map((row: any) => ({
+    id: row.id,
+    articleId: row.article_id,
+    userId: row.user_id,
+    reason: row.reason,
+    details: row.details,
+    status: row.status,
+    createdAt: row.created_at,
+    articleTitle: row.article_title,
+    articleSlug: row.article_slug,
+    reporterUsername: row.reporter_username,
   }));
 
   return c.json(paged(items, countRow?.count ?? 0, page, size));
@@ -99,7 +104,9 @@ reportsRoutes.put('/:id/status', requireAuth, requireRole('Admin'), async (c) =>
   if (!['pending', 'reviewed', 'dismissed'].includes(body.status ?? '')) {
     return c.json(errMsg('Invalid status'), 400);
   }
-  await c.env.DB.prepare('UPDATE article_reports SET status = ?, updated_at = ? WHERE id = ?')
-    .bind(body.status, nowIso(), id).run();
+  const result = await c.env.DB.prepare(
+    'UPDATE article_reports SET status = ?, updated_at = ? WHERE id = ? AND is_active = 1'
+  ).bind(body.status, nowIso(), id).run();
+  if (result.meta.changes === 0) return c.json(errMsg('Report not found'), 404);
   return c.json({ message: 'Status updated', id });
 });

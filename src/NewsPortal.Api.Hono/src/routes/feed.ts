@@ -3,9 +3,9 @@ import type { Env } from '../lib/env';
 
 export const feedRoutes = new Hono<Env>();
 
-function escapeXml(s: string | null | undefined): string {
-  if (!s) return '';
-  return s
+function escapeXml(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -47,16 +47,20 @@ feedRoutes.get('/rss', async (c) => {
     }>();
 
   const items = (rows.results ?? [])
-    .map(
-      (r) => `    <item>
-      <title>${escapeXml(r.title)}</title>
-      <link>${escapeXml(`${base}/news/${r.slug}`)}</link>
-      <guid isPermaLink="false">${escapeXml(`newsportal-${r.id}`)}</guid>
-      <description>${escapeXml(r.summary ?? '')}</description>
-      <source>${escapeXml(r.source_name)}</source>
-      <pubDate>${new Date(r.published_at ?? r.fetched_at).toUTCString()}</pubDate>
-    </item>`
-    )
+    .map((item) => {
+      let pubDate = new Date(item.published_at ?? item.fetched_at);
+      if (Number.isNaN(pubDate.getTime())) {
+        pubDate = new Date(item.fetched_at);
+      }
+      return `    <item>
+      <title>${escapeXml(item.title)}</title>
+      <link>${escapeXml(`${base}/news/${item.slug}`)}</link>
+      <guid isPermaLink="false">${escapeXml(`newsportal-${item.id}`)}</guid>
+      <description>${escapeXml(item.summary ?? '')}</description>
+      <source>${escapeXml(item.source_name)}</source>
+      <pubDate>${pubDate.toUTCString()}</pubDate>
+    </item>`;
+    })
     .join('\n');
 
   const title = categorySlug ? `NewsPortal — ${categorySlug}` : 'NewsPortal — Latest News';

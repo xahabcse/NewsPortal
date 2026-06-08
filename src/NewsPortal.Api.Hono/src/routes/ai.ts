@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/env';
 import { errMsg } from '../lib/response';
-import { requireAuth } from '../lib/auth';
+import { requireAuth, requireRole } from '../lib/auth';
 import { nowIso } from '../lib/db';
 import { summarize, translate, sentimentBatch } from '../lib/gemini';
 
@@ -46,22 +46,22 @@ aiRoutes.post('/translate/:id', requireAuth, async (c) => {
 });
 
 // POST /categorize/:id — rerun the keyword classifier
-aiRoutes.post('/categorize/:id', requireAuth, async (c) => {
+aiRoutes.post('/categorize/:id', requireAuth, requireRole('Editor'), async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
 
   const { categorize } = await import('../lib/categorizer');
-  const a = await c.env.DB.prepare(
+  const article = await c.env.DB.prepare(
     'SELECT title, summary, plain_text FROM news_articles WHERE id = ? LIMIT 1'
   ).bind(id).first<{ title: string; summary: string | null; plain_text: string | null }>();
-  if (!a) return c.json(errMsg('Article not found'), 404);
+  if (!article) return c.json(errMsg('Article not found'), 404);
 
-  const slug = categorize(`${a.title}\n${a.summary ?? ''}\n${a.plain_text ?? ''}`);
-  const cat = await c.env.DB.prepare('SELECT id FROM categories WHERE slug = ? LIMIT 1').bind(slug).first<{ id: number }>();
-  if (!cat) return c.json({ slug, applied: false });
+  const slug = categorize(`${article.title}\n${article.summary ?? ''}\n${article.plain_text ?? ''}`);
+  const category = await c.env.DB.prepare('SELECT id FROM categories WHERE slug = ? LIMIT 1').bind(slug).first<{ id: number }>();
+  if (!category) return c.json({ slug, applied: false });
 
   await c.env.DB.prepare('UPDATE news_articles SET category_id = ?, updated_at = ? WHERE id = ?')
-    .bind(cat.id, nowIso(), id).run();
+    .bind(category.id, nowIso(), id).run();
   return c.json({ slug, applied: true });
 });
 
@@ -82,13 +82,13 @@ aiRoutes.get('/sentiment/article/:id', async (c) => {
     // Lightweight keyword fallback.
     const posWords = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful'];
     const negWords = ['bad', 'terrible', 'awful', 'hate', 'wrong', 'worst'];
-    let p = 0, n = 0;
-    for (const c of comments) {
-      const lower = c.toLowerCase();
-      if (posWords.some((w) => lower.includes(w))) p++;
-      else if (negWords.some((w) => lower.includes(w))) n++;
+    let positiveCount = 0, negativeCount = 0;
+    for (const comment of comments) {
+      const lower = comment.toLowerCase();
+      if (posWords.some((w) => lower.includes(w))) positiveCount++;
+      else if (negWords.some((w) => lower.includes(w))) negativeCount++;
     }
-    return c.json({ positive: p, negative: n, neutral: comments.length - p - n, total: comments.length, source: 'fallback' });
+    return c.json({ positive: positiveCount, negative: negativeCount, neutral: comments.length - positiveCount - negativeCount, total: comments.length, source: 'fallback' });
   }
   return c.json({ ...result, total: comments.length, source: 'gemini' });
 });

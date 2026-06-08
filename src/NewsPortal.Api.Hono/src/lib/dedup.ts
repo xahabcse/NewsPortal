@@ -6,7 +6,7 @@
 //       TITLE_MATCH_THRESHOLD similar (token Jaccard) to a recently-stored title.
 //
 // To stay within Cloudflare's per-invocation subrequest budget, the fetch loop
-// loads the comparison data for a whole source in just TWO D1 reads
+// loads the comparison data for a whole source in just THREE D1 reads
 // (loadDedupContext) and then runs the pure, in-memory isDuplicate() check per
 // item — instead of issuing 1-2 D1 queries for every single feed item.
 
@@ -46,46 +46,46 @@ export function tokenizeTitle(title: string): Set<string> {
 }
 
 /** Token-based Jaccard similarity between two titles (0..1). */
-export function titleSimilarity(a: string, b: string): number {
-  const aTokens = tokenizeTitle(a);
-  const bTokens = tokenizeTitle(b);
-  if (aTokens.size === 0 || bTokens.size === 0) return 0;
-
-  let intersection = 0;
-  for (const token of aTokens) if (bTokens.has(token)) intersection++;
-
-  const union = aTokens.size + bTokens.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+export function titleSimilarity(titleA: string, titleB: string): number {
+  return jaccardSets(tokenizeTitle(titleA), tokenizeTitle(titleB));
 }
 
 /** Jaccard over two precomputed token sets. */
-function jaccardSets(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 || b.size === 0) return 0;
+function jaccardSets(tokensA: Set<string>, tokensB: Set<string>): number {
+  if (tokensA.size === 0 || tokensB.size === 0) return 0;
   let intersection = 0;
-  for (const t of a) if (b.has(t)) intersection++;
-  return intersection / (a.size + b.size - intersection);
+  for (const token of tokensA) if (tokensB.has(token)) intersection++;
+  return intersection / (tokensA.size + tokensB.size - intersection);
+}
+
+/**
+ * Strip wire-service code prefixes that one outlet keeps and another drops — e.g. BSS copy
+ * runs "BSS-24 ..." / "BFF-16 ..." / "ZCZC BSS-22 ..." while Daily Star republishes the bare
+ * headline. Without stripping, those 1-2 prefix tokens drag the cross-source Jaccard below
+ * threshold.
+ */
+function stripWireServicePrefix(title: string): string {
+  return (title ?? '')
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/^\s*(?:zczc\s+)?(?:[a-z]{2,6}-\d{1,5}\s+)+/i, ' ');
 }
 
 /**
  * Tokenize a title for CROSS-SOURCE clustering. Same as tokenizeTitle, but first strips
- * wire-service code prefixes that one outlet keeps and another drops — e.g. BSS copy runs
- * "BSS-24 ..." / "BFF-16 ..." / "ZCZC BSS-22 ..." while Daily Star republishes the bare
- * headline. Without stripping, those 1-2 prefix tokens drag the Jaccard below threshold.
+ * wire-service code prefixes (see stripWireServicePrefix) so republished copy still clusters.
  */
-export function clusterTokens(title: string): Set<string> {
-  const normalized = (title ?? '')
-    .normalize('NFC')
-    .toLowerCase()
-    .replace(/^\s*(?:zczc\s+)?(?:[a-z]{2,6}-\d{1,5}\s+)+/i, ' ');
-  return new Set(normalized.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 1));
+export function clusterTokensFromTitle(title: string): Set<string> {
+  return new Set(stripWireServicePrefix(title).split(/[^\p{L}\p{N}]+/u).filter((token) => token.length > 1));
 }
 
 /** Preloaded comparison data for deduping one source's batch of feed items. */
 export type DedupContext = {
   /** Canonical URLs that already exist in the DB (global match). */
   existingCanonicalUrls: Set<string>;
-  /** Recent titles from this source, for fuzzy same-source matching. */
-  recentSourceTitles: string[];
+  /** Recent titles from this source as precomputed token sets, for fuzzy same-source
+   *  matching (tokenized once at load, so isDuplicate never re-tokenizes them per item). */
+  recentSourceTitles: Set<string>[];
   /** Recent PRIMARY articles across ALL sources (duplicate_of IS NULL), for cross-source
    *  clustering: a new item that matches one of these is tagged as its duplicate. */
   recentPrimaries: { id: number; tokens: Set<string> }[];
@@ -93,12 +93,13 @@ export type DedupContext = {
 
 /**
  * Load everything needed to dedup a batch of feed items for one source in exactly
- * TWO D1 reads:
- *   1. which of the candidate canonical URLs already exist (a single `IN (...)` query), and
- *   2. the most recent titles from this source (for the fuzzy title check).
+ * THREE D1 reads:
+ *   1. which of the candidate canonical URLs already exist (a single `IN (...)` query),
+ *   2. the most recent titles from this source (for the fuzzy same-source title check), and
+ *   3. the recent cross-source PRIMARY articles (for cross-source clustering).
  *
- * Both reads count toward the per-invocation subrequest budget, so the caller is
- * expected to decrement its budget by 2.
+ * All three reads count toward the per-invocation subrequest budget, so the caller is
+ * expected to decrement its budget by 3.
  */
 export async function loadDedupContext(
   env: Env['Bindings'],
@@ -135,16 +136,18 @@ export async function loadDedupContext(
 
   return {
     existingCanonicalUrls,
-    recentSourceTitles: (titleRows.results ?? []).map((row) => row.title),
-    recentPrimaries: (primaryRows.results ?? []).map((row) => ({ id: row.id, tokens: clusterTokens(row.title) })),
+    recentSourceTitles: (titleRows.results ?? []).map((row) => tokenizeTitle(row.title)),
+    recentPrimaries: (primaryRows.results ?? []).map((row) => ({ id: row.id, tokens: clusterTokensFromTitle(row.title) })),
   };
 }
 
 /** Pure, in-memory duplicate check against a preloaded DedupContext. */
 export function isDuplicate(context: DedupContext, canonicalUrl: string, title: string): boolean {
   if (context.existingCanonicalUrls.has(canonicalUrl)) return true;
-  for (const existingTitle of context.recentSourceTitles) {
-    if (titleSimilarity(title, existingTitle) >= TITLE_MATCH_THRESHOLD) return true;
+  // Tokenize the new title ONCE, then compare against the source's precomputed token sets.
+  const titleTokens = tokenizeTitle(title);
+  for (const existingTokens of context.recentSourceTitles) {
+    if (jaccardSets(titleTokens, existingTokens) >= TITLE_MATCH_THRESHOLD) return true;
   }
   return false;
 }
@@ -156,7 +159,7 @@ export function isDuplicate(context: DedupContext, canonicalUrl: string, title: 
  * Very short titles (< 3 tokens) are never clustered — too little signal, too risky.
  */
 export function findClusterPrimary(context: DedupContext, title: string): number | null {
-  const tokens = clusterTokens(title);
+  const tokens = clusterTokensFromTitle(title);
   if (tokens.size < 3) return null;
   for (const primary of context.recentPrimaries) {
     if (jaccardSets(tokens, primary.tokens) >= CLUSTER_MATCH_THRESHOLD) return primary.id;

@@ -98,6 +98,7 @@ newsSourcesRoutes.put('/:id', requireAuth, requireRole('Editor'), async (c) => {
   const id = parseInt(c.req.param('id'));
   if (isNaN(id)) return c.json(errMsg('Invalid id'), 400);
   const body = await c.req.json<any>();
+  if (!body.name || !body.baseUrl) return c.json(errMsg('name and baseUrl are required'), 400);
 
   await c.env.DB.prepare(
     `UPDATE news_sources SET
@@ -193,14 +194,48 @@ newsSourcesRoutes.post('/:id/fetch', requireAuth, requireRole('Editor'), async (
   });
 });
 
+// Guard against SSRF: only allow http(s) to non-private/non-loopback hosts.
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h === '::1' || h === '0.0.0.0') return true;
+  // IPv4 private / loopback / link-local ranges
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a === 127) return true; // loopback 127.0.0.0/8
+    if (a === 10) return true; // private 10.0.0.0/8
+    if (a === 192 && b === 168) return true; // private 192.168.0.0/16
+    if (a === 172 && b >= 16 && b <= 31) return true; // private 172.16.0.0/12
+    if (a === 169 && b === 254) return true; // link-local 169.254.0.0/16
+  }
+  return false;
+}
+
 // POST /test — dry-run test a source config without saving
 newsSourcesRoutes.post('/test', requireAuth, requireRole('Editor'), async (c) => {
   const body = await c.req.json<{ rssFeedUrl?: string; apiEndpoint?: string; fetchMethod?: number }>();
   const url = body.rssFeedUrl || body.apiEndpoint;
   if (!url) return c.json(errMsg('rssFeedUrl or apiEndpoint required'), 400);
 
+  let parsed: URL;
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'NewsPortal/1.0' } });
+    parsed = new URL(url);
+  } catch {
+    return c.json(errMsg('Invalid URL'), 400);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return c.json(errMsg('Only http and https URLs are allowed'), 400);
+  }
+  if (isBlockedHost(parsed.hostname)) {
+    return c.json(errMsg('Private, loopback, and link-local hosts are not allowed'), 400);
+  }
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'NewsPortal/1.0' },
+      signal: AbortSignal.timeout(8000),
+    });
     if (res.ok === false) {
       return c.json({
         success: false,
@@ -227,34 +262,26 @@ newsSourcesRoutes.post('/test', requireAuth, requireRole('Editor'), async (c) =>
 newsSourcesRoutes.post('/bulk-action', requireAuth, requireRole('Admin'), async (c) => {
   const body = await c.req.json<{ ids?: number[]; action?: string }>();
   if (!Array.isArray(body.ids) || body.ids.length === 0) return c.json(errMsg('ids[] required'), 400);
+  if (body.ids.length > 200) return c.json(errMsg('Cannot process more than 200 ids at once'), 400);
 
-  let processed = 0;
-  let failed = 0;
   const now = nowIso();
 
-  for (const id of body.ids) {
-    try {
-      if (body.action === 'pause') {
-        await c.env.DB.prepare('UPDATE news_sources SET health_status = 2, updated_at = ? WHERE id = ?')
-          .bind(now, id).run();
-      } else if (body.action === 'resume') {
-        await c.env.DB.prepare(
-          'UPDATE news_sources SET is_active = 1, health_status = 0, consecutive_failures = 0, updated_at = ? WHERE id = ?'
-        ).bind(now, id).run();
-      } else if (body.action === 'delete') {
-        await c.env.DB.prepare('UPDATE news_sources SET is_active = 0, updated_at = ? WHERE id = ?')
-          .bind(now, id).run();
-      } else {
-        failed++;
-        continue;
-      }
-      processed++;
-    } catch {
-      failed++;
-    }
+  let sql: string;
+  if (body.action === 'pause') {
+    sql = 'UPDATE news_sources SET health_status = 2, updated_at = ? WHERE id = ?';
+  } else if (body.action === 'resume') {
+    sql = 'UPDATE news_sources SET is_active = 1, health_status = 0, consecutive_failures = 0, updated_at = ? WHERE id = ?';
+  } else if (body.action === 'delete') {
+    sql = 'UPDATE news_sources SET is_active = 0, updated_at = ? WHERE id = ?';
+  } else {
+    return c.json(errMsg('action must be pause, resume, or delete'), 400);
   }
 
-  return c.json({ processed, failed, total: body.ids.length });
+  const stmts = body.ids.map((id) => c.env.DB.prepare(sql).bind(now, id));
+  const batchResults = await c.env.DB.batch(stmts);
+  const processed = batchResults.reduce((sum, r) => sum + (r.meta?.changes ?? 0), 0);
+
+  return c.json({ processed, failed: body.ids.length - processed, total: body.ids.length });
 });
 
 // POST /backfill — manually run the body-backfill job now (Admin+). Visits the

@@ -43,19 +43,31 @@ app.use('*', async (c, next) => {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const origin = c.req.header('Origin');
-  const resolvedOrigin =
-    !origin || allowed.length === 0
-      ? '*'
-      : allowed.includes(origin)
-        ? origin
-        : allowed[0];
+  // When there's no Origin (server-to-server / same-origin) or no allowlist
+  // configured, fall back to a wildcard. A present-but-disallowed origin must
+  // get NO Access-Control-Allow-Origin so we never reflect a credentialed
+  // allow-origin for an origin the request didn't actually come from.
+  const noAllowlist = allowed.length === 0;
 
   return cors({
-    origin: resolvedOrigin,
+    // The cors() origin function returns the origin only when it's allowed,
+    // otherwise undefined (→ no Access-Control-Allow-Origin header). '*' is
+    // returned ONLY when no allowlist is configured (dev) — which is exactly
+    // when credentials below is false — so '*' never pairs with credentials:true.
+    // A no-Origin request with an allowlist present isn't a CORS request, so it
+    // needs no ACAO header (undefined) rather than a credentialed wildcard.
+    origin: (origin) => {
+      if (noAllowlist) return '*';
+      if (!origin) return undefined;
+      return allowed.includes(origin) ? origin : undefined;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    // This API authenticates via the Authorization header, not cookies, so
+    // pairing the '*' fallback with credentials:true is both unsafe (browsers
+    // reject it) and unnecessary. Enable credentials only when we echo a
+    // specific allowlisted origin.
+    credentials: noAllowlist === false,
   })(c, next);
 });
 
@@ -147,10 +159,13 @@ export default {
             console.log('Body backfill complete:', r);
             // Log retention housekeeping — every 30 min is plenty.
             await pruneLogs(env);
-          } else {
+          } else if (event.cron === '*/5 * * * *') {
             // */5 ingestion fetch.
             const result = await runScheduledFetch(env);
             console.log('Scheduled fetch complete:', result);
+          } else {
+            // An unrecognized cron must not silently run the */5 ingest.
+            console.warn('Unrecognized cron trigger, no-op:', event.cron);
           }
         } catch (err) {
           console.error('Scheduled job failed:', err);

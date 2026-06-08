@@ -6,7 +6,8 @@ import { nowIso } from '../lib/db';
 
 export const reactionsRoutes = new Hono<Env>();
 
-const VALID_TYPES = ['Like', 'Love', 'Informative', 'Shocking', 'Sad', 'Angry'];
+const VALID_REACTION_TYPES = ['Like', 'Love', 'Informative', 'Shocking', 'Sad', 'Angry'] as const;
+type ReactionType = typeof VALID_REACTION_TYPES[number];
 
 // GET /article/:articleId — counts per reactionType + the current user's reaction (if any)
 reactionsRoutes.get('/article/:articleId', async (c) => {
@@ -21,8 +22,8 @@ reactionsRoutes.get('/article/:articleId', async (c) => {
   `).bind(articleId).all<{ reaction_type: string; count: number }>();
 
   const result: Record<string, number> = {};
-  for (const t of VALID_TYPES) result[t] = 0;
-  for (const r of counts.results ?? []) result[r.reaction_type] = r.count;
+  for (const reactionType of VALID_REACTION_TYPES) result[reactionType] = 0;
+  for (const countRow of counts.results ?? []) result[countRow.reaction_type] = countRow.count;
 
   // Try to read the current user's reaction if a token is present.
   const authHeader = c.req.header('Authorization');
@@ -50,22 +51,21 @@ reactionsRoutes.post('/', requireAuth, async (c) => {
   const articleId = body.articleId;
   const reactionType = body.reactionType;
   if (!articleId || !reactionType) return c.json(errMsg('articleId and reactionType required'), 400);
-  if (!VALID_TYPES.includes(reactionType)) return c.json(errMsg('Invalid reactionType'), 400);
+  if (!VALID_REACTION_TYPES.includes(reactionType as ReactionType)) return c.json(errMsg('Invalid reactionType'), 400);
 
+  // Check article exists before writing — avoids an FK-violation 500 on a bad id.
+  const article = await c.env.DB.prepare('SELECT id FROM news_articles WHERE id = ? AND is_active = 1 LIMIT 1')
+    .bind(articleId).first();
+  if (!article) return c.json(errMsg('Article not found'), 404);
+
+  // Atomic upsert on the (user_id, article_id) unique index — no select-then-write race.
   const now = nowIso();
-  const existing = await c.env.DB.prepare(
-    'SELECT id FROM article_reactions WHERE user_id = ? AND article_id = ? LIMIT 1'
-  ).bind(userId, articleId).first<{ id: number }>();
-
-  if (existing) {
-    await c.env.DB.prepare(
-      'UPDATE article_reactions SET reaction_type = ?, is_active = 1, updated_at = ? WHERE id = ?'
-    ).bind(reactionType, now, existing.id).run();
-  } else {
-    await c.env.DB.prepare(
-      'INSERT INTO article_reactions (user_id, article_id, reaction_type, created_at, is_active) VALUES (?, ?, ?, ?, 1)'
-    ).bind(userId, articleId, reactionType, now).run();
-  }
+  await c.env.DB.prepare(
+    `INSERT INTO article_reactions (user_id, article_id, reaction_type, created_at, is_active)
+     VALUES (?, ?, ?, ?, 1)
+     ON CONFLICT(user_id, article_id)
+     DO UPDATE SET reaction_type = excluded.reaction_type, is_active = 1, updated_at = ?`
+  ).bind(userId, articleId, reactionType, now, now).run();
 
   return c.json({ message: 'Reaction saved', articleId, reactionType });
 });

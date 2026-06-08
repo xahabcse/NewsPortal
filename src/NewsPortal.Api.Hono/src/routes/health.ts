@@ -7,7 +7,8 @@ healthRoutes.get('/health', async (c) => {
   try {
     await c.env.DB.prepare('SELECT 1 as ok').first();
   } catch (err) {
-    return c.json({ status: 'unhealthy', error: String(err) }, 503);
+    console.error('[health] DB check failed:', err);
+    return c.json({ status: 'unhealthy' }, 503);
   }
   return c.json({
     status: 'healthy',

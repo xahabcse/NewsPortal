@@ -77,8 +77,11 @@ function extractImage(block: string): string | null {
     extractAttr(block, 'media:thumbnail', 'url');
   if (url) return url;
 
-  const imgInImage = extractTagContent(block, 'image\\s*>\\s*<url');
-  if (imgInImage) return imgInImage;
+  const imageBlock = extractTagContent(block, 'image');
+  if (imageBlock) {
+    const u = extractTagContent(imageBlock, 'url');
+    if (u) return u;
+  }
 
   const desc = extractTagContent(block, 'description') ?? extractTagContent(block, 'content:encoded') ?? '';
   const m = /<img[^>]+src=["']([^"']+)["']/i.exec(desc);
