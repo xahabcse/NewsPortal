@@ -37,7 +37,7 @@ npm run lint       # ESLint over the project
 3. Start the API (see root [README.md](../../README.md) — `cd src/NewsPortal.Api && dotnet run`).
 4. `npm run dev` → app at <http://localhost:5173>.
 
-The dev server proxies `/api/*` to the backend at `http://localhost:5016` (configured in [vite.config.ts](vite.config.ts)). Override with `VITE_API_BASE_URL` if you need a different backend host.
+The dev server proxies `/api/*` to the backend at `http://localhost:5016` (configured in [vite.config.ts](vite.config.ts)). Override with `VITE_API_URL` if you need a different backend host.
 
 ## Project Structure
 
@@ -111,15 +111,19 @@ Public routes mount in `App.tsx`. Admin and editor routes are wrapped with `Prot
 
 ## Environment Variables
 
-The frontend is config-light. The only var the build reads is:
+The frontend is config-light. The build reads three vars:
 
-| Variable             | Default                  | Purpose                                |
-|----------------------|--------------------------|----------------------------------------|
-| `VITE_API_BASE_URL`  | `/api` (proxied in dev)  | Override API host (e.g., for previews) |
+| Variable                | Default                  | Purpose                                              |
+|-------------------------|--------------------------|------------------------------------------------------|
+| `VITE_API_URL`          | `/api` (proxied in dev)  | Override API host (e.g., the Hono Worker URL)        |
+| `VITE_GOOGLE_CLIENT_ID` | —                        | Google OAuth sign-in button                          |
+| `VITE_ENABLE_SIGNALR`   | off                      | Legacy SignalR toggle — the live stack uses SSE      |
 
 For backend env vars, see the root [README.md](../../README.md#environment-variables).
 
 ## Build & Deploy
+
+Production deploys go to **Cloudflare Pages** via `.github/workflows/deploy-client-pages.yml` (on push to `main`); the Docker/Nginx path below is the legacy self-host option.
 
 Production builds run inside the `web` Docker image (see [Dockerfile](Dockerfile)) which serves the static bundle behind Nginx. Build locally with `npm run build`; output lands in `dist/`.
 

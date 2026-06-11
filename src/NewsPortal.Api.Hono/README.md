@@ -2,7 +2,7 @@
 
 Hono.js + TypeScript REST API for the NewsPortal aggregation platform, deployed on **Cloudflare Workers**.
 
-This project runs **alongside** the legacy `NewsPortal.Api` (ASP.NET Core 8) — both serve the same domain model from a different data layer. Switch between them via the React client's `VITE_API_BASE_URL`.
+This project runs **alongside** the legacy `NewsPortal.Api` (ASP.NET Core 8) — both serve the same domain model from a different data layer. Switch between them via the React client's `VITE_API_URL`.
 
 ## Stack
 
@@ -15,7 +15,7 @@ This project runs **alongside** the legacy `NewsPortal.Api` (ASP.NET Core 8) —
 | Cache | Cloudflare KV |
 | Image storage | Cloudinary (same account as Portfolio) |
 | Auth | JWT (HS256) via `hono/jwt` |
-| Deploy | `cloudflare/wrangler-action@v3` on push to `main` |
+| Deploy | `cloudflare/wrangler-action@v4` on push to `main` |
 
 ## Scripts
 
@@ -74,15 +74,16 @@ src/
 │   ├── slug.ts             # Bengali-safe slug generator
 │   ├── password.ts         # bcryptjs wrapper
 │   └── cloudinary.ts       # Image upload + delete
-├── routes/                 # Route handlers — one file per controller
-│   ├── auth.ts             # login, register, /me, change-password, google
-│   ├── news.ts             # public news endpoints
-│   ├── feed.ts             # RSS feed
-│   ├── sitemap.ts          # XML sitemap
-│   ├── robots.ts           # robots.txt
-│   └── health.ts           # /health
+├── jobs/
+│   └── fetch-news.ts       # Cron handlers — scheduled news fetching
+├── routes/                 # Route handlers — one file per controller (21 files)
+│   └── auth, news, feed, sitemap, robots, health, bookmarks, comments,
+│       reactions, reports, read-history, news-sources, fetch-jobs, admin,
+│       admin-articles, user-management, analytics, images, ai, sse, logs
 migrations/                 # D1 SQL migrations
 ├── 0001_init.sql           # Consolidated initial schema
+├── 0002_app_logs.sql       # App logs table
+├── 0003_dedup_cluster.sql  # Dedup clustering columns
 seed/
 └── seed.sql                # Categories, news sources, seed users
 ```
@@ -126,7 +127,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_secret
 
 ## API Compatibility
 
-The Hono API mirrors the legacy ASP.NET Core API path structure (`/api/v1/...`) so the frontend can switch between them by changing `VITE_API_BASE_URL`. Response shape is wrapped:
+The Hono API mirrors the legacy ASP.NET Core API path structure (`/api/v1/...`) so the frontend can switch between them by changing `VITE_API_URL`. Response shape is wrapped:
 
 ```json
 { "success": true, "data": { ... }, "message": "OK" }
@@ -136,9 +137,9 @@ The Hono API mirrors the legacy ASP.NET Core API path structure (`/api/v1/...`) 
 
 | Phase | Status |
 |-------|--------|
-| 1 — Pages frontend deploy | ✅ Workflow added |
-| 2 — Hono scaffold + auth + read-only news | 🚧 In progress |
-| 3 — Write endpoints + cache + admin | ⏳ Planned |
-| 4 — Cloudinary image handling | ⏳ Planned |
-| 5 — Cron Triggers for news fetch | ⏳ Planned |
-| 6 — SSE realtime + production cutover | ⏳ Planned |
+| 1 — Pages frontend deploy | ✅ Live in production |
+| 2 — Hono scaffold + auth + read-only news | ✅ Live in production |
+| 3 — Write endpoints + cache + admin | ✅ Live in production |
+| 4 — Cloudinary image handling | ✅ Live in production |
+| 5 — Cron Triggers for news fetch | ✅ Live in production |
+| 6 — SSE realtime + production cutover | ✅ Live in production |

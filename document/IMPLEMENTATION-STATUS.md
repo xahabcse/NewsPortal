@@ -1,5 +1,7 @@
 # NewsPortal - Implementation Status
 
+> ⚠️ **Legacy snapshot** — এই document-টা মূল .NET/Docker stack-এর status snapshot (May 24, 2026 পর্যন্ত)। বর্তমান LIVE stack হলো Cloudflare (Hono Worker + D1 + Pages) — SignalR-এর জায়গায় এখন SSE। দেখুন CLAUDE.md ও document/CLOUDFLARE-DEPLOYMENT.md।
+
 > **Project**: NewsPortal - News Aggregation Platform
 > **Stack**: ASP.NET Core 8.0 + React 18 + TypeScript + Vite + Tailwind CSS + PostgreSQL + MongoDB + Redis
 > **Created**: February 19, 2026

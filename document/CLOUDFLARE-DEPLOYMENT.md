@@ -88,7 +88,7 @@ Add these to **Repository Settings → Secrets and variables → Actions**:
 |--------|-------|
 | `CLOUDFLARE_API_TOKEN` | Token from Cloudflare → My Profile → API Tokens → Create — needs Workers Scripts:Edit, Pages:Edit, D1:Edit, Workers KV:Edit |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → right sidebar (`6b96972c79485e10ed298946c8af5e0b` for the Portfolio account) |
-| `VITE_API_BASE_URL` | The Worker URL from Step 1.8, e.g. `https://newsportal-api-hono.sujoncep.workers.dev` |
+| `VITE_API_URL` | The Worker URL from Step 1.8, e.g. `https://newsportal-api-hono.sujoncep.workers.dev` |
 
 ---
 
@@ -122,7 +122,7 @@ npm run dev               # http://localhost:5173
 To point the dev client at the **local Hono API** instead of the .NET API, run:
 
 ```bash
-VITE_API_BASE_URL=http://localhost:8787 npm run dev
+VITE_API_URL=http://localhost:8787 npm run dev
 ```
 
 For local-only secrets, create `src/NewsPortal.Api.Hono/.dev.vars` (git-ignored):
@@ -138,14 +138,16 @@ CLOUDINARY_API_SECRET=optional_for_phase_4
 
 ## Phase status
 
+> ℹ️ এই guide-টা প্রথম setup-এর সময়ের। বর্তমানে সব phase live — দেখুন CLAUDE.md।
+
 | Phase | Status | What works |
 |-------|--------|-----------|
 | 1 — Pages frontend | ✅ Wired | React client deploys to Pages, supports SPA routing, optimized chunks |
 | 2 — Hono API (read-only + auth) | ✅ Wired | `/api/v1/auth/*`, `/api/v1/news/*`, `/api/v1/feed/rss`, `/sitemap`, `/robots.txt` |
-| 3 — Write endpoints + admin | ⏳ Not started | Admin CRUD, bookmarks, comments, reactions, reports, analytics |
-| 4 — Cloudinary image handling | ⏳ Not started | Image upload + delivery |
-| 5 — Cron Triggers for news fetch | ⏳ Not started | Replaces Hangfire |
-| 6 — SSE realtime + production cutover | ⏳ Not started | Replaces SignalR |
+| 3 — Write endpoints + admin | ✅ Done | Admin CRUD, bookmarks, comments, reactions, reports, analytics — live since cutover |
+| 4 — Cloudinary image handling | ✅ Done | Image upload + delivery — live since cutover |
+| 5 — Cron Triggers for news fetch | ✅ Done | Replaces Hangfire — live since cutover |
+| 6 — SSE realtime + production cutover | ✅ Done | Replaces SignalR — live since cutover |
 
 ---
 
