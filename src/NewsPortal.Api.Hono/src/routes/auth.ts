@@ -147,7 +147,7 @@ authRoutes.post('/register', async (c) => {
 
   const result = await c.env.DB.prepare(
     `INSERT INTO users (username, email, password_hash, first_name, last_name, role, auth_provider, avatar_id, created_at, is_active)
-     VALUES (?, ?, ?, ?, ?, 'Reader', 'Local', 1, ?, 1)`
+     VALUES (?, ?, ?, ?, ?, 'Reader', 'Local', 0, ?, 1)`
   ).bind(username, email, passwordHash, firstName, lastName, now).run();
 
   const created = await findUser(c.env, Number(result.meta.last_row_id));
@@ -254,7 +254,7 @@ authRoutes.post('/google', async (c) => {
     const now = nowIso();
     const result = await c.env.DB.prepare(
       `INSERT INTO users (username, email, password_hash, first_name, last_name, role, auth_provider, avatar_id, created_at, is_active)
-       VALUES (?, ?, '', ?, ?, 'Reader', 'Google', 1, ?, 1)`
+       VALUES (?, ?, '', ?, ?, 'Reader', 'Google', 0, ?, 1)`
     ).bind(username, email, firstName, lastName, now).run();
     user = await findUser(c.env, Number(result.meta.last_row_id));
   }
@@ -276,7 +276,7 @@ authRoutes.put('/profile', requireAuth, async (c) => {
 
   const body = await c.req.json<{ bio?: string | null; avatarId?: number }>();
   const bio = body.bio?.toString().trim() ?? null;
-  const avatarId = body.avatarId ?? 1;
+  const avatarId = body.avatarId ?? 0;
 
   await c.env.DB.prepare('UPDATE users SET bio = ?, avatar_id = ?, updated_at = ? WHERE id = ?')
     .bind(bio, avatarId, nowIso(), userId).run();
