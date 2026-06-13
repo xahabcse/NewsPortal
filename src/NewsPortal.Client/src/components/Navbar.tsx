@@ -128,7 +128,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             value={searchQuery}
                             onChange={handleSearchChange}
                             placeholder="Search..."
-                            className="w-full bg-white/5 border border-glass-border rounded-lg py-1.5 sm:py-2 pl-3 pr-9 sm:pl-4 sm:pr-14 text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                            className="w-full bg-white/5 border border-glass-border rounded-lg py-1.5 sm:py-2 pl-3 pr-9 sm:pl-4 sm:pr-14 text-sm text-white placeholder:text-secondary focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                         />
                         <div className="absolute right-2 sm:right-3 top-1.5 sm:top-2 flex items-center gap-1.5">
                             <span className="hidden sm:inline-block text-[10px] bg-white/10 border border-glass-border px-1.5 py-0.5 rounded text-secondary/70 font-mono">/</span>
