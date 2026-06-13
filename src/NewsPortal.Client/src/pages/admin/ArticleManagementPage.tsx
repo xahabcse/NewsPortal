@@ -152,18 +152,18 @@ const ArticleManagementPage = () => {
     };
 
     return (
-        <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
+        <div className="p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Article Management</h1>
                     <p className="text-sm text-secondary">{totalCount} articles total</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <button
                         onClick={async () => {
                             try {
-                                const res = await axiosInstance.post('/ai/categorize/bulk?limit=200');
-                                toast.success(`Categorized ${res.data.categorized} of ${res.data.total} articles`);
+                                const res = await axiosInstance.post('/adminarticles/auto-categorize');
+                                toast.success(`Categorized ${res.data.updated} of ${res.data.processed} articles`);
                                 fetchArticles();
                             } catch { toast.error('Bulk categorize failed'); }
                         }}
@@ -209,51 +209,81 @@ const ArticleManagementPage = () => {
                         <div key={i} className="h-16 bg-white/5 rounded-lg animate-pulse"></div>
                     ))}
                 </div>
+            ) : articles.length === 0 ? (
+                <div className="bg-white/5 border border-glass-border rounded-xl px-4 py-10 text-center text-secondary text-sm">No articles found</div>
             ) : (
-                <div className="bg-white/5 border border-glass-border rounded-xl overflow-hidden">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-glass-border text-left">
-                                <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase">Title</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase hidden md:table-cell">Category</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase hidden lg:table-cell">Views</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase hidden lg:table-cell">Date</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {articles.map(a => (
-                                <tr key={a.id} className="border-b border-glass-border/50 hover:bg-white/5 transition-colors">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            {a.isFeatured && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" title="Featured"></span>}
-                                            {!a.isActive && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Hidden"></span>}
-                                            <span className="text-sm text-white line-clamp-1">{a.title}</span>
-                                        </div>
-                                        <span className="text-[10px] text-secondary">{a.sourceName}</span>
-                                    </td>
-                                    <td className="px-4 py-3 text-xs text-secondary hidden md:table-cell">{a.categoryName || '-'}</td>
-                                    <td className="px-4 py-3 text-xs text-secondary hidden lg:table-cell">{a.viewCount.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-xs text-secondary hidden lg:table-cell">
-                                        {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : '-'}
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <button onClick={() => handleEdit(a.id)} className="bulk-btn" title="Edit">Edit</button>
-                                            <button onClick={() => handleToggleFeatured(a.id)} className={`bulk-btn ${a.isFeatured ? 'text-accent' : ''}`} title="Toggle featured">
-                                                {a.isFeatured ? 'Unfeature' : 'Feature'}
-                                            </button>
-                                            <button onClick={() => handleDelete(a.id, a.title)} className="bulk-btn text-red-400" title="Hide">Hide</button>
-                                        </div>
-                                    </td>
+                <>
+                    {/* Mobile: stacked cards (avoids the cramped/truncated table on small screens) */}
+                    <div className="space-y-3 md:hidden">
+                        {articles.map(a => (
+                            <div key={a.id} className="bg-white/5 border border-glass-border rounded-xl p-4">
+                                <div className="flex items-start gap-2">
+                                    {a.isFeatured && <span className="w-2 h-2 mt-1.5 rounded-full bg-accent shrink-0" title="Featured"></span>}
+                                    {!a.isActive && <span className="w-2 h-2 mt-1.5 rounded-full bg-red-500 shrink-0" title="Hidden"></span>}
+                                    <p className="text-sm font-medium text-white line-clamp-2 min-w-0">{a.title}</p>
+                                </div>
+                                <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[11px] text-secondary mt-2">
+                                    <span>{a.sourceName}</span>
+                                    <span aria-hidden>·</span>
+                                    <span>{a.categoryName || 'Uncategorized'}</span>
+                                    <span aria-hidden>·</span>
+                                    <span>{a.viewCount.toLocaleString()} views</span>
+                                    {a.publishedAt && <><span aria-hidden>·</span><span>{new Date(a.publishedAt).toLocaleDateString()}</span></>}
+                                </div>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <button onClick={() => handleEdit(a.id)} className="bulk-btn flex-1 min-h-[36px]" title="Edit">Edit</button>
+                                    <button onClick={() => handleToggleFeatured(a.id)} className={`bulk-btn flex-1 min-h-[36px] ${a.isFeatured ? 'text-accent' : ''}`} title="Toggle featured">
+                                        {a.isFeatured ? 'Unfeature' : 'Feature'}
+                                    </button>
+                                    <button onClick={() => handleDelete(a.id, a.title)} className="bulk-btn flex-1 min-h-[36px] text-red-400" title="Hide">Hide</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop: table */}
+                    <div className="hidden md:block bg-white/5 border border-glass-border rounded-xl overflow-hidden">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-glass-border text-left">
+                                    <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase">Title</th>
+                                    <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase">Category</th>
+                                    <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase hidden lg:table-cell">Views</th>
+                                    <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase hidden lg:table-cell">Date</th>
+                                    <th className="px-4 py-3 text-xs font-semibold text-secondary uppercase text-right">Actions</th>
                                 </tr>
-                            ))}
-                            {articles.length === 0 && (
-                                <tr><td colSpan={5} className="px-4 py-8 text-center text-secondary text-sm">No articles found</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {articles.map(a => (
+                                    <tr key={a.id} className="border-b border-glass-border/50 hover:bg-white/5 transition-colors">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                {a.isFeatured && <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" title="Featured"></span>}
+                                                {!a.isActive && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Hidden"></span>}
+                                                <span className="text-sm text-white line-clamp-1">{a.title}</span>
+                                            </div>
+                                            <span className="text-[10px] text-secondary">{a.sourceName}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-secondary">{a.categoryName || '-'}</td>
+                                        <td className="px-4 py-3 text-xs text-secondary hidden lg:table-cell">{a.viewCount.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-xs text-secondary hidden lg:table-cell">
+                                            {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button onClick={() => handleEdit(a.id)} className="bulk-btn" title="Edit">Edit</button>
+                                                <button onClick={() => handleToggleFeatured(a.id)} className={`bulk-btn ${a.isFeatured ? 'text-accent' : ''}`} title="Toggle featured">
+                                                    {a.isFeatured ? 'Unfeature' : 'Feature'}
+                                                </button>
+                                                <button onClick={() => handleDelete(a.id, a.title)} className="bulk-btn text-red-400" title="Hide">Hide</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
 
             {/* Pagination */}

@@ -113,7 +113,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     {/* Hamburger Menu Button - Mobile/Tablet Only */}
                     <button
                         onClick={onMenuClick}
-                        className="lg:hidden text-secondary hover:text-white transition-colors p-2 -ml-1 shrink-0 rounded-lg hover:bg-white/5"
+                        className="lg:hidden flex items-center justify-center h-10 w-10 -ml-1 shrink-0 text-secondary hover:text-white transition-colors rounded-lg hover:bg-white/5"
                         aria-label="Open menu"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -145,7 +145,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     <div className="relative" ref={notificationRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="text-secondary hover:text-white transition-colors relative"
+                            className="relative flex items-center justify-center h-10 w-10 rounded-lg text-secondary hover:text-white hover:bg-white/5 transition-colors"
                             aria-label="Notifications"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -260,7 +260,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                 <div className="text-sm font-medium text-white">{displayName}</div>
                                 <div className="text-xs text-secondary">{displayRole}</div>
                             </div>
-                            <Avatar id={session?.avatarId || 1} size="md" />
+                            <Avatar id={session?.avatarId ?? 0} size="md" username={session?.username} />
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary hidden md:block">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
@@ -350,7 +350,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
-                        className="text-secondary hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+                        className="flex items-center justify-center h-10 w-10 text-secondary hover:text-white transition-colors rounded-lg hover:bg-white/5"
                         title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                         aria-label="Toggle theme"
                     >
