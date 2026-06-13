@@ -36,9 +36,43 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
+  version:
+    name: Bump version
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v5
+        with:
+          ref: dev
+          fetch-depth: 0   # full history so the commit range can be inspected
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Compute & apply version bump
+        id: bump
+        env:
+          BUMP_RANGE: ${{ github.event.before }}..${{ github.sha }}
+        run: node scripts/version-bump.cjs
+
+      # Pushed with the default GITHUB_TOKEN, which by design does NOT trigger a
+      # new workflow run — so the release commit can't cause an infinite loop.
+      # create-pr (below) still merges the now-bumped dev into main and deploys.
+      - name: Commit & push release bump
+        if: steps.bump.outputs.bumped == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/NewsPortal.Client/src/version.json src/NewsPortal.Client/package.json
+          git commit -m "chore(release): v${{ steps.bump.outputs.version }} [skip ci]"
+          git push origin HEAD:dev
+
   create-pr:
     name: Create PR to Main and Auto-Merge
-    needs: build
+    needs: [build, version]
     runs-on: ubuntu-latest
 
     steps:

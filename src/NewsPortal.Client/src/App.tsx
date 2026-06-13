@@ -30,6 +30,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import BackToTop from './components/BackToTop'
+import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import KeyboardShortcuts from './components/KeyboardShortcuts'
 import NewsTicker from './components/NewsTicker'
@@ -97,6 +98,7 @@ function App() {
 
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>
+                    <Footer />
                   </div>
                 </div>
               </div>
