@@ -284,6 +284,17 @@ Project conventions for AI-assisted work — Bangla answers, plan-first workflow
 
 ---
 
+## 🔖 Versioning
+
+The app version shows in the site footer (`v{version}`) and auto-bumps on every push to `dev`:
+
+- **Minor** change → `+0.1` (`0.9 → 1.0` carries automatically).
+- **Major** change → next whole number (e.g. `1.4 → 2.0`) — triggered when any pushed commit is a breaking change (Conventional Commits `type!:` subject or a `BREAKING CHANGE` footer).
+
+Source of truth: [`src/NewsPortal.Client/src/version.json`](src/NewsPortal.Client/src/version.json); bump logic: [`scripts/version-bump.cjs`](scripts/version-bump.cjs); wired into `ci-dev.yml` (the release commit is pushed back with the default token so it never re-triggers CI).
+
+---
+
 ## License
 
 For educational and portfolio purposes.
