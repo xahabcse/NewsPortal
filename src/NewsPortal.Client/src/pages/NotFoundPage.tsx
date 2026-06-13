@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { useTranslation } from 'react-i18next';
 
 const NotFoundPage = () => {
+    const { t } = useTranslation();
     return (
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
             <Helmet>
-                <title>Page Not Found - NewsPortal</title>
+                <title>{t('notFound.pageTitle')}</title>
             </Helmet>
             <div className="max-w-md w-full text-center">
                 {/* 404 Animation */}
@@ -15,9 +17,9 @@ const NotFoundPage = () => {
                         <h1 className="font-serif text-8xl font-bold text-accent mb-4">
                             404
                         </h1>
-                        <p className="text-secondary text-lg mb-2">Page Not Found</p>
+                        <p className="text-secondary text-lg mb-2">{t('notFound.heading')}</p>
                         <p className="text-secondary/60 text-sm">
-                            The page you're looking for doesn't exist or has been moved.
+                            {t('notFound.description')}
                         </p>
                     </div>
                 </div>
@@ -45,7 +47,7 @@ const NotFoundPage = () => {
                                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
                             </svg>
                         </div>
-                        <span className="text-xs font-medium text-white">Home</span>
+                        <span className="text-xs font-medium text-white">{t('nav.home')}</span>
                     </Link>
 
                     <Link
@@ -72,7 +74,7 @@ const NotFoundPage = () => {
                                 <polyline points="10 9 9 9 8 9"></polyline>
                             </svg>
                         </div>
-                        <span className="text-xs font-medium text-white">News Sources</span>
+                        <span className="text-xs font-medium text-white">{t('notFound.newsSources')}</span>
                     </Link>
 
                     <Link
@@ -95,7 +97,7 @@ const NotFoundPage = () => {
                                 <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
                             </svg>
                         </div>
-                        <span className="text-xs font-medium text-white">Trending</span>
+                        <span className="text-xs font-medium text-white">{t('nav.trending')}</span>
                     </Link>
 
                     <a
@@ -122,7 +124,7 @@ const NotFoundPage = () => {
                                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                             </svg>
                         </div>
-                        <span className="text-xs font-medium text-white">GitHub</span>
+                        <span className="text-xs font-medium text-white">{t('notFound.github')}</span>
                     </a>
                 </div>
 
@@ -145,7 +147,7 @@ const NotFoundPage = () => {
                         <line x1="19" y1="12" x2="5" y2="12"></line>
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
-                    Back to Home
+                    {t('auth.backToHome')}
                 </Link>
             </div>
         </div>

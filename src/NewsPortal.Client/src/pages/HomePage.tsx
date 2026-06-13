@@ -14,6 +14,7 @@ import WeatherWidget from '../components/WeatherWidget'
 import { useWeather } from '../hooks/useWeather'
 import { Sunrise, Sun, Sunset, Moon, CalendarDays, Leaf, Newspaper, type LucideIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 const PAGE_SIZE = 9
 
@@ -26,6 +27,7 @@ function sessionGlyph(hour: number): LucideIcon {
 }
 
 const HomePage = () => {
+  const { t } = useTranslation()
   const { session: authSession } = useAuth()
   const weather = useWeather()
   const [news, setNews] = useState<NewsArticle[]>([])
@@ -61,8 +63,8 @@ const HomePage = () => {
     toast(
       () => (
         <div>
-          <strong>NewsPortal+ Coming Soon!</strong>
-          <p className="text-xs opacity-70 mt-1">We're working on premium features. Stay tuned!</p>
+          <strong>{t('home.premiumToastTitle')}</strong>
+          <p className="text-xs opacity-70 mt-1">{t('home.premiumToastBody')}</p>
         </div>
       ),
       { duration: 5000, position: 'top-right' }
@@ -102,12 +104,12 @@ const HomePage = () => {
       setError(null)
     } catch (err) {
       console.error('Error fetching news:', err)
-      setError(`Failed to load news. ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setError(t('home.loadError', { error: err instanceof Error ? err.message : 'Unknown error' }))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [filters])
+  }, [filters, t])
 
   useEffect(() => { fetchMeta() }, [fetchMeta])
 
@@ -141,8 +143,8 @@ const HomePage = () => {
   return (
     <>
       <SEO
-        title="Latest News & Headlines"
-        description="Stay updated with the latest headlines from trusted news sources worldwide. Real-time news aggregation with smart categorization."
+        title={t('home.seoTitle')}
+        description={t('home.seoDescription')}
       />
       <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
         <div className="mb-6">
@@ -218,7 +220,7 @@ const HomePage = () => {
                     ? 'bg-accent/20 text-accent border-accent/40'
                     : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                 >
-                  All News
+                  {t('home.allNews')}
                 </button>
                 {userCategorySlugs.length > 0 && (
                   <button
@@ -233,7 +235,7 @@ const HomePage = () => {
                       ? 'bg-accent/20 text-accent border-accent/40'
                       : 'bg-white/5 text-secondary hover:text-white border-glass-border hover:border-white/20'}`}
                   >
-                    For You
+                    {t('home.forYou')}
                   </button>
                 )}
               </>
@@ -255,7 +257,7 @@ const HomePage = () => {
               onClick={() => fetchNews(1, false)}
               className="mt-3 px-4 py-2 bg-accent/20 border border-accent/30 text-accent text-sm font-medium rounded-lg hover:bg-accent/30 transition-colors"
             >
-              Try Again
+              {t('common.tryAgain')}
             </button>
           </div>
         ) : news.length === 0 ? (
@@ -263,9 +265,9 @@ const HomePage = () => {
             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary/40"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8l-4 4v14a2 2 0 0 0 2 2z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
             </div>
-            <h3 className="text-white font-semibold mb-1">No articles found</h3>
+            <h3 className="text-white font-semibold mb-1">{t('home.noArticlesFound')}</h3>
             <p className="text-secondary text-sm max-w-xs mx-auto">
-              Try adjusting your filters or check back in a few moments.
+              {t('home.noArticlesFoundDesc')}
             </p>
           </div>
         ) : (
@@ -298,7 +300,7 @@ const HomePage = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                     </svg>
-                    <span className="text-sm">Loading more articles…</span>
+                    <span className="text-sm">{t('home.loadingMoreArticles')}</span>
                   </div>
                 )}
               </div>
@@ -307,7 +309,7 @@ const HomePage = () => {
             {!hasNextPage && news.length > 0 && (
               <div className="mt-8 text-center">
                 <p className="text-secondary text-sm">
-                  You've caught up! <span className="text-accent">{news.length}</span> articles loaded.
+                  {t('home.caughtUpCount', { count: news.length })}
                 </p>
               </div>
             )}
@@ -318,14 +320,14 @@ const HomePage = () => {
         <div className="mt-12 p-4 sm:p-8 rounded-3xl bg-accent/10 border border-accent/20 relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
             <div className="max-w-md">
-              <h2 className="font-serif text-xl sm:text-2xl font-bold text-white mb-2">Upgrade to NewsPortal+</h2>
-              <p className="text-secondary text-xs sm:text-sm italic">Unlock exclusive analysis, ad-free experience, and early access to breaking news stories from around the globe.</p>
+              <h2 className="font-serif text-xl sm:text-2xl font-bold text-white mb-2">{t('home.premiumHeading')}</h2>
+              <p className="text-secondary text-xs sm:text-sm italic">{t('home.premiumDesc')}</p>
             </div>
             <button
               onClick={handlePremiumClick}
               className="bg-accent text-white px-4 sm:px-8 py-2 sm:py-3 rounded-xl font-bold hover:bg-accent/90 transition-all transform hover:scale-105"
             >
-              Explore Premium
+              {t('home.explorePremium')}
             </button>
           </div>
         </div>

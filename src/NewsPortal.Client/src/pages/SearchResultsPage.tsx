@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import { newsApi, type Category } from '../services/api';
@@ -30,6 +31,7 @@ interface PagedResult<T> {
 }
 
 const SearchResultsPage = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const query = searchParams.get('q') || '';
 
@@ -126,14 +128,14 @@ const SearchResultsPage = () => {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
                     if (axiosError.response?.status === 400) {
-                        setError('Please enter a valid search query.');
+                        setError(t('search.errorInvalidQuery'));
                     } else if (axiosError.response?.status === 404) {
-                        setError('No articles found matching your search.');
+                        setError(t('search.errorNoMatch'));
                     } else {
-                        setError('Failed to search articles. Please try again.');
+                        setError(t('search.errorFailed'));
                     }
                 } else {
-                    setError('Failed to search articles. Please try again.');
+                    setError(t('search.errorFailed'));
                 }
             } finally {
                 setLoading(false);
@@ -141,7 +143,7 @@ const SearchResultsPage = () => {
         };
 
         fetchResults();
-    }, [query, page, selectedCategory, selectedSource, datePreset, sortOrder, getFromDate]);
+    }, [query, page, selectedCategory, selectedSource, datePreset, sortOrder, getFromDate, t]);
 
     // Reset page on filter change
     useEffect(() => {
@@ -166,8 +168,8 @@ const SearchResultsPage = () => {
         return (
             <>
                 <SEO
-                    title="Search News"
-                    description="Search through thousands of news articles from trusted sources worldwide."
+                    title={t('search.seoTitle')}
+                    description={t('search.seoDescription')}
                 />
                 <div className="p-8">
                     <div className="max-w-2xl mx-auto text-center">
@@ -177,20 +179,20 @@ const SearchResultsPage = () => {
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                     </div>
-                    <h1 className="font-serif text-3xl font-bold text-white mb-2">Search News</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white mb-2">{t('search.emptyTitle')}</h1>
                     <p className="text-secondary text-sm mb-8">
-                        Find articles by title, summary, author, or content
+                        {t('search.emptyDesc')}
                     </p>
 
                     {recentSearches.length > 0 && (
                         <div className="bg-white/5 rounded-xl border border-glass-border p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-semibold text-white">Recent Searches</h3>
+                                <h3 className="text-sm font-semibold text-white">{t('search.recentSearches')}</h3>
                                 <button
                                     onClick={clearRecentSearches}
                                     className="text-xs text-secondary hover:text-white transition-colors"
                                 >
-                                    Clear all
+                                    {t('search.clearAll')}
                                 </button>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -218,16 +220,10 @@ const SearchResultsPage = () => {
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h1 className="font-serif text-3xl font-bold text-white mb-2">
-                            Search Results
+                            {t('search.results')}
                         </h1>
                         <p className="text-secondary text-sm">
-                            {loading ? (
-                                'Searching...'
-                            ) : (
-                                <>
-                                    Found <span className="text-accent font-semibold">{totalCount}</span> articles for "<span className="text-accent">{query}</span>"
-                                </>
-                            )}
+                            {loading ? t('search.searching') : t('search.foundFor', { count: totalCount, query })}
                         </p>
                     </div>
                     <button
@@ -249,7 +245,7 @@ const SearchResultsPage = () => {
                             <line x1="9" y1="8" x2="15" y2="8"></line>
                             <line x1="17" y1="16" x2="23" y2="16"></line>
                         </svg>
-                        Filters
+                        {t('search.filters')}
                         {activeFilterCount > 0 && (
                             <span className="w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                                 {activeFilterCount}
@@ -263,54 +259,54 @@ const SearchResultsPage = () => {
                     <div className="bg-white/5 border border-glass-border rounded-xl p-4 mb-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div>
-                                <label className="block text-xs text-secondary mb-1.5">Category</label>
+                                <label className="block text-xs text-secondary mb-1.5">{t('search.filterCategory')}</label>
                                 <select
                                     value={selectedCategory}
                                     onChange={e => setSelectedCategory(e.target.value ? Number(e.target.value) : '')}
                                     className="w-full bg-white/5 border border-glass-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/50"
                                 >
-                                    <option value="">All Categories</option>
+                                    <option value="">{t('search.allCategories')}</option>
                                     {categories.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs text-secondary mb-1.5">Source</label>
+                                <label className="block text-xs text-secondary mb-1.5">{t('search.filterSource')}</label>
                                 <select
                                     value={selectedSource}
                                     onChange={e => setSelectedSource(e.target.value ? Number(e.target.value) : '')}
                                     className="w-full bg-white/5 border border-glass-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/50"
                                 >
-                                    <option value="">All Sources</option>
+                                    <option value="">{t('search.allSources')}</option>
                                     {sources.map(s => (
                                         <option key={s.id} value={s.id}>{s.name}</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs text-secondary mb-1.5">Date Range</label>
+                                <label className="block text-xs text-secondary mb-1.5">{t('search.dateRange')}</label>
                                 <select
                                     value={datePreset}
                                     onChange={e => setDatePreset(e.target.value)}
                                     className="w-full bg-white/5 border border-glass-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/50"
                                 >
-                                    <option value="">Any Time</option>
-                                    <option value="today">Today</option>
-                                    <option value="week">Past Week</option>
-                                    <option value="month">Past Month</option>
+                                    <option value="">{t('search.anyTime')}</option>
+                                    <option value="today">{t('search.today')}</option>
+                                    <option value="week">{t('search.pastWeek')}</option>
+                                    <option value="month">{t('search.pastMonth')}</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs text-secondary mb-1.5">Sort By</label>
+                                <label className="block text-xs text-secondary mb-1.5">{t('search.sortBy')}</label>
                                 <select
                                     value={sortOrder}
                                     onChange={e => setSortOrder(e.target.value)}
                                     className="w-full bg-white/5 border border-glass-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/50"
                                 >
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="relevance">Relevance</option>
+                                    <option value="newest">{t('search.sortNewest')}</option>
+                                    <option value="oldest">{t('search.sortOldest')}</option>
+                                    <option value="relevance">{t('search.sortRelevance')}</option>
                                 </select>
                             </div>
                         </div>
@@ -320,7 +316,7 @@ const SearchResultsPage = () => {
                                     onClick={clearFilters}
                                     className="text-xs text-secondary hover:text-white transition-colors"
                                 >
-                                    Clear all filters
+                                    {t('search.clearFilters')}
                                 </button>
                             </div>
                         )}
@@ -350,7 +346,7 @@ const SearchResultsPage = () => {
                             <line x1="12" y1="16" x2="12.01" y2="16"></line>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">Search Error</h3>
+                    <h3 className="text-white font-semibold mb-1">{t('search.errorTitle')}</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto">{error}</p>
                 </div>
             ) : results.length === 0 ? (
@@ -361,9 +357,9 @@ const SearchResultsPage = () => {
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">No Results Found</h3>
+                    <h3 className="text-white font-semibold mb-1">{t('search.noResults')}</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto mb-4">
-                        We couldn't find any articles matching "{query}". Try different keywords or check your spelling.
+                        {t('search.noResultsForDesc', { query })}
                     </p>
                     <Link
                         to="/"
@@ -373,7 +369,7 @@ const SearchResultsPage = () => {
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
-                        Back to Home
+                        {t('search.backHome')}
                     </Link>
                 </div>
             ) : (
@@ -404,11 +400,11 @@ const SearchResultsPage = () => {
                                 disabled={page === 1}
                                 className="px-4 py-2 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Previous
+                                {t('common.previous')}
                             </button>
 
                             <span className="px-4 py-2 text-sm text-secondary">
-                                Page {page} of {totalPages}
+                                {t('common.pageOf', { page, totalPages })}
                             </span>
 
                             <button
@@ -416,7 +412,7 @@ const SearchResultsPage = () => {
                                 disabled={page === totalPages}
                                 className="px-4 py-2 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Next
+                                {t('common.next')}
                             </button>
                         </div>
                     )}

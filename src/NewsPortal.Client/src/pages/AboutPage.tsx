@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
     ArrowRight,
     ArrowUpRight,
@@ -232,18 +233,18 @@ const FAQ: FaqItem[] = [
 
 interface NavAnchor {
     id: string;
-    label: string;
+    labelKey: string;
 }
 
 const PAGE_NAV: NavAnchor[] = [
-    { id: 'mission', label: 'Mission' },
-    { id: 'numbers', label: 'Numbers' },
-    { id: 'pillars', label: 'Principles' },
-    { id: 'team', label: 'Team' },
-    { id: 'stack', label: 'Stack' },
-    { id: 'roadmap', label: 'Roadmap' },
-    { id: 'faq', label: 'FAQ' },
-    { id: 'contact', label: 'Contact' },
+    { id: 'mission', labelKey: 'about.nav.mission' },
+    { id: 'numbers', labelKey: 'about.nav.numbers' },
+    { id: 'pillars', labelKey: 'about.nav.principles' },
+    { id: 'team', labelKey: 'about.nav.team' },
+    { id: 'stack', labelKey: 'about.nav.stack' },
+    { id: 'roadmap', labelKey: 'about.nav.roadmap' },
+    { id: 'faq', labelKey: 'about.nav.faq' },
+    { id: 'contact', labelKey: 'about.nav.contact' },
 ];
 
 /* ── Small inline components ── */
@@ -258,23 +259,24 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function StatusPill({ status }: { status: RoadmapStatus }) {
+    const { t } = useTranslation();
     if (status === 'shipped') {
         return (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-accent/15 text-accent border border-accent/30">
-                <CheckCircle2 className="h-3 w-3" /> Shipped
+                <CheckCircle2 className="h-3 w-3" /> {t('about.status.shipped')}
             </span>
         );
     }
     if (status === 'in-progress') {
         return (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white/5 text-white border border-glass-border">
-                <Circle className="h-3 w-3 fill-current text-accent" /> In progress
+                <Circle className="h-3 w-3 fill-current text-accent" /> {t('about.status.inProgress')}
             </span>
         );
     }
     return (
         <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white/5 text-secondary border border-glass-border">
-            <Circle className="h-3 w-3" /> Planned
+            <Circle className="h-3 w-3" /> {t('about.status.planned')}
         </span>
     );
 }
@@ -286,6 +288,7 @@ const TrustPill = ({ children }: { children: React.ReactNode }) => (
 );
 
 const AboutPage = () => {
+    const { t } = useTranslation();
     const [stats, setStats] = useState<{ sources: number; categories: number; articles: number }>({
         sources: 8,
         categories: 10,
@@ -310,12 +313,12 @@ const AboutPage = () => {
     }, []);
 
     const NUMBERS = [
-        { value: stats.sources, label: 'Sources', sub: 'trusted outlets' },
-        { value: stats.categories, label: 'Categories', sub: 'topic sections' },
-        { value: stats.articles ? stats.articles.toLocaleString() : '—', label: 'Articles', sub: 'in the archive' },
-        { value: '2', label: 'Languages', sub: 'বাংলা + English' },
-        { value: '5 min', label: 'Refresh', sub: 'scheduled fetch' },
-        { value: 'Free', label: 'Cost', sub: 'no ads, ever' },
+        { value: stats.sources, label: t('about.number.sources'), sub: t('about.number.sourcesSub') },
+        { value: stats.categories, label: t('about.number.categories'), sub: t('about.number.categoriesSub') },
+        { value: stats.articles ? stats.articles.toLocaleString() : '—', label: t('about.number.articles'), sub: t('about.number.articlesSub') },
+        { value: '2', label: t('about.number.languages'), sub: 'বাংলা + English' },
+        { value: '5 min', label: t('about.number.refresh'), sub: t('about.number.refreshSub') },
+        { value: 'Free', label: t('about.number.cost'), sub: t('about.number.costSub') },
     ];
 
     return (
@@ -339,16 +342,16 @@ const AboutPage = () => {
                     <div className="max-w-[1180px] mx-auto px-4 sm:px-6 md:px-10 pt-10 md:pt-16 pb-12 md:pb-20 relative">
                         <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-secondary mb-8 md:mb-12">
                             <div className="flex items-center gap-3">
-                                <span className="text-accent font-medium">NewsPortal · About</span>
+                                <span className="text-accent font-medium">{t('about.eyebrow.brand')}</span>
                                 <span className="hidden sm:inline text-secondary/50">·</span>
-                                <span className="hidden sm:inline">A reader-first newsroom</span>
+                                <span className="hidden sm:inline">{t('about.eyebrow.tagline')}</span>
                             </div>
-                            <span className="text-secondary/60">Vol. 2024 — present</span>
+                            <span className="text-secondary/60">{t('about.eyebrow.vol')}</span>
                         </div>
 
                         <div className="grid md:grid-cols-[1.15fr_1fr] gap-10 md:gap-16 items-center">
                             <div>
-                                <SectionLabel>About NewsPortal</SectionLabel>
+                                <SectionLabel>{t('about.section.aboutLabel')}</SectionLabel>
                                 <h1 className="font-serif text-[38px] sm:text-[50px] md:text-[64px] leading-[1.04] tracking-[-0.025em] text-white mt-5">
                                     এক জায়গায় সব খবর — <span className="italic text-accent">calm, bilingual, ad-free</span>।
                                 </h1>
@@ -359,19 +362,19 @@ const AboutPage = () => {
                                 </p>
 
                                 <div className="mt-7 flex flex-wrap gap-2">
-                                    <TrustPill>{stats.sources} sources</TrustPill>
-                                    <TrustPill>{stats.categories} categories</TrustPill>
-                                    <TrustPill>Zero ads</TrustPill>
-                                    <TrustPill>Bilingual</TrustPill>
-                                    <TrustPill>Free forever</TrustPill>
+                                    <TrustPill>{t('about.pill.sources', { count: stats.sources })}</TrustPill>
+                                    <TrustPill>{t('about.pill.categories', { count: stats.categories })}</TrustPill>
+                                    <TrustPill>{t('about.pill.zeroAds')}</TrustPill>
+                                    <TrustPill>{t('about.pill.bilingual')}</TrustPill>
+                                    <TrustPill>{t('about.pill.freeForever')}</TrustPill>
                                 </div>
 
                                 <div className="mt-8 flex flex-wrap gap-3">
                                     <Link to="/" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/85 transition-colors">
-                                        Explore the news <ArrowRight className="h-4 w-4" />
+                                        {t('about.cta.exploreNews')} <ArrowRight className="h-4 w-4" />
                                     </Link>
                                     <Link to="/news-sources" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-white/5 border border-glass-border text-secondary hover:text-white hover:bg-white/10 text-sm font-semibold transition-colors">
-                                        <Layers className="h-4 w-4" /> View sources
+                                        <Layers className="h-4 w-4" /> {t('about.cta.viewSources')}
                                     </Link>
                                 </div>
                             </div>
@@ -396,7 +399,7 @@ const AboutPage = () => {
                                         style={{ right: -150, top: -150, width: 440, height: 440, background: 'radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%)' }}
                                     />
                                     <div className="absolute top-7 left-7 right-7 flex items-start justify-between text-[10.5px] uppercase tracking-[0.14em] text-white/80 z-10">
-                                        <span>Daily edition</span>
+                                        <span>{t('about.cover.dailyEdition')}</span>
                                         <span className="text-white/60">No. 01 / ∞</span>
                                     </div>
                                     <div className="relative h-full p-9 pt-20 flex flex-col justify-end text-white">
@@ -427,7 +430,7 @@ const AboutPage = () => {
                         <div className="min-w-0">
                             {/* MISSION */}
                             <section id="mission" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>Mission</SectionLabel>
+                                <SectionLabel>{t('about.section.missionLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[44px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[820px]">
                                     খবর পড়া আবার <span className="italic text-accent">শান্ত</span> হোক।
                                 </h2>
@@ -447,7 +450,7 @@ const AboutPage = () => {
                             <section id="numbers" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
                                 <div className="flex items-end justify-between mb-8 flex-wrap gap-3">
                                     <div>
-                                        <SectionLabel>By the numbers</SectionLabel>
+                                        <SectionLabel>{t('about.section.numbersLabel')}</SectionLabel>
                                         <h2 className="font-serif text-[26px] md:text-[36px] mt-3 leading-[1.1] tracking-[-0.02em] text-white">
                                             Honest counts, <span className="italic text-accent">live data</span>।
                                         </h2>
@@ -481,7 +484,7 @@ const AboutPage = () => {
 
                             {/* PILLARS */}
                             <section id="pillars" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>Four principles</SectionLabel>
+                                <SectionLabel>{t('about.section.pillarsLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[760px]">
                                     আমাদের <span className="italic text-accent">manifesto</span> — চারটা কথা।
                                 </h2>
@@ -494,7 +497,7 @@ const AboutPage = () => {
                                             <div>
                                                 <div className="inline-flex items-center gap-2.5 text-accent mb-2">
                                                     {p.icon}
-                                                    <span className="text-[12px] uppercase tracking-[0.1em] font-medium">Principle</span>
+                                                    <span className="text-[12px] uppercase tracking-[0.1em] font-medium">{t('about.pillar.tag')}</span>
                                                 </div>
                                                 <h3 className="font-serif text-[21px] md:text-[25px] leading-[1.15] text-white tracking-tight">{p.title}</h3>
                                                 <p className="text-[14px] text-secondary mt-2 leading-relaxed">{p.body}</p>
@@ -509,7 +512,7 @@ const AboutPage = () => {
 
                             {/* TEAM */}
                             <section id="team" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>The crew</SectionLabel>
+                                <SectionLabel>{t('about.section.teamLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[820px]">
                                     Three on the ship — <span className="italic text-accent">one human</span>, two co-pilots.
                                 </h2>
@@ -537,7 +540,7 @@ const AboutPage = () => {
                                                 <div className="text-[12.5px] font-medium mt-1.5 text-accent">{m.role}</div>
                                                 {m.kind === 'ai' && (
                                                     <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-secondary bg-white/5 px-2 py-1 rounded-md w-fit border border-glass-border">
-                                                        <Sparkles className="h-3 w-3" /> AI assistant — every commit human-reviewed
+                                                        <Sparkles className="h-3 w-3" /> {t('about.team.aiBadge')}
                                                     </div>
                                                 )}
                                                 <p className="text-[13.5px] text-secondary mt-3 leading-relaxed flex-1">{m.blurb}</p>
@@ -559,8 +562,8 @@ const AboutPage = () => {
 
                                 <div className="mt-10 md:mt-14 glass-morphism border border-glass-border rounded-2xl p-6 md:p-8 grid md:grid-cols-[180px_1fr] gap-6 md:gap-10">
                                     <div>
-                                        <SectionLabel>Methodology</SectionLabel>
-                                        <h3 className="font-serif text-[20px] md:text-[22px] mt-2 leading-tight text-white tracking-tight">How human + AI work together</h3>
+                                        <SectionLabel>{t('about.section.methodologyLabel')}</SectionLabel>
+                                        <h3 className="font-serif text-[20px] md:text-[22px] mt-2 leading-tight text-white tracking-tight">{t('about.methodology.title')}</h3>
                                     </div>
                                     <div className="space-y-3 text-[14px] text-secondary leading-[1.7]">
                                         <p>
@@ -581,7 +584,7 @@ const AboutPage = () => {
 
                             {/* STACK */}
                             <section id="stack" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>Built with</SectionLabel>
+                                <SectionLabel>{t('about.section.stackLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[760px]">
                                     Tools that <span className="italic text-accent">stay out of the way</span>।
                                 </h2>
@@ -615,7 +618,7 @@ const AboutPage = () => {
 
                             {/* ROADMAP */}
                             <section id="roadmap" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>What's next</SectionLabel>
+                                <SectionLabel>{t('about.section.roadmapLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[760px]">
                                     পরের দিকে যেদিকে <span className="italic text-accent">যাচ্ছি</span>।
                                 </h2>
@@ -638,7 +641,7 @@ const AboutPage = () => {
 
                             {/* FAQ */}
                             <section id="faq" className="py-12 md:py-20 border-b border-glass-border scroll-mt-24">
-                                <SectionLabel>Common questions</SectionLabel>
+                                <SectionLabel>{t('about.section.faqLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[760px]">
                                     আগে অনেকে <span className="italic text-accent">যা জিজ্ঞেস করেছে</span>।
                                 </h2>
@@ -659,7 +662,7 @@ const AboutPage = () => {
 
                             {/* CONTACT */}
                             <section id="contact" className="py-12 md:py-20 scroll-mt-24">
-                                <SectionLabel>Get in touch</SectionLabel>
+                                <SectionLabel>{t('about.section.contactLabel')}</SectionLabel>
                                 <h2 className="font-serif text-[28px] sm:text-[34px] md:text-[42px] mt-4 leading-[1.08] tracking-[-0.02em] text-white max-w-[820px]">
                                     Open source, <span className="italic text-accent">open ear</span>।
                                 </h2>
@@ -673,7 +676,7 @@ const AboutPage = () => {
                                             <Mail className="h-5 w-5 text-accent" />
                                             <ArrowUpRight className="h-4 w-4 text-secondary group-hover:text-accent transition-colors" />
                                         </div>
-                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">Email</div>
+                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">{t('about.contact.email')}</div>
                                         <div className="text-[13px] text-secondary mt-1">sujoncep@gmail.com</div>
                                     </a>
                                     <a href="https://github.com/xahabcse" target="_blank" rel="noopener noreferrer" className="glass-morphism border border-glass-border rounded-2xl p-5 hover:border-accent/50 transition-colors group block">
@@ -681,7 +684,7 @@ const AboutPage = () => {
                                             <GithubMark className="h-5 w-5 text-white" />
                                             <ArrowUpRight className="h-4 w-4 text-secondary group-hover:text-accent transition-colors" />
                                         </div>
-                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">GitHub</div>
+                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">{t('about.contact.github')}</div>
                                         <div className="text-[13px] text-secondary mt-1">@xahabcse</div>
                                     </a>
                                     <Link to="/" className="glass-morphism border border-glass-border rounded-2xl p-5 hover:border-accent/50 transition-colors group block">
@@ -689,13 +692,13 @@ const AboutPage = () => {
                                             <BookOpen className="h-5 w-5 text-accent" />
                                             <ArrowUpRight className="h-4 w-4 text-secondary group-hover:text-accent transition-colors" />
                                         </div>
-                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">Read the news</div>
-                                        <div className="text-[13px] text-secondary mt-1">Latest headlines</div>
+                                        <div className="font-serif text-[18px] mt-4 text-white tracking-tight">{t('about.contact.readNews')}</div>
+                                        <div className="text-[13px] text-secondary mt-1">{t('about.contact.readNewsSub')}</div>
                                     </Link>
                                 </div>
 
                                 <div className="mt-12 md:mt-16 pt-8 border-t border-glass-border">
-                                    <SectionLabel>Acknowledgements</SectionLabel>
+                                    <SectionLabel>{t('about.section.acknowledgementsLabel')}</SectionLabel>
                                     <p className="text-[13.5px] text-secondary mt-3 leading-relaxed max-w-[820px]">
                                         NewsPortal চলে free + open tools-এ — React, Tailwind CSS, Source Serif & Inter
                                         (open fonts), lucide-react icons, Hono, এবং Cloudflare-এর free tier (Workers,
@@ -707,14 +710,14 @@ const AboutPage = () => {
 
                         {/* Sticky page-nav — md+ */}
                         <aside className="hidden md:block">
-                            <nav aria-label="On this page" className="sticky top-24 py-12 md:py-20">
-                                <div className="text-[10.5px] uppercase tracking-[0.14em] text-secondary font-medium mb-4">On this page</div>
+                            <nav aria-label={t('about.onThisPage')} className="sticky top-24 py-12 md:py-20">
+                                <div className="text-[10.5px] uppercase tracking-[0.14em] text-secondary font-medium mb-4">{t('about.onThisPage')}</div>
                                 <ul className="space-y-2.5">
                                     {PAGE_NAV.map((a) => (
                                         <li key={a.id}>
                                             <a href={`#${a.id}`} className="text-[13px] text-secondary hover:text-accent transition-colors inline-flex items-center gap-2 group">
                                                 <span className="h-[1px] w-3 bg-accent/40 group-hover:bg-accent group-hover:w-5 transition-all" />
-                                                {a.label}
+                                                {t(a.labelKey)}
                                             </a>
                                         </li>
                                     ))}
@@ -737,7 +740,7 @@ const AboutPage = () => {
                                 style={{ right: -120, top: -120, width: 360, height: 360, background: 'radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%)' }}
                             />
                             <div className="relative">
-                                <div className="text-[11px] uppercase tracking-[0.14em] text-white/80">Ready when you are</div>
+                                <div className="text-[11px] uppercase tracking-[0.14em] text-white/80">{t('about.footer.eyebrow')}</div>
                                 <h2 className="font-serif text-[28px] sm:text-[36px] md:text-[46px] mt-3 tracking-[-0.02em] leading-[1.08] text-white">
                                     আজকের খবর, <span className="italic text-white/85">এক জায়গায়</span>।
                                 </h2>
@@ -747,12 +750,12 @@ const AboutPage = () => {
                             </div>
                             <div className="relative flex flex-col gap-3">
                                 <Link to="/" className="inline-flex items-center justify-center gap-2 rounded-lg bg-white text-accent font-semibold text-sm h-[52px] hover:bg-white/90 transition-colors">
-                                    Browse the news <ArrowRight className="h-4 w-4" />
+                                    {t('about.footer.browseNews')} <ArrowRight className="h-4 w-4" />
                                 </Link>
                                 <Link to="/trending" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 text-white font-semibold text-sm h-[52px] hover:bg-white/10 transition-colors">
-                                    <Zap className="h-4 w-4" /> See what's trending
+                                    <Zap className="h-4 w-4" /> {t('about.footer.seeTrending')}
                                 </Link>
-                                <div className="text-[12px] mt-1 text-center text-white/70">Free forever · No tracking · Offline-ready</div>
+                                <div className="text-[12px] mt-1 text-center text-white/70">{t('about.footer.tagline')}</div>
                             </div>
                         </div>
                     </div>

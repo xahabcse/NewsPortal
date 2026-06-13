@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ReadHistoryService, type ReadHistoryItem } from '../services/ReadHistoryService';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +11,7 @@ interface Props {
 
 const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
     const { isAuthenticated } = useAuth();
+    const { t } = useTranslation();
     const [history, setHistory] = useState<ReadHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -41,9 +43,9 @@ const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
         return (
             <div className="bg-white/5 border border-glass-border rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-white">Recently Read</h3>
+                    <h3 className="text-lg font-bold text-white">{t('article.recentlyRead')}</h3>
                     {history.length > 0 && (
-                        <span className="text-xs text-secondary">{history.length} article{history.length > 1 ? 's' : ''}</span>
+                        <span className="text-xs text-secondary">{t('article.articleCount', { count: history.length })}</span>
                     )}
                 </div>
 
@@ -61,7 +63,7 @@ const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
                                 <polyline points="12 6 12 12 16 14" />
                             </svg>
                         </div>
-                        <p className="text-sm text-secondary mb-1">No articles read yet</p>
+                        <p className="text-sm text-secondary mb-1">{t('article.noArticlesRead')}</p>
                         <Link to="/" className="text-xs text-accent hover:text-accent/80 transition-colors">Browse News →</Link>
                     </div>
                 ) : (
@@ -91,7 +93,7 @@ const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
         return (
             <div className="space-y-2">
                 <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">
-                    Recently Read
+                    {t('article.recentlyRead')}
                 </div>
                 {Array.from({ length: 3 }).map((_, idx) => (
                     <div key={idx} className="h-16 bg-white/5 rounded-lg animate-pulse"></div>
@@ -104,10 +106,10 @@ const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
         return (
             <div className="space-y-2">
                 <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">
-                    Recently Read
+                    {t('article.recentlyRead')}
                 </div>
                 <div className="text-xs text-secondary/50 ml-4">
-                    No recent articles
+                    {t('article.noRecentArticles')}
                 </div>
             </div>
         );
@@ -116,7 +118,7 @@ const ReadingHistory = ({ variant = 'sidebar' }: Props) => {
     return (
         <div className="space-y-2">
             <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">
-                Recently Read
+                {t('article.recentlyRead')}
             </div>
             <div className="space-y-1 ml-2">
                 {history.map((item) => (

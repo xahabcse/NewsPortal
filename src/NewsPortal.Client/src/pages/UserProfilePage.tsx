@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CalendarDays, BadgeCheck, UserX, ArrowLeft } from 'lucide-react';
 import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
@@ -14,6 +15,7 @@ interface PublicProfile {
 }
 
 const UserProfilePage = () => {
+    const { t } = useTranslation();
     const { username } = useParams<{ username: string }>();
     const [profile, setProfile] = useState<PublicProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -69,10 +71,10 @@ const UserProfilePage = () => {
                 <span className="w-16 h-16 rounded-2xl bg-white/5 border border-glass-border flex items-center justify-center mb-4">
                     <UserX className="w-7 h-7 text-secondary" strokeWidth={1.75} />
                 </span>
-                <h2 className="font-serif text-2xl font-bold text-white mb-1">User not found</h2>
-                <p className="text-secondary text-sm mb-5">The user you're looking for doesn't exist.</p>
+                <h2 className="font-serif text-2xl font-bold text-white mb-1">{t('profile.userNotFound')}</h2>
+                <p className="text-secondary text-sm mb-5">{t('profile.userNotFoundDesc')}</p>
                 <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent/80 transition-colors">
-                    <ArrowLeft className="w-4 h-4" strokeWidth={1.75} /> Back to Home
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1.75} /> {t('search.backHome')}
                 </Link>
             </div>
         );
@@ -80,7 +82,7 @@ const UserProfilePage = () => {
 
     return (
         <>
-            <SEO title={`${profile.username}'s Profile`} description={profile.bio || `${profile.username}'s profile on NewsPortal`} />
+            <SEO title={t('profile.publicSeoTitle', { username: profile.username })} description={profile.bio || t('profile.publicSeoDescription', { username: profile.username })} />
             <div className="p-4 sm:p-8">
                 <div className="max-w-md mx-auto">
                     <div className="glass-morphism border border-glass-border rounded-2xl overflow-hidden">
@@ -103,7 +105,7 @@ const UserProfilePage = () => {
                             <div className="mt-6 pt-4 border-t border-glass-border w-full">
                                 <p className="inline-flex items-center gap-1.5 text-xs text-secondary">
                                     <CalendarDays className="w-3.5 h-3.5" strokeWidth={1.75} />
-                                    Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                    {t('profile.memberSinceDate', { date: new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) })}
                                 </p>
                             </div>
                         </div>
@@ -111,7 +113,7 @@ const UserProfilePage = () => {
 
                     <div className="mt-6 text-center">
                         <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-secondary hover:text-white transition-colors">
-                            <ArrowLeft className="w-4 h-4" strokeWidth={1.75} /> Back to Home
+                            <ArrowLeft className="w-4 h-4" strokeWidth={1.75} /> {t('search.backHome')}
                         </Link>
                     </div>
                 </div>

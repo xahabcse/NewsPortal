@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { newsApi, type NewsArticle } from '../services/api';
 import { signalRService } from '../services/SignalRService';
 
 const NewsTicker = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [headlines, setHeadlines] = useState<NewsArticle[]>([]);
     const [dismissed, setDismissed] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
@@ -31,7 +33,7 @@ const NewsTicker = () => {
                 setHeadlines(prev => {
                     const breakingItem: NewsArticle = {
                         id: Date.now(),
-                        title: `BREAKING: ${title}`,
+                        title: t('ticker.breakingPrefix', { title }),
                         slug: '',
                         summary: null,
                         thumbnailUrl: null,
@@ -45,7 +47,7 @@ const NewsTicker = () => {
                 setDismissed(false); // Show ticker again for breaking news
             }
         });
-    }, []);
+    }, [t]);
 
     if (dismissed || headlines.length === 0) return null;
 
@@ -80,7 +82,7 @@ const NewsTicker = () => {
                 <button
                     onClick={() => setDismissed(true)}
                     className="flex-shrink-0 px-2 h-full text-secondary hover:text-white transition-colors"
-                    aria-label="Dismiss ticker"
+                    aria-label={t('ticker.dismiss')}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>

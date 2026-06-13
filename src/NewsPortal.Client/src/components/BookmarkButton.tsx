@@ -1,5 +1,6 @@
 import { useState, useEffect, type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { BookmarkService } from '../services/BookmarkService';
@@ -46,6 +47,7 @@ const BookmarkButton: FC<BookmarkButtonProps> = ({
 }) => {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [bookmarked, setBookmarked] = useState(false);
     const [busy, setBusy] = useState(false);
 
@@ -64,7 +66,7 @@ const BookmarkButton: FC<BookmarkButtonProps> = ({
         e.stopPropagation();
 
         if (!isAuthenticated) {
-            toast.error('Please sign in to save articles');
+            toast.error(t('article.signInToSave'));
             navigate('/login');
             return;
         }
@@ -76,20 +78,20 @@ const BookmarkButton: FC<BookmarkButtonProps> = ({
         try {
             if (next) {
                 await BookmarkService.addBookmark(articleId);
-                toast.success('Saved to bookmarks');
+                toast.success(t('article.savedToBookmarks'));
             } else {
                 await BookmarkService.removeBookmark(articleId);
-                toast.success('Removed from bookmarks');
+                toast.success(t('article.removedFromBookmarks'));
             }
         } catch {
             setBookmarked(!next); // revert
-            toast.error('Could not update bookmark');
+            toast.error(t('article.bookmarkUpdateFailed'));
         } finally {
             setBusy(false);
         }
     };
 
-    const label = bookmarked ? 'Remove bookmark' : 'Save article';
+    const label = bookmarked ? t('article.removeBookmark') : t('article.saveArticle');
 
     if (variant === 'icon') {
         return (
@@ -122,7 +124,7 @@ const BookmarkButton: FC<BookmarkButtonProps> = ({
             } ${className}`}
         >
             <BookmarkGlyph filled={bookmarked} size={14} />
-            {bookmarked ? 'Saved' : 'Save'}
+            {bookmarked ? t('article.saved') : t('common.save')}
         </button>
     );
 };

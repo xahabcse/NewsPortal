@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { axiosInstance } from '../services/axiosInstance';
 import toast from 'react-hot-toast';
 
@@ -7,6 +8,7 @@ interface SummarizeButtonProps {
 }
 
 const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
+    const { t } = useTranslation();
     const [summary, setSummary] = useState<{ text: string; bullets: string[] } | null>(null);
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'paragraph' | 'bullets'>('bullets');
@@ -21,7 +23,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
             const res = await axiosInstance.post(`/ai/summarize/${articleId}?sentences=4&mode=${mode}`);
             setSummary({ text: res.data.summary, bullets: res.data.bullets || [] });
         } catch {
-            toast.error('Failed to generate summary');
+            toast.error(t('article.summaryFailed'));
         } finally {
             setLoading(false);
         }
@@ -38,7 +40,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
                             ? 'bg-purple-500/15 border-purple-500/40 text-purple-400'
                             : 'bg-white/5 border-glass-border text-secondary hover:text-white hover:bg-white/10'
                     } disabled:opacity-50`}
-                    title="AI Summarize"
+                    title={t('article.aiSummarizeTitle')}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -46,7 +48,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
                         <line x1="16" y1="13" x2="8" y2="13" />
                         <line x1="16" y1="17" x2="8" y2="17" />
                     </svg>
-                    {loading ? 'Summarizing...' : summary ? 'Hide Summary' : 'AI Summary'}
+                    {loading ? t('article.summarizing') : summary ? t('article.hideSummary') : t('article.aiSummary')}
                 </button>
                 {summary && (
                     <div className="flex items-center gap-1">
@@ -56,7 +58,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
                                 mode === 'bullets' ? 'bg-purple-500/20 border-purple-500/40 text-purple-300' : 'bg-white/5 border-glass-border text-secondary'
                             }`}
                         >
-                            Bullets
+                            {t('article.summaryBullets')}
                         </button>
                         <button
                             onClick={() => setMode('paragraph')}
@@ -64,7 +66,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
                                 mode === 'paragraph' ? 'bg-purple-500/20 border-purple-500/40 text-purple-300' : 'bg-white/5 border-glass-border text-secondary'
                             }`}
                         >
-                            Paragraph
+                            {t('article.summaryParagraph')}
                         </button>
                     </div>
                 )}
@@ -73,7 +75,7 @@ const SummarizeButton = ({ articleId }: SummarizeButtonProps) => {
             {summary && (
                 <div className="mt-3 p-4 bg-purple-500/5 border border-purple-500/20 rounded-xl animate-fade-in">
                     <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400">AI Summary</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400">{t('article.aiSummary')}</span>
                     </div>
                     {mode === 'bullets' && summary.bullets.length > 0 ? (
                         <ul className="space-y-1.5">

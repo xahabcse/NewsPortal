@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const LoginPage = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, login, googleLogin } = useAuth();
@@ -37,7 +39,7 @@ const LoginPage = () => {
         setError('');
 
         if (!username.trim() || !password) {
-            setError('Please enter your username and password.');
+            setError(t('auth.errorEnterCredentials'));
             return;
         }
 
@@ -49,15 +51,15 @@ const LoginPage = () => {
             if (axios.isAxiosError(err)) {
                 const status = err.response?.status;
                 if (status === 401) {
-                    setError('Invalid username or password.');
+                    setError(t('auth.invalidCredentials'));
                 } else if (status === 429) {
-                    setError('Too many login attempts. Please wait a moment and try again.');
+                    setError(t('auth.errorTooManyAttempts'));
                 } else {
                     const msg = err.response?.data?.message;
-                    setError(typeof msg === 'string' && msg ? msg : 'Login failed. Please try again.');
+                    setError(typeof msg === 'string' && msg ? msg : t('auth.errorLoginFailed'));
                 }
             } else {
-                setError('Login failed. Please try again.');
+                setError(t('auth.errorLoginFailed'));
             }
         } finally {
             setSubmitting(false);
@@ -71,7 +73,7 @@ const LoginPage = () => {
             await googleLogin(credential);
             navigate(redirectTo, { replace: true });
         } catch {
-            setError('Google sign-in failed. Please try again.');
+            setError(t('auth.errorGoogleFailed'));
         } finally {
             setSubmitting(false);
         }
@@ -90,15 +92,15 @@ const LoginPage = () => {
                         <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <span className="text-2xl font-bold text-white">N</span>
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
-                        <p className="text-secondary text-sm">Sign in to your NewsPortal account</p>
+                        <h1 className="text-3xl font-bold text-white mb-2">{t('auth.welcomeBack')}</h1>
+                        <p className="text-secondary text-sm">{t('auth.signInSubtitle')}</p>
                     </div>
 
                     {/* Registered banner */}
                     {justRegistered && (
                         <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm text-green-400 flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            Account created! Please sign in.
+                            {t('auth.accountCreatedBanner')}
                         </div>
                     )}
 
@@ -106,13 +108,13 @@ const LoginPage = () => {
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Username</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.username')}</label>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={e => setUsername(e.target.value)}
                                     className="form-input"
-                                    placeholder="Enter your username"
+                                    placeholder={t('auth.usernamePlaceholder')}
                                     autoComplete="username"
                                     autoFocus
                                     disabled={submitting}
@@ -120,14 +122,14 @@ const LoginPage = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Password</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.password')}</label>
                                 <div className="relative">
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
                                         className="form-input pr-10"
-                                        placeholder="Enter your password"
+                                        placeholder={t('auth.passwordPlaceholder')}
                                         autoComplete="current-password"
                                         disabled={submitting}
                                     />
@@ -158,14 +160,14 @@ const LoginPage = () => {
                                 disabled={submitting}
                                 className="w-full py-3 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {submitting ? 'Signing in…' : 'Sign In'}
+                                {submitting ? t('auth.signingIn') : t('auth.signIn')}
                             </button>
                         </form>
 
                         {/* Google sign-in — only when client id configured */}
                         {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
                             <div className="mt-4 pt-4 border-t border-glass-border">
-                                <p className="text-xs text-secondary text-center mb-3">Or continue with</p>
+                                <p className="text-xs text-secondary text-center mb-3">{t('auth.orContinueWith')}</p>
                                 <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
                             </div>
                         )}
@@ -173,9 +175,9 @@ const LoginPage = () => {
                         {/* Register link */}
                         <div className="mt-6 text-center">
                             <p className="text-sm text-secondary">
-                                Don't have an account?{' '}
+                                {t('auth.noAccount')}{' '}
                                 <Link to="/register" className="text-accent hover:text-accent/80 transition-colors font-medium">
-                                    Create one
+                                    {t('auth.createOne')}
                                 </Link>
                             </p>
                         </div>
@@ -184,7 +186,7 @@ const LoginPage = () => {
                     {/* Back to home */}
                     <div className="mt-6 text-center">
                         <Link to="/" className="text-sm text-secondary hover:text-white transition-colors">
-                            ← Back to Home
+                            ← {t('auth.backToHome')}
                         </Link>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { axiosInstance } from '../services/axiosInstance';
 import { ReadHistoryService } from '../services/ReadHistoryService';
@@ -65,6 +66,7 @@ const ImagePlaceholder: React.FC<{ category: string }> = ({ category }) => (
 const ArticleDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
     const [article, setArticle] = useState<NewsArticleDetail | null>(null);
     const [relatedArticles, setRelatedArticles] = useState<RelatedArticle[]>([]);
@@ -78,7 +80,7 @@ const ArticleDetailPage = () => {
     useEffect(() => {
         const fetchArticle = async () => {
             if (!slug) {
-                setError('Article not found');
+                setError(t('article.notFound'));
                 setLoading(false);
                 return;
             }
@@ -103,12 +105,12 @@ const ArticleDetailPage = () => {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
                     if (axiosError.response?.status === 404) {
-                        setError('Article not found');
+                        setError(t('article.notFound'));
                     } else {
-                        setError('Failed to load article');
+                        setError(t('article.loadFailed'));
                     }
                 } else {
-                    setError('Failed to load article');
+                    setError(t('article.loadFailed'));
                 }
             } finally {
                 setLoading(false);
@@ -116,13 +118,13 @@ const ArticleDetailPage = () => {
         };
 
         fetchArticle();
-    }, [slug, isAuthenticated]);
+    }, [slug, isAuthenticated, t]);
 
     if (loading) {
         return (
             <div className="p-4 sm:p-8 max-w-4xl mx-auto">
                 <Helmet>
-                    <title>Loading article… - NewsPortal</title>
+                    <title>{t('article.loadingTitle')}</title>
                 </Helmet>
                 <div className="animate-pulse space-y-6">
                     <div className="h-4 bg-white/10 rounded w-24"></div>
@@ -143,11 +145,11 @@ const ArticleDetailPage = () => {
         return (
             <div className="p-4 sm:p-8 max-w-4xl mx-auto">
                 <Helmet>
-                    <title>Article Not Found - NewsPortal</title>
+                    <title>{t('article.notFoundTitle')}</title>
                 </Helmet>
                 <div className="text-center p-12 bg-white/5 rounded-2xl border border-dashed border-glass-border">
-                    <h2 className="text-2xl font-bold text-white mb-2">Article Not Found</h2>
-                    <p className="text-secondary text-sm mb-6">{error || 'The article you\'re looking for doesn\'t exist or has been removed.'}</p>
+                    <h2 className="text-2xl font-bold text-white mb-2">{t('article.notFoundHeading')}</h2>
+                    <p className="text-secondary text-sm mb-6">{error || t('article.notFoundDesc')}</p>
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 text-accent hover:text-accent/80 transition-colors font-medium"
@@ -156,7 +158,7 @@ const ArticleDetailPage = () => {
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
-                        Back to Home
+                        {t('search.backHome')}
                     </Link>
                 </div>
             </div>
@@ -164,7 +166,7 @@ const ArticleDetailPage = () => {
     }
 
     const showImage = article.imageUrl && !imgFailed;
-    const category = article.categoryName || 'General';
+    const category = article.categoryName || t('article.generalCategory');
     const readingTime = calculateReadingTime(article.content);
     const formattedDate = new Date(article.publishedAt).toLocaleDateString('en-US', {
         month: 'short',
@@ -244,7 +246,7 @@ const ArticleDetailPage = () => {
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                Back
+                {t('common.back')}
             </button>
 
             {/* Article Header */}
@@ -293,14 +295,14 @@ const ArticleDetailPage = () => {
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
-                        {article.viewCount.toLocaleString()} views
+                        {t('article.viewsCount', { count: article.viewCount })}
                     </span>
                     <span className="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
-                        {readingTime} min read
+                        {t('article.minReadCount', { count: readingTime })}
                     </span>
                 </div>
 
@@ -330,12 +332,12 @@ const ArticleDetailPage = () => {
                                 <polyline points="15 3 21 3 21 9"></polyline>
                                 <line x1="10" y1="14" x2="21" y2="3"></line>
                             </svg>
-                            Read Original
+                            {t('article.readOriginal')}
                         </a>
                     )}
                     {article.content && (
                         <div className="flex items-center gap-1 sm:gap-2 ml-auto" data-testid="font-size-control">
-                            <span className="text-xs text-secondary mr-1">Font:</span>
+                            <span className="text-xs text-secondary mr-1">{t('article.fontLabel')}</span>
                             {(['small', 'medium', 'large'] as const).map(size => (
                                 <button
                                     key={size}
@@ -410,7 +412,7 @@ const ArticleDetailPage = () => {
             {/* Related Articles */}
             {relatedArticles.length > 0 && (
                 <div className="mt-12 pt-8 border-t border-glass-border">
-                    <h2 className="font-serif text-2xl font-bold text-white mb-6">Related Articles</h2>
+                    <h2 className="font-serif text-2xl font-bold text-white mb-6">{t('article.relatedArticles')}</h2>
                     {/* 2-up on tablet/desktop: inside the max-w-4xl article column, 4 columns
                         made each card too narrow and tall. 2 columns keeps a balanced size. */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
