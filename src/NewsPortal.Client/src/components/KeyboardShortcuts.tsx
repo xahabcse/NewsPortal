@@ -1,17 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const SHORTCUTS = [
-    { key: '/', description: 'Focus search bar' },
-    { key: 's', description: 'Open search page' },
-    { key: 'h', description: 'Go to home' },
-    { key: 't', description: 'Go to trending' },
-    { key: 'b', description: 'Go to bookmarks' },
-    { key: 'j', description: 'Next article' },
-    { key: 'k', description: 'Previous article' },
-    { key: 'o', description: 'Open selected article' },
-    { key: 'Escape', description: 'Close modal / go back' },
-    { key: '?', description: 'Show this help' },
+    { key: '/', descriptionKey: 'shortcuts.focusSearch' },
+    { key: 's', descriptionKey: 'shortcuts.openSearch' },
+    { key: 'h', descriptionKey: 'shortcuts.goHome' },
+    { key: 't', descriptionKey: 'shortcuts.goTrending' },
+    { key: 'b', descriptionKey: 'shortcuts.goBookmarks' },
+    { key: 'j', descriptionKey: 'shortcuts.nextArticle' },
+    { key: 'k', descriptionKey: 'shortcuts.prevArticle' },
+    { key: 'o', descriptionKey: 'shortcuts.openArticle' },
+    { key: 'Escape', descriptionKey: 'shortcuts.closeModal' },
+    { key: '?', descriptionKey: 'shortcuts.showHelp' },
 ];
 
 interface KeyboardShortcutsProps {
@@ -19,12 +20,18 @@ interface KeyboardShortcutsProps {
 }
 
 export const KeyboardShortcutsModal = ({ onClose }: KeyboardShortcutsProps) => {
+    const { t } = useTranslation();
+    // Render the footer hint from i18n while keeping the <kbd> styling on the key token.
+    // Interpolate a unique sentinel for {{key}} and split around it, so the surrounding
+    // wording (incl. bn word order) comes entirely from the translation string.
+    const KEY_TOKEN = '__KBD_KEY__';
+    const [footerBefore, footerAfter] = t('shortcuts.footerHint', { key: KEY_TOKEN }).split(KEY_TOKEN);
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="w-full max-w-md bg-glass-surface border border-glass-border rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="p-5 border-b border-glass-border flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-white">Keyboard Shortcuts</h2>
-                    <button onClick={onClose} className="text-secondary hover:text-white transition-colors" aria-label="Close">
+                    <h2 className="text-lg font-bold text-white">{t('shortcuts.title')}</h2>
+                    <button onClick={onClose} className="text-secondary hover:text-white transition-colors" aria-label={t('common.close')}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -34,7 +41,7 @@ export const KeyboardShortcutsModal = ({ onClose }: KeyboardShortcutsProps) => {
                 <div className="p-5 space-y-2 max-h-[60vh] overflow-y-auto">
                     {SHORTCUTS.map(s => (
                         <div key={s.key} className="flex items-center justify-between py-1.5">
-                            <span className="text-sm text-secondary">{s.description}</span>
+                            <span className="text-sm text-secondary">{t(s.descriptionKey)}</span>
                             <kbd className="px-2 py-1 bg-white/10 border border-glass-border rounded text-xs font-mono text-white">
                                 {s.key === '/' ? '/' : s.key === 'Escape' ? 'Esc' : s.key}
                             </kbd>
@@ -42,7 +49,7 @@ export const KeyboardShortcutsModal = ({ onClose }: KeyboardShortcutsProps) => {
                     ))}
                 </div>
                 <div className="p-4 border-t border-glass-border bg-white/5 text-center">
-                    <p className="text-xs text-secondary">Press <kbd className="px-1.5 py-0.5 bg-white/10 border border-glass-border rounded text-[10px] font-mono">?</kbd> anytime to show this help</p>
+                    <p className="text-xs text-secondary">{footerBefore}<kbd className="px-1.5 py-0.5 bg-white/10 border border-glass-border rounded text-[10px] font-mono">?</kbd>{footerAfter}</p>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, type FC } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Layers } from 'lucide-react';
 import BookmarkButton from './BookmarkButton';
 
@@ -53,11 +54,12 @@ const NewsCard: FC<NewsCardProps> = ({
     onCardClick,
     alsoOn = []
 }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [imgFailed, setImgFailed] = useState(false);
     const [bookmarked, setBookmarked] = useState(isBookmarked);
     const showImage = thumbnailUrl && !imgFailed;
-    const category = categoryName || 'General';
+    const category = categoryName || t('newsCard.generalCategory');
 
     const handleBookmarkClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -65,7 +67,7 @@ const NewsCard: FC<NewsCardProps> = ({
         if (articleId && onBookmarkToggle) {
             onBookmarkToggle(articleId, !bookmarked);
             setBookmarked(!bookmarked);
-            toast.success(bookmarked ? 'Bookmark removed' : 'Article saved to bookmarks');
+            toast.success(bookmarked ? t('bookmarks.removeBookmark') : t('newsCard.articleSaved'));
         }
     };
 
@@ -114,7 +116,7 @@ const NewsCard: FC<NewsCardProps> = ({
                         <button
                             onClick={handleBookmarkClick}
                             className="absolute top-2 right-2 md:top-4 md:right-4 w-7 h-7 md:w-8 md:h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
-                            title={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                            title={bookmarked ? t('newsCard.removeBookmark') : t('newsCard.addBookmark')}
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -162,25 +164,25 @@ const NewsCard: FC<NewsCardProps> = ({
                     <span className="w-1 h-1 rounded-full bg-secondary/30 shrink-0"></span>
                     <span className="shrink-0">{formattedDate}</span>
                     <span className="hidden md:inline w-1 h-1 rounded-full bg-secondary/30"></span>
-                    <span className="hidden md:inline">{readingTime} min read</span>
+                    <span className="hidden md:inline">{t('article.readingTime', { minutes: readingTime })}</span>
                 </div>
 
                 {/* Cross-source duplicates — "also on X · Y" */}
                 {alsoOn.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1.5 text-[10px] md:text-[11px] text-secondary/70" title={`Also reported by ${alsoOn.join(', ')}`}>
+                    <div className="flex items-center gap-1 mt-1.5 text-[10px] md:text-[11px] text-secondary/70" title={t('newsCard.alsoReportedBy', { sources: alsoOn.join(', ') })}>
                         <Layers className="w-3 h-3 shrink-0" strokeWidth={1.75} />
-                        <span className="truncate">Also on {alsoOn.slice(0, 2).join(' · ')}{alsoOn.length > 2 ? ` +${alsoOn.length - 2}` : ''}</span>
+                        <span className="truncate">{t('newsCard.alsoOn', { sources: `${alsoOn.slice(0, 2).join(' · ')}${alsoOn.length > 2 ? ` +${alsoOn.length - 2}` : ''}` })}</span>
                     </div>
                 )}
 
                 {/* Summary — desktop only */}
                 <p className="hidden md:block text-sm text-secondary line-clamp-3 mt-3 mb-6">
-                    {summary || 'No summary available'}
+                    {summary || t('newsCard.noSummary')}
                 </p>
 
                 {/* Read more — desktop only */}
                 <span className="hidden md:flex mt-auto items-center gap-2 text-xs font-bold text-accent group-hover:gap-3 transition-all">
-                    READ MORE
+                    {t('article.readMore')}
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>

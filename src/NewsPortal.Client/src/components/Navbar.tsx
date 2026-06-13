@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 import NotificationPreferences from './NotificationPreferences';
+import LanguageToggle from './LanguageToggle';
 import { signalRService } from '../services/SignalRService';
 import { Avatar } from '../utils/avatars';
 
@@ -22,6 +24,7 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
@@ -102,8 +105,8 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
         });
     }, []);
 
-    const displayName = session?.username ?? 'Guest User';
-    const displayRole = session?.role ?? 'Guest';
+    const displayName = session?.username ?? t('nav.guestUser');
+    const displayRole = session?.role ?? t('nav.guest');
     const isAdmin = session?.role === 'Admin' || session?.role === 'SuperAdmin';
 
     return (
@@ -114,7 +117,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     <button
                         onClick={onMenuClick}
                         className="lg:hidden flex items-center justify-center h-10 w-10 -ml-1 shrink-0 text-secondary hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                        aria-label="Open menu"
+                        aria-label={t('nav.openMenu')}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -127,7 +130,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             type="text"
                             value={searchQuery}
                             onChange={handleSearchChange}
-                            placeholder="Search..."
+                            placeholder={t('nav.searchPlaceholder')}
                             className="w-full bg-white/5 border border-glass-border rounded-lg py-1.5 sm:py-2 pl-3 pr-9 sm:pl-4 sm:pr-14 text-sm text-white placeholder:text-secondary focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
                         />
                         <div className="absolute right-2 sm:right-3 top-1.5 sm:top-2 flex items-center gap-1.5">
@@ -146,7 +149,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
                             className="relative flex items-center justify-center h-10 w-10 rounded-lg text-secondary hover:text-white hover:bg-white/5 transition-colors"
-                            aria-label="Notifications"
+                            aria-label={t('nav.notifications')}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -164,19 +167,19 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             <div
                                 className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
                                 role="dialog"
-                                aria-label="Notifications"
+                                aria-label={t('nav.notifications')}
                                 aria-modal="true"
                             >
                                 <div className="p-4 border-b border-glass-border">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                                        <h3 className="text-sm font-semibold text-white">{t('nav.notifications')}</h3>
                                         <div className="flex items-center gap-3">
                                             {notifications.length > 0 && (
                                                 <button
                                                     onClick={() => setNotifications([])}
                                                     className="text-xs text-accent hover:text-accent/80"
                                                 >
-                                                    Clear all
+                                                    {t('search.clearAll')}
                                                 </button>
                                             )}
                                             <button
@@ -185,8 +188,8 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                                     setShowNotifPrefs(true);
                                                 }}
                                                 className="text-secondary hover:text-white transition-colors"
-                                                title="Notification preferences"
-                                                aria-label="Notification preferences"
+                                                title={t('nav.notificationPreferences')}
+                                                aria-label={t('nav.notificationPreferences')}
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <circle cx="12" cy="12" r="3"></circle>
@@ -199,7 +202,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                 <div className="max-h-96 overflow-y-auto">
                                     {notifications.length === 0 ? (
                                         <div className="p-8 text-center text-sm text-secondary">
-                                            No notifications yet
+                                            {t('nav.noNotifications')}
                                         </div>
                                     ) : (
                                         notifications.map((notification) => (
@@ -214,7 +217,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                                 }}
                                                 tabIndex={0}
                                                 role="button"
-                                                aria-label={`Notification: ${notification.title}`}
+                                                aria-label={t('nav.notificationItem', { title: notification.title })}
                                                 className={`p-4 border-b border-glass-border hover:bg-white/5 cursor-pointer transition-colors focus:outline-none focus:bg-white/10 ${
                                                     !notification.read ? 'bg-accent/5' : ''
                                                 }`}
@@ -254,7 +257,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
                             className="flex items-center gap-2 sm:pl-3 lg:pl-6 sm:border-l sm:border-glass-border hover:bg-white/5 rounded-lg px-1 sm:px-3 py-1.5 transition-colors"
-                            aria-label="User menu"
+                            aria-label={t('nav.userMenu')}
                         >
                             <div className="text-right hidden md:block">
                                 <div className="text-sm font-medium text-white">{displayName}</div>
@@ -271,7 +274,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             <div
                                 className="absolute right-0 mt-2 w-52 max-w-[calc(100vw-1rem)] bg-glass-surface border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50"
                                 role="menu"
-                                aria-label="User menu"
+                                aria-label={t('nav.userMenu')}
                             >
                                 <div className="p-4 border-b border-glass-border bg-white/5">
                                     <p className="text-sm font-semibold text-white">{session?.username}</p>
@@ -287,7 +290,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                             <circle cx="12" cy="7" r="4"></circle>
                                         </svg>
-                                        My Profile
+                                        {t('profile.title')}
                                     </button>
                                     <button
                                         onClick={() => { navigate('/bookmarks'); setShowUserMenu(false); }}
@@ -297,7 +300,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
                                         </svg>
-                                        Bookmarks
+                                        {t('nav.bookmarks')}
                                     </button>
                                     {isAdmin && (
                                         <button
@@ -309,7 +312,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                                 <rect width="20" height="14" x="2" y="5" rx="2"></rect>
                                                 <line x1="2" x2="22" y1="10" y2="10"></line>
                                             </svg>
-                                            Admin Dashboard
+                                            {t('admin.dashboard')}
                                         </button>
                                     )}
                                     {isAdmin && (
@@ -324,7 +327,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                                             </svg>
-                                            User Management
+                                            {t('nav.userManagement')}
                                         </button>
                                     )}
                                 </div>
@@ -339,7 +342,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                                             <polyline points="16 17 21 12 16 7"></polyline>
                                             <line x1="21" x2="9" y1="12" y2="12"></line>
                                         </svg>
-                                        Logout
+                                        {t('nav.logout')}
                                     </button>
                                 </div>
                             </div>
@@ -347,12 +350,15 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                     </div>
                     )}
 
+                    {/* Language Toggle (bn ↔ en) */}
+                    <LanguageToggle />
+
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
                         className="flex items-center justify-center h-10 w-10 text-secondary hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                        aria-label="Toggle theme"
+                        title={theme === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
+                        aria-label={t('nav.toggleTheme')}
                     >
                         {theme === 'dark' ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -378,7 +384,7 @@ const Navbar = ({ onMenuClick, isSidebarCollapsed = false }: NavbarProps) => {
                             onClick={() => navigate('/login')}
                             className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-accent/20 border border-accent/40 text-xs sm:text-sm text-white hover:bg-accent/30 transition-colors whitespace-nowrap"
                         >
-                            Sign In
+                            {t('auth.signIn')}
                         </button>
                     )}
                 </div>

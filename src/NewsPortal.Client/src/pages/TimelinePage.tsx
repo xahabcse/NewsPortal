@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import SEO from '../components/SEO'
 import DailyTimeline from '../components/DailyTimeline'
 import NewsFilterBar, { defaultFilters, hasActiveFilters } from '../components/NewsFilterBar'
@@ -10,6 +11,7 @@ import type { NewsSource } from '../types/NewsSource'
 const FETCH_DAYS = 14
 
 const TimelinePage = () => {
+    const { t } = useTranslation()
     const [allHighlights, setAllHighlights] = useState<DailyHighlight[]>([])
     const [sources, setSources] = useState<NewsSource[]>([])
     const [categories, setCategories] = useState<Category[]>([])
@@ -61,8 +63,8 @@ const TimelinePage = () => {
     return (
         <>
             <SEO
-                title="Daily News Timeline"
-                description="Day-wise national and international news highlights"
+                title={t('timeline.seoTitle')}
+                description={t('timeline.seoDescription')}
             />
             <main className="flex-1 overflow-y-auto p-4 lg:p-8">
                 <div className="max-w-6xl mx-auto">
@@ -70,17 +72,11 @@ const TimelinePage = () => {
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h1 className="font-serif text-3xl font-bold text-white mb-1">Daily Timeline</h1>
+                                <h1 className="font-serif text-3xl font-bold text-white mb-1">{t('timeline.title')}</h1>
                                 <p className="text-secondary text-sm">
-                                    {loading ? 'Loading timeline…' : (
-                                        <>
-                                            Everything that happened, day by day — biggest stories first.{' '}
-                                            <span className="text-accent font-semibold">{totalShown}</span>
-                                            {' '}stories across{' '}
-                                            <span className="text-accent font-semibold">{filteredHighlights.length}</span>
-                                            {' '}days.
-                                        </>
-                                    )}
+                                    {loading
+                                        ? t('timeline.loading')
+                                        : t('timeline.subtitle', { stories: totalShown, days: filteredHighlights.length })}
                                 </p>
                             </div>
                         </div>
@@ -106,9 +102,9 @@ const TimelinePage = () => {
                                     <line x1="3" y1="10" x2="21" y2="10"/>
                                 </svg>
                             </div>
-                            <h3 className="text-white font-semibold mb-1">No timeline entries found</h3>
+                            <h3 className="text-white font-semibold mb-1">{t('timeline.noEntries')}</h3>
                             <p className="text-secondary text-sm max-w-xs mx-auto">
-                                Try adjusting your filters or clearing the date range.
+                                {t('timeline.noEntriesDesc')}
                             </p>
                         </div>
                     )}

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { useTranslation } from 'react-i18next';
 import { newsApi, type NewsArticle } from '../services/api';
 import NewsCard from '../components/NewsCard';
 
 const CategoryPage = () => {
+    const { t } = useTranslation();
     const { slug } = useParams<{ slug: string }>();
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [page, setPage] = useState(1);
@@ -58,14 +60,14 @@ const CategoryPage = () => {
     return (
         <>
             <Helmet>
-                <title>{categoryName} News - NewsPortal</title>
-                <meta name="description" content={`Browse ${categoryName} news articles on NewsPortal`} />
+                <title>{t('category.seoTitle', { category: categoryName })}</title>
+                <meta name="description" content={t('category.seoDescription', { category: categoryName })} />
             </Helmet>
             <div className="p-8">
                 <div className="mb-8">
                     <div className="flex items-center gap-2 text-sm mb-3">
                         <Link to="/" className="text-secondary hover:text-white transition-colors">
-                            Home
+                            {t('nav.home')}
                         </Link>
                         <span className="text-secondary/40">/</span>
                         <span className="text-accent font-medium">{categoryName}</span>
@@ -73,8 +75,8 @@ const CategoryPage = () => {
                     <h1 className="font-serif text-3xl font-bold text-white">{categoryName}</h1>
                     <p className="text-secondary text-sm mt-1">
                         {articles.length > 0
-                            ? `Showing ${articles.length} articles`
-                            : 'No articles found'}
+                            ? t('category.showingArticles', { count: articles.length })
+                            : t('category.noArticlesFound')}
                     </p>
                 </div>
 
@@ -86,8 +88,8 @@ const CategoryPage = () => {
                                 <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
                         </div>
-                        <h2 className="text-xl font-bold text-white mb-2">No Articles Yet</h2>
-                        <p className="text-secondary text-sm">No articles have been categorized under {categoryName}.</p>
+                        <h2 className="text-xl font-bold text-white mb-2">{t('category.noArticlesYet')}</h2>
+                        <p className="text-secondary text-sm">{t('category.noArticlesDesc', { category: categoryName })}</p>
                     </div>
                 ) : (
                     <>
@@ -116,17 +118,17 @@ const CategoryPage = () => {
                                     disabled={page === 1}
                                     className="btn-secondary disabled:opacity-30"
                                 >
-                                    Previous
+                                    {t('common.previous')}
                                 </button>
                                 <span className="text-secondary text-sm px-4">
-                                    Page {page} of {totalPages}
+                                    {t('common.pageOf', { page, totalPages })}
                                 </span>
                                 <button
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
                                     className="btn-secondary disabled:opacity-30"
                                 >
-                                    Next
+                                    {t('common.next')}
                                 </button>
                             </div>
                         )}

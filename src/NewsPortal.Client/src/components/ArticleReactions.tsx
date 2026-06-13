@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ThumbsUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { axiosInstance } from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -11,10 +12,10 @@ interface ReactionData {
 }
 
 const REACTIONS = [
-    { type: 'like', emoji: '\uD83D\uDC4D', label: 'Like' },
-    { type: 'love', emoji: '\u2764\uFE0F', label: 'Love' },
-    { type: 'informative', emoji: '\uD83D\uDCA1', label: 'Informative' },
-    { type: 'shocking', emoji: '\uD83D\uDE32', label: 'Shocking' },
+    { type: 'like', emoji: '\uD83D\uDC4D', labelKey: 'article.reactionLike' },
+    { type: 'love', emoji: '\u2764\uFE0F', labelKey: 'article.reactionLove' },
+    { type: 'informative', emoji: '\uD83D\uDCA1', labelKey: 'article.reactionInformative' },
+    { type: 'shocking', emoji: '\uD83D\uDE32', labelKey: 'article.reactionShocking' },
 ];
 
 interface ArticleReactionsProps {
@@ -22,6 +23,7 @@ interface ArticleReactionsProps {
 }
 
 const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
+    const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
     const [data, setData] = useState<ReactionData>({ counts: {}, total: 0, userReaction: null });
     const [showPicker, setShowPicker] = useState(false);
@@ -35,7 +37,7 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
 
     const handleReact = async (type: string) => {
         if (!isAuthenticated) {
-            toast.error('Please login to react');
+            toast.error(t('article.loginToReact'));
             return;
         }
         if (loading) return;
@@ -45,7 +47,7 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
             setData(res.data);
             setShowPicker(false);
         } catch {
-            toast.error('Failed to react');
+            toast.error(t('article.reactFailed'));
         } finally {
             setLoading(false);
         }
@@ -74,7 +76,7 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
                     {userReactionInfo
                         ? <span className="text-base leading-none">{userReactionInfo.emoji}</span>
                         : <ThumbsUp className="w-4 h-4" strokeWidth={1.75} />}
-                    <span>{data.userReaction ? userReactionInfo?.label : 'React'}</span>
+                    <span>{data.userReaction && userReactionInfo ? t(userReactionInfo.labelKey) : t('article.react')}</span>
                     {data.total > 0 && (
                         <span className="ml-0.5 text-xs opacity-70">{data.total}</span>
                     )}
@@ -92,7 +94,7 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
                                 className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg transition-all hover:bg-white/10 hover:scale-110 ${
                                     data.userReaction === r.type ? 'bg-accent/20' : ''
                                 }`}
-                                title={r.label}
+                                title={t(r.labelKey)}
                             >
                                 <span className="text-xl">{r.emoji}</span>
                                 <span className="text-[9px] text-secondary">{data.counts[r.type] || 0}</span>
@@ -106,7 +108,7 @@ const ArticleReactions = ({ articleId }: ArticleReactionsProps) => {
             {data.total > 0 && (
                 <div className="flex -space-x-1">
                     {REACTIONS.filter(r => (data.counts[r.type] || 0) > 0).slice(0, 3).map(r => (
-                        <span key={r.type} className="text-sm" title={`${r.label}: ${data.counts[r.type]}`}>
+                        <span key={r.type} className="text-sm" title={t('article.reactionBreakdown', { label: t(r.labelKey), count: data.counts[r.type] })}>
                             {r.emoji}
                         </span>
                     ))}

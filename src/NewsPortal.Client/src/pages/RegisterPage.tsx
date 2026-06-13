@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import axios from 'axios';
 import { axiosInstance } from '../services/axiosInstance';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const RegisterPage = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { isAuthenticated, googleLogin } = useAuth();
 
@@ -31,25 +33,25 @@ const RegisterPage = () => {
         const newErrors: Record<string, string> = {};
 
         if (!formData.username.trim()) {
-            newErrors.username = 'Username is required';
+            newErrors.username = t('auth.errorUsernameRequired');
         } else if (formData.username.length < 3) {
-            newErrors.username = 'Username must be at least 3 characters';
+            newErrors.username = t('auth.errorUsernameMin');
         }
 
         if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
+            newErrors.email = t('auth.errorEmailRequired');
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Invalid email format';
+            newErrors.email = t('auth.errorEmailInvalid');
         }
 
         if (!formData.password) {
-            newErrors.password = 'Password is required';
+            newErrors.password = t('auth.errorPasswordRequired');
         } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
+            newErrors.password = t('auth.errorPasswordMin');
         }
 
         if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
+            newErrors.confirmPassword = t('auth.errorPasswordMismatch');
         }
 
         return newErrors;
@@ -103,12 +105,12 @@ const RegisterPage = () => {
                     });
                     setErrors(formattedErrors);
                 } else if (status === 409) {
-                    setGeneralError('Username or email already exists');
+                    setGeneralError(t('auth.errorUserExists'));
                 } else {
-                    setGeneralError(data?.message || 'Registration failed');
+                    setGeneralError(data?.message || t('auth.errorRegisterFailed'));
                 }
             } else {
-                setGeneralError('Registration failed');
+                setGeneralError(t('auth.errorRegisterFailed'));
             }
         } finally {
             setSubmitting(false);
@@ -122,7 +124,7 @@ const RegisterPage = () => {
             await googleLogin(credential);
             navigate('/', { replace: true });
         } catch {
-            setGeneralError('Google sign-in failed. Please try again.');
+            setGeneralError(t('auth.errorGoogleFailed'));
         } finally {
             setSubmitting(false);
         }
@@ -141,9 +143,9 @@ const RegisterPage = () => {
                         <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <span className="text-2xl font-bold text-white">N</span>
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
+                        <h1 className="text-3xl font-bold text-white mb-2">{t('auth.createAccount')}</h1>
                         <p className="text-secondary text-sm">
-                            Join NewsPortal to save articles and track your reading history
+                            {t('auth.registerDesc')}
                         </p>
                     </div>
 
@@ -151,14 +153,14 @@ const RegisterPage = () => {
                     <div className="glass-morphism border border-glass-border rounded-2xl p-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Username</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.username')}</label>
                                 <input
                                     type="text"
                                     name="username"
                                     value={formData.username}
                                     onChange={handleChange}
                                     className={`form-input ${errors.username ? 'border-red-500/50' : ''}`}
-                                    placeholder="Choose a username"
+                                    placeholder={t('auth.chooseUsername')}
                                     autoComplete="username"
                                 />
                                 {errors.username && (
@@ -167,14 +169,14 @@ const RegisterPage = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Email</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.email')}</label>
                                 <input
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     className={`form-input ${errors.email ? 'border-red-500/50' : ''}`}
-                                    placeholder="your@email.com"
+                                    placeholder={t('auth.emailPlaceholder')}
                                     autoComplete="email"
                                 />
                                 {errors.email && (
@@ -183,14 +185,14 @@ const RegisterPage = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Password</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.password')}</label>
                                 <input
                                     type="password"
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     className={`form-input ${errors.password ? 'border-red-500/50' : ''}`}
-                                    placeholder="At least 6 characters"
+                                    placeholder={t('auth.passwordMinPlaceholder')}
                                     autoComplete="new-password"
                                 />
                                 {errors.password && (
@@ -199,14 +201,14 @@ const RegisterPage = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm text-secondary mb-1">Confirm Password</label>
+                                <label className="block text-sm text-secondary mb-1">{t('auth.confirmPassword')}</label>
                                 <input
                                     type="password"
                                     name="confirmPassword"
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                     className={`form-input ${errors.confirmPassword ? 'border-red-500/50' : ''}`}
-                                    placeholder="Re-enter password"
+                                    placeholder={t('auth.reenterPassword')}
                                     autoComplete="new-password"
                                 />
                                 {errors.confirmPassword && (
@@ -225,14 +227,14 @@ const RegisterPage = () => {
                                 disabled={submitting}
                                 className="w-full py-3 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {submitting ? 'Creating Account...' : 'Create Account'}
+                                {submitting ? t('auth.creating') : t('auth.createAccount')}
                             </button>
                         </form>
 
                         {/* Google sign-in — only when client id configured */}
                         {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
                             <div className="mt-4 pt-4 border-t border-glass-border">
-                                <p className="text-xs text-secondary text-center mb-3">Or sign up with</p>
+                                <p className="text-xs text-secondary text-center mb-3">{t('auth.orSignUpWith')}</p>
                                 <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
                             </div>
                         )}
@@ -240,9 +242,9 @@ const RegisterPage = () => {
                         {/* Login Link */}
                         <div className="mt-6 text-center">
                             <p className="text-sm text-secondary">
-                                Already have an account?{' '}
+                                {t('auth.haveAccount')}{' '}
                                 <Link to="/login" className="text-accent hover:text-accent/80 transition-colors font-medium">
-                                    Sign in
+                                    {t('auth.signIn')}
                                 </Link>
                             </p>
                         </div>
@@ -254,7 +256,7 @@ const RegisterPage = () => {
                             to="/"
                             className="text-sm text-secondary hover:text-white transition-colors"
                         >
-                            ← Back to Home
+                            ← {t('auth.backToHome')}
                         </Link>
                     </div>
                 </div>

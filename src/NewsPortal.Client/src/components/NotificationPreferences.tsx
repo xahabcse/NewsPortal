@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { newsApi, type Category } from '../services/api';
 
 const STORAGE_KEY = 'newsportal-notification-prefs';
@@ -49,6 +50,7 @@ interface NotificationPreferencesProps {
 }
 
 const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
+    const { t } = useTranslation();
     const [prefs, setPrefs] = useState<NotificationPrefs>(getNotificationPrefs);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -83,13 +85,13 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
             <div className="w-full max-w-md bg-glass-surface border border-glass-border rounded-xl overflow-hidden">
                 <div className="p-5 border-b border-glass-border flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-white">Notification Preferences</h2>
-                        <p className="text-xs text-secondary mt-0.5">Choose what notifications you receive</p>
+                        <h2 className="text-lg font-bold text-white">{t('notifications.title')}</h2>
+                        <p className="text-xs text-secondary mt-0.5">{t('notifications.subtitle')}</p>
                     </div>
                     <button
                         onClick={onClose}
                         className="text-secondary hover:text-white transition-colors p-1"
-                        aria-label="Close preferences"
+                        aria-label={t('notifications.closeAria')}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -102,8 +104,8 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                     {/* Master Toggle */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-white">Enable Notifications</p>
-                            <p className="text-xs text-secondary">Receive news alerts in real-time</p>
+                            <p className="text-sm font-medium text-white">{t('notifications.enable')}</p>
+                            <p className="text-xs text-secondary">{t('notifications.enableDesc')}</p>
                         </div>
                         <button
                             onClick={() => updatePrefs({ enabled: !prefs.enabled })}
@@ -126,9 +128,9 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                                 <div>
                                     <p className="text-sm font-medium text-white flex items-center gap-2">
                                         <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                                        Breaking News
+                                        {t('notifications.breakingNews')}
                                     </p>
-                                    <p className="text-xs text-secondary">Always get breaking news alerts</p>
+                                    <p className="text-xs text-secondary">{t('notifications.breakingNewsDesc')}</p>
                                 </div>
                                 <button
                                     onClick={() => updatePrefs({ breakingNews: !prefs.breakingNews })}
@@ -147,8 +149,8 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                             {/* Sound */}
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-white">Sound</p>
-                                    <p className="text-xs text-secondary">Play a sound for new notifications</p>
+                                    <p className="text-sm font-medium text-white">{t('notifications.sound')}</p>
+                                    <p className="text-xs text-secondary">{t('notifications.soundDesc')}</p>
                                 </div>
                                 <button
                                     onClick={() => updatePrefs({ sound: !prefs.sound })}
@@ -168,11 +170,11 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                             <div>
                                 <div className="flex items-center justify-between mb-3">
                                     <div>
-                                        <p className="text-sm font-medium text-white">Category Filters</p>
+                                        <p className="text-sm font-medium text-white">{t('notifications.categoryFilters')}</p>
                                         <p className="text-xs text-secondary">
                                             {prefs.categories.length === 0
-                                                ? 'Receiving all categories'
-                                                : `${prefs.categories.length} selected`
+                                                ? t('notifications.receivingAll')
+                                                : t('notifications.selectedCount', { count: prefs.categories.length })
                                             }
                                         </p>
                                     </div>
@@ -181,7 +183,7 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                                             onClick={selectAllCategories}
                                             className="text-xs text-accent hover:text-accent/80 transition-colors"
                                         >
-                                            Select All
+                                            {t('notifications.selectAll')}
                                         </button>
                                     )}
                                 </div>
@@ -232,7 +234,7 @@ const NotificationPreferences = ({ onClose }: NotificationPreferencesProps) => {
                         onClick={onClose}
                         className="w-full btn-primary text-sm"
                     >
-                        Done
+                        {t('notifications.done')}
                     </button>
                 </div>
             </div>

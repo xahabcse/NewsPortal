@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { StatsService } from '../services/StatsService'
 import { newsApi, type Category } from '../services/api'
 
@@ -55,6 +56,7 @@ const categoryIconMap: Record<string, JSX.Element> = {
 };
 
 const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) => {
+    const { t } = useTranslation()
     const location = useLocation()
     const [todayCount, setTodayCount] = useState<number>(0)
     const [categories, setCategories] = useState<Category[]>([])
@@ -137,12 +139,12 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                 <div className={`flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
                     <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:gap-0' : ''}`}>
                         <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white shrink-0">N</div>
-                        <span className={`text-xl font-bold tracking-tight text-white ${textClass}`}>NewsPortal</span>
+                        <span className={`text-xl font-bold tracking-tight text-white ${textClass}`}>{t('app.name')}</span>
                     </div>
                     <button
                         onClick={onClose}
                         className="lg:hidden text-secondary hover:text-white transition-colors"
-                        aria-label="Close menu"
+                        aria-label={t('nav.closeMenu')}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -157,7 +159,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                     <div className="bg-accent/15 border border-accent/30 rounded-xl p-3">
                         <div className="flex items-center justify-between">
                             <div>
-                                <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
+                                <div className="text-[10px] text-secondary uppercase tracking-wider">{t('sidebar.today')}</div>
                                 <div className="text-2xl font-bold text-white">{todayCount}</div>
                             </div>
                             <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-accent">
@@ -171,7 +173,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                         <div className="bg-accent/15 border border-accent/30 rounded-xl p-3 lg:hidden">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <div className="text-[10px] text-secondary uppercase tracking-wider">Today</div>
+                                    <div className="text-[10px] text-secondary uppercase tracking-wider">{t('sidebar.today')}</div>
                                     <div className="text-2xl font-bold text-white">{todayCount}</div>
                                 </div>
                                 <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-accent">
@@ -180,8 +182,8 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                             </div>
                         </div>
                         {/* Desktop collapsed: compact count */}
-                        <div className="hidden lg:flex flex-col items-center bg-accent/15 border border-accent/30 rounded-lg py-2" title={`${todayCount} articles today`}>
-                            <div className="text-[8px] text-secondary uppercase">Today</div>
+                        <div className="hidden lg:flex flex-col items-center bg-accent/15 border border-accent/30 rounded-lg py-2" title={t('sidebar.articlesToday', { count: todayCount })}>
+                            <div className="text-[8px] text-secondary uppercase">{t('sidebar.today')}</div>
                             <div className="text-lg font-bold text-white">{todayCount}</div>
                         </div>
                     </>
@@ -189,50 +191,50 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
 
                 {/* Main Menu */}
                 <nav className={`flex flex-col ${isCollapsed ? 'lg:gap-1 gap-2' : 'gap-2'}`}>
-                    <div className={`text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4 ${textClass}`}>Main Menu</div>
+                    <div className={`text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4 ${textClass}`}>{t('sidebar.mainMenu')}</div>
 
-                    <Link to="/" className={`huly-sidebar-item ${isActive('/')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Home">
+                    <Link to="/" className={`huly-sidebar-item ${isActive('/')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('nav.home')}>
                         <span className="shrink-0"><IconHome /></span>
-                        <span className={textClass}>Home</span>
+                        <span className={textClass}>{t('nav.home')}</span>
                     </Link>
 
-                    <Link to="/timeline" className={`huly-sidebar-item ${isActive('/timeline')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Daily Timeline">
+                    <Link to="/timeline" className={`huly-sidebar-item ${isActive('/timeline')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('sidebar.timeline')}>
                         <span className="shrink-0"><IconTimeline /></span>
                         <div className={`flex flex-col ${textClass}`}>
-                            <span>Daily Timeline</span>
-                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Day-wise highlights</span>
+                            <span>{t('sidebar.timeline')}</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">{t('sidebar.timelineDesc')}</span>
                         </div>
                     </Link>
 
-                    <Link to="/trending" className={`huly-sidebar-item ${isActive('/trending')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Trending">
+                    <Link to="/trending" className={`huly-sidebar-item ${isActive('/trending')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('nav.trending')}>
                         <span className="shrink-0"><IconTrending /></span>
                         <div className={`flex flex-col ${textClass}`}>
-                            <span>Trending</span>
-                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Most popular stories</span>
+                            <span>{t('nav.trending')}</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">{t('sidebar.trendingDesc')}</span>
                         </div>
                     </Link>
 
-                    <Link to="/bookmarks" className={`huly-sidebar-item ${isActive('/bookmarks')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="Saved">
+                    <Link to="/bookmarks" className={`huly-sidebar-item ${isActive('/bookmarks')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('nav.saved')}>
                         <span className="shrink-0"><IconBookmark /></span>
                         <div className={`flex flex-col ${textClass}`}>
-                            <span>Saved</span>
-                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Your bookmarks</span>
+                            <span>{t('nav.saved')}</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">{t('sidebar.savedDesc')}</span>
                         </div>
                     </Link>
 
-                    <Link to="/news-sources" className={`huly-sidebar-item ${isActive('/news-sources')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="News Channels">
+                    <Link to="/news-sources" className={`huly-sidebar-item ${isActive('/news-sources')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('nav.sources')}>
                         <span className="shrink-0"><IconRss /></span>
                         <div className={`flex flex-col ${textClass}`}>
-                            <span>News Channels</span>
-                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Manage sources</span>
+                            <span>{t('nav.sources')}</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">{t('sidebar.sourcesDesc')}</span>
                         </div>
                     </Link>
 
-                    <Link to="/about" className={`huly-sidebar-item ${isActive('/about')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title="About">
+                    <Link to="/about" className={`huly-sidebar-item ${isActive('/about')} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`} title={t('sidebar.about')}>
                         <span className="shrink-0"><IconInfo /></span>
                         <div className={`flex flex-col ${textClass}`}>
-                            <span>About</span>
-                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">Story & team</span>
+                            <span>{t('sidebar.about')}</span>
+                            <span className="text-[10px] text-secondary/50 font-normal leading-tight">{t('sidebar.aboutDesc')}</span>
                         </div>
                     </Link>
                 </nav>
@@ -240,7 +242,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                 {/* Categories Section */}
                 {categories.length > 0 && (
                     <nav className={`flex flex-col gap-1 ${isCollapsed ? 'lg:hidden' : ''}`}>
-                        <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">Categories</div>
+                        <div className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2 ml-4">{t('sidebar.categories')}</div>
                         {visibleCategories.map(cat => (
                             <Link
                                 key={cat.id}
@@ -278,7 +280,7 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                                 onClick={() => setShowAllCategories(!showAllCategories)}
                                 className="text-xs text-accent hover:text-accent/80 ml-4 mt-1 text-left transition-colors"
                             >
-                                {showAllCategories ? 'Show less' : `Show all (${categories.length})`}
+                                {showAllCategories ? t('sidebar.showLess') : t('sidebar.showAll', { count: categories.length })}
                             </button>
                         )}
                     </nav>
@@ -294,13 +296,13 @@ const Sidebar = ({ isOpen = false, onClose, isCollapsed = false, onToggleCollaps
                 <button
                     onClick={onToggleCollapse}
                     className={`hidden lg:flex items-center gap-3 px-4 py-2 rounded-lg text-secondary hover:text-white hover:bg-white/5 transition-all duration-200 ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
-                    title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapseSidebar')}
+                    aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapseSidebar')}
                 >
                     <span className="shrink-0">
                         {isCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
                     </span>
-                    <span className={`text-sm ${textClass}`}>Collapse</span>
+                    <span className={`text-sm ${textClass}`}>{t('sidebar.collapse')}</span>
                 </button>
             </aside>
         </>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { axiosInstance } from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -21,6 +22,7 @@ type SortMode = 'newest' | 'oldest' | 'top';
 
 const CommentsSection = () => {
     const { slug } = useParams<{ slug: string }>();
+    const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,10 +93,10 @@ const CommentsSection = () => {
             });
 
             setNewComment('');
-            toast.success(parentId ? 'Reply posted!' : 'Comment posted!');
+            toast.success(parentId ? t('article.replyPosted') : t('article.commentPosted'));
             await fetchComments(slug);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to post comment');
+            toast.error(error.response?.data?.message || t('article.commentFailed'));
         } finally {
             setSubmitting(false);
         }
@@ -102,7 +104,7 @@ const CommentsSection = () => {
 
     const handleVote = async (commentId: number, isUpvote: boolean) => {
         if (!isAuthenticated) {
-            toast.error('Please login to vote');
+            toast.error(t('article.loginToVote'));
             return;
         }
         try {
@@ -110,7 +112,7 @@ const CommentsSection = () => {
             setVoteCounts(prev => ({ ...prev, [commentId]: { upvotes: res.data.upvotes, downvotes: res.data.downvotes, score: res.data.score } }));
             setUserVotes(prev => ({ ...prev, [commentId]: res.data.userVote }));
         } catch {
-            toast.error('Failed to vote');
+            toast.error(t('article.voteFailed'));
         }
     };
 
@@ -147,7 +149,7 @@ const CommentsSection = () => {
                             className={`flex items-center gap-1 text-xs transition-colors ${
                                 userVote === 'up' ? 'text-green-400' : 'text-secondary hover:text-green-400'
                             }`}
-                            title="Upvote"
+                            title={t('article.upvote')}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={userVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
@@ -159,7 +161,7 @@ const CommentsSection = () => {
                             className={`flex items-center gap-1 text-xs transition-colors ${
                                 userVote === 'down' ? 'text-red-400' : 'text-secondary hover:text-red-400'
                             }`}
-                            title="Downvote"
+                            title={t('article.downvote')}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={userVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
@@ -188,7 +190,7 @@ const CommentsSection = () => {
         <div className="mt-12 pt-8 border-t border-glass-border">
             <div className="flex items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-white">
-                    Comments {comments.length > 0 && <span className="text-sm sm:text-base font-normal text-secondary">({comments.length})</span>}
+                    {t('article.comments')} {comments.length > 0 && <span className="text-sm sm:text-base font-normal text-secondary">({comments.length})</span>}
                 </h2>
                 {comments.length > 1 && (
                     <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5 border border-glass-border">
@@ -200,7 +202,7 @@ const CommentsSection = () => {
                                     sortMode === mode ? 'bg-accent text-white' : 'text-secondary hover:text-white'
                                 }`}
                             >
-                                {mode === 'top' ? 'Most Voted' : mode}
+                                {mode === 'top' ? t('article.sortMostVoted') : mode === 'oldest' ? t('article.sortOldest') : t('article.sortNewest')}
                             </button>
                         ))}
                     </div>
@@ -213,25 +215,25 @@ const CommentsSection = () => {
                     <textarea
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Write a comment..."
+                        placeholder={t('article.writeComment')}
                         className="w-full bg-white/5 border border-glass-border rounded-lg p-3 text-white text-sm focus:outline-none focus:border-accent/50"
                         rows={3}
                         maxLength={2000}
                     />
                     <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-secondary">{newComment.length}/2000</span>
+                        <span className="text-xs text-secondary">{t('article.charCount', { count: newComment.length })}</span>
                         <button
                             type="submit"
                             disabled={submitting || !newComment.trim()}
                             className="px-4 py-2 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting ? 'Posting...' : 'Post Comment'}
+                            {submitting ? t('article.posting') : t('article.postComment')}
                         </button>
                     </div>
                 </form>
             ) : (
                 <div className="mb-8 p-4 bg-white/5 rounded-lg text-center text-sm text-secondary">
-                    Please login to comment
+                    {t('article.loginToComment')}
                 </div>
             )}
 
@@ -243,7 +245,7 @@ const CommentsSection = () => {
                     ))}
                 </div>
             ) : comments.length === 0 ? (
-                <p className="text-secondary text-sm">No comments yet. Be the first to comment!</p>
+                <p className="text-secondary text-sm">{t('article.noComments')}</p>
             ) : (
                 <>
                     <div className="space-y-4">
@@ -257,13 +259,13 @@ const CommentsSection = () => {
                                 onClick={() => setDisplayCount(prev => prev + COMMENTS_PER_PAGE)}
                                 className="px-4 py-2 text-sm font-medium rounded-lg bg-white/5 border border-glass-border text-secondary hover:text-white hover:bg-white/10 transition-colors"
                             >
-                                See More ({sortedComments.length - displayCount} remaining)
+                                {t('article.seeMoreComments', { count: sortedComments.length - displayCount })}
                             </button>
                             <button
                                 onClick={() => setDisplayCount(sortedComments.length)}
                                 className="px-4 py-2 text-sm font-medium rounded-lg bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
                             >
-                                See All Comments
+                                {t('article.seeAllComments')}
                             </button>
                         </div>
                     )}

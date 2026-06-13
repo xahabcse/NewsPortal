@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import toast from 'react-hot-toast';
 import { BookmarkService, type Bookmark } from '../services/BookmarkService';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import NewsCard from '../components/NewsCard';
 
 const BookmarksPage = () => {
+    const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ const BookmarksPage = () => {
 
     useEffect(() => {
         if (!isAuthenticated) {
-            setError('Please login to view your bookmarks');
+            setError(t('bookmarks.loginRequiredDesc'));
             setLoading(false);
             return;
         }
@@ -38,12 +40,12 @@ const BookmarksPage = () => {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosError = err as { response?: { status?: number } };
                 if (axiosError.response?.status === 401) {
-                    setError('Please login to view your bookmarks');
+                    setError(t('bookmarks.loginRequiredDesc'));
                 } else {
-                    setError('Failed to load bookmarks');
+                    setError(t('bookmarks.loadError'));
                 }
             } else {
-                setError('Failed to load bookmarks');
+                setError(t('bookmarks.loadError'));
             }
         } finally {
             setLoading(false);
@@ -55,7 +57,7 @@ const BookmarksPage = () => {
             await BookmarkService.removeBookmark(articleId);
             setBookmarks(prev => prev.filter(b => b.articleId !== articleId));
             setTotalCount(prev => Math.max(0, prev - 1));
-            toast.success('Bookmark removed');
+            toast.success(t('bookmarks.removeBookmark'));
         } catch (err) {
             console.error('Failed to remove bookmark:', err);
         }
@@ -81,15 +83,15 @@ const BookmarksPage = () => {
                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Login Required</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2">{t('bookmarks.loginRequired')}</h2>
                     <p className="text-secondary text-sm mb-6">
-                        Please login to view and manage your saved articles.
+                        {t('bookmarks.loginRequiredManageDesc')}
                     </p>
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/80 transition-colors"
                     >
-                        Go Home
+                        {t('bookmarks.goHome')}
                     </Link>
                 </div>
             </div>
@@ -99,8 +101,8 @@ const BookmarksPage = () => {
     return (
         <>
             <SEO
-                title="Saved Articles - My Bookmarks"
-                description="Access your saved and bookmarked news articles. Read your personalized collection of important stories anytime."
+                title={t('bookmarks.seoTitle')}
+                description={t('bookmarks.seoDescription')}
             />
             <div className="p-8">
             {/* Header */}
@@ -121,15 +123,13 @@ const BookmarksPage = () => {
                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                         </svg>
                     </div>
-                    <h1 className="font-serif text-3xl font-bold text-white">Saved Articles</h1>
+                    <h1 className="font-serif text-3xl font-bold text-white">{t('bookmarks.title')}</h1>
                 </div>
                 <p className="text-secondary text-sm">
                     {loading ? (
-                        'Loading your bookmarks...'
+                        t('bookmarks.loading')
                     ) : (
-                        <>
-                            You have <span className="text-accent font-semibold">{totalCount}</span> saved articles
-                        </>
+                        t('bookmarks.savedCount', { count: totalCount })
                     )}
                 </p>
             </div>
@@ -187,7 +187,7 @@ const BookmarksPage = () => {
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
-                        Back to Home
+                        {t('search.backHome')}
                     </Link>
                 </div>
             ) : bookmarks.length === 0 ? (
@@ -203,9 +203,9 @@ const BookmarksPage = () => {
                             <circle cx="80" cy="92" r="3" className="fill-accent"></circle>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold text-lg mb-2">No Bookmarks Yet</h3>
+                    <h3 className="text-white font-semibold text-lg mb-2">{t('bookmarks.noBookmarks')}</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto mb-6">
-                        Start saving articles to read later by clicking the bookmark icon on any news card.
+                        {t('bookmarks.noBookmarksDesc')}
                     </p>
                     <Link
                         to="/"
@@ -215,7 +215,7 @@ const BookmarksPage = () => {
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
-                        Browse News
+                        {t('bookmarks.browseNews')}
                     </Link>
                 </div>
             ) : (
@@ -240,7 +240,7 @@ const BookmarksPage = () => {
                                     <button
                                         onClick={() => handleRemoveBookmark(bookmark.article.id)}
                                         className="w-8 h-8 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center hover:bg-red-500/30 transition-colors opacity-0 group-hover:opacity-100"
-                                        title="Remove bookmark"
+                                        title={t('bookmarks.removeBookmarkAction')}
                                     >
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
@@ -271,11 +271,11 @@ const BookmarksPage = () => {
                                 disabled={page === 1}
                                 className="px-4 py-2 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Previous
+                                {t('common.previous')}
                             </button>
 
                             <span className="px-4 py-2 text-sm text-secondary">
-                                Page {page} of {totalPages}
+                                {t('common.pageOf', { page, totalPages })}
                             </span>
 
                             <button
@@ -283,7 +283,7 @@ const BookmarksPage = () => {
                                 disabled={page === totalPages}
                                 className="px-4 py-2 rounded-lg bg-white/5 border border-glass-border text-sm text-secondary hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Next
+                                {t('common.next')}
                             </button>
                         </div>
                     )}

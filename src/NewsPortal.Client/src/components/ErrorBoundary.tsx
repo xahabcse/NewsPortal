@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { reportClientError } from '../services/LogService';
+import i18n from '../i18n/i18n';
 
 interface Props {
     children: ReactNode;
@@ -59,17 +60,17 @@ class ErrorBoundary extends Component<Props, State> {
                         </div>
 
                         <h1 className="text-2xl font-bold text-white mb-2">
-                            Something went wrong
+                            {i18n.t('errorBoundary.heading')}
                         </h1>
 
                         <p className="text-secondary text-sm mb-6">
-                            We're sorry, but something unexpected happened. Please try refreshing the page or navigating back to the home page.
+                            {i18n.t('errorBoundary.description')}
                         </p>
 
                         {error && (
                             <details className="text-left mb-6 p-4 bg-black/20 rounded-lg">
                                 <summary className="text-xs font-medium text-secondary cursor-pointer hover:text-white transition-colors">
-                                    Error details (for debugging)
+                                    {i18n.t('errorBoundary.errorDetails')}
                                 </summary>
                                 <pre className="mt-2 text-xs text-red-400 overflow-auto max-h-40">
                                     {error.toString()}
@@ -82,7 +83,7 @@ class ErrorBoundary extends Component<Props, State> {
                                 onClick={() => window.location.reload()}
                                 className="px-6 py-2.5 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent/80 transition-colors"
                             >
-                                Refresh Page
+                                {i18n.t('errorBoundary.refresh')}
                             </button>
 
                             <a
@@ -103,7 +104,7 @@ class ErrorBoundary extends Component<Props, State> {
                                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                                 </svg>
-                                Go Home
+                                {i18n.t('errorBoundary.goHome')}
                             </a>
                         </div>
                     </div>

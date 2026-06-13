@@ -1,5 +1,6 @@
 import { useState, useEffect, type FC } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface ArticlePopupProps {
     isOpen: boolean;
@@ -27,8 +28,9 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
     sourceUrl,
     slug,
 }) => {
+    const { t } = useTranslation();
     const [imgFailed, setImgFailed] = useState(false);
-    const category = categoryName || 'General';
+    const category = categoryName || t('article.generalCategory');
 
     // Reset image state when article changes
     useEffect(() => {
@@ -136,7 +138,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                         <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
                         <span>{formattedDate}</span>
                         <span className="w-1 h-1 rounded-full bg-secondary/30"></span>
-                        <span>{readingTime} min read</span>
+                        <span>{t('article.readingTime', { minutes: readingTime })}</span>
                     </div>
 
                     {/* Summary / Content */}
@@ -146,7 +148,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                                 <p key={i}>{paragraph}</p>
                             ))
                         ) : (
-                            <p className="text-secondary italic">No summary available for this article.</p>
+                            <p className="text-secondary italic">{t('article.noSummaryFull')}</p>
                         )}
                     </div>
                 </div>
@@ -160,7 +162,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                             rel="noopener noreferrer"
                             className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors"
                         >
-                            Read Full Article
+                            {t('article.readFullArticle')}
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                 <polyline points="15 3 21 3 21 9"></polyline>
@@ -173,7 +175,7 @@ const ArticlePopup: FC<ArticlePopupProps> = ({
                         onClick={onClose}
                         className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors"
                     >
-                        Details
+                        {t('article.details')}
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                             <polyline points="12 5 19 12 12 19"></polyline>

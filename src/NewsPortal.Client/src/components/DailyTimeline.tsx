@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Layers, Clock } from 'lucide-react';
 import type { DailyHighlight, CategoryHighlight } from '../services/api';
 
@@ -7,13 +8,13 @@ interface Props {
     loading: boolean;
 }
 
-function formatDay(dateStr: string): string {
+function formatDay(dateStr: string, t: (key: string) => string): string {
     const d = new Date(dateStr + 'T00:00:00');
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
     const dd = new Date(d); dd.setHours(0, 0, 0, 0);
-    if (dd.getTime() === today.getTime()) return 'Today';
-    if (dd.getTime() === yesterday.getTime()) return 'Yesterday';
+    if (dd.getTime() === today.getTime()) return t('timeline.today');
+    if (dd.getTime() === yesterday.getTime()) return t('timeline.yesterday');
     return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -31,6 +32,7 @@ function publishMs(iso: string | null): number {
 
 const DailyTimeline = ({ highlights, loading }: Props) => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     if (loading) {
         return (
@@ -68,9 +70,9 @@ const DailyTimeline = ({ highlights, loading }: Props) => {
                         {/* Day header — section divider that sits above this day's spine */}
                         <div className="sticky top-0 z-30 flex items-center gap-3 mb-5 py-2 bg-background/85 backdrop-blur-sm">
                             <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0" />
-                            <h2 className="font-serif text-xl font-bold text-white whitespace-nowrap">{formatDay(day.date)}</h2>
+                            <h2 className="font-serif text-xl font-bold text-white whitespace-nowrap">{formatDay(day.date, t)}</h2>
                             <span className="text-xs font-medium text-secondary whitespace-nowrap">
-                                {items.length} {items.length === 1 ? 'story' : 'stories'}
+                                {items.length} {items.length === 1 ? t('timeline.story') : t('timeline.stories')}
                             </span>
                             <span className="flex-1 h-px bg-glass-border" />
                         </div>
@@ -100,6 +102,7 @@ interface EntryProps {
 }
 
 const TimelineEntry = ({ h, onLeft, onOpen }: EntryProps) => {
+    const { t } = useTranslation();
     const color = h.categoryColor || '#6c757d';
     const time = formatTime(h.publishedAt);
     const multi = (h.sourceCount ?? 1) >= 2;
@@ -132,9 +135,9 @@ const TimelineEntry = ({ h, onLeft, onOpen }: EntryProps) => {
                         {multi && (
                             <span
                                 className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent/12 text-accent border border-accent/25"
-                                title={`Covered by ${h.sourceCount} sources`}
+                                title={t('timeline.coveredBy', { count: h.sourceCount })}
                             >
-                                <Layers className="w-2.5 h-2.5" strokeWidth={2} /> {h.sourceCount} sources
+                                <Layers className="w-2.5 h-2.5" strokeWidth={2} /> {t('timeline.sourcesCount', { count: h.sourceCount })}
                             </span>
                         )}
                     </div>

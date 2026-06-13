@@ -20,6 +20,7 @@ i18n
     .init({
         resources,
         fallbackLng: 'en',
+        supportedLngs: ['en', 'bn'],
         debug: false,
         interpolation: {
             escapeValue: false // React already escapes
@@ -29,5 +30,12 @@ i18n
             caches: ['localStorage']
         }
     });
+
+// Keep <html lang> in sync with the active language (accessibility + SEO).
+const applyHtmlLang = (lng: string) => {
+    if (typeof document !== 'undefined') document.documentElement.lang = lng;
+};
+applyHtmlLang(i18n.language || 'en');
+i18n.on('languageChanged', applyHtmlLang);
 
 export default i18n;

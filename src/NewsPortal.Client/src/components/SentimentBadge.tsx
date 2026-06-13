@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { axiosInstance } from '../services/axiosInstance';
 
 interface SentimentData {
@@ -14,6 +15,7 @@ interface SentimentBadgeProps {
 }
 
 const SentimentBadge = ({ articleId }: SentimentBadgeProps) => {
+    const { t } = useTranslation();
     const [data, setData] = useState<SentimentData | null>(null);
 
     useEffect(() => {
@@ -38,10 +40,10 @@ const SentimentBadge = ({ articleId }: SentimentBadgeProps) => {
             <span className="text-base">{config.icon}</span>
             <div>
                 <span className={`font-semibold capitalize ${config.color}`}>
-                    {data.overallSentiment} sentiment
+                    {t('article.sentimentLabel', { sentiment: data.overallSentiment })}
                 </span>
                 <span className="text-secondary ml-2">
-                    ({data.positive} positive, {data.negative} negative, {data.neutral} neutral of {total})
+                    {t('article.sentimentBreakdown', { positive: data.positive, negative: data.negative, neutral: data.neutral, total })}
                 </span>
             </div>
             {/* Mini bar */}

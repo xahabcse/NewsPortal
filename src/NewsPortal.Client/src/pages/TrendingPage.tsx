@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SEO from '../components/SEO';
 import { axiosInstance } from '../services/axiosInstance';
 import NewsCard from '../components/NewsCard';
@@ -19,6 +20,7 @@ interface NewsArticle {
 }
 
 const TrendingPage = () => {
+    const { t } = useTranslation();
     const [articles, setArticles] = useState<NewsArticle[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -38,12 +40,12 @@ const TrendingPage = () => {
                 if (err && typeof err === 'object' && 'response' in err) {
                     const axiosError = err as { response?: { status?: number } };
                     if (axiosError.response?.status === 404) {
-                        setError('No trending articles found.');
+                        setError(t('trending.errorNotFound'));
                     } else {
-                        setError('Failed to load trending articles.');
+                        setError(t('trending.errorFailed'));
                     }
                 } else {
-                    setError('Failed to load trending articles.');
+                    setError(t('trending.errorFailed'));
                 }
             } finally {
                 setLoading(false);
@@ -51,19 +53,19 @@ const TrendingPage = () => {
         };
 
         fetchTrending();
-    }, [timeRange]);
+    }, [timeRange, t]);
 
     const timeRanges = [
-        { label: '24h', value: 24 },
-        { label: '48h', value: 48 },
-        { label: '7d', value: 168 }
+        { label: t('trending.range24h'), value: 24 },
+        { label: t('trending.range48h'), value: 48 },
+        { label: t('trending.range7d'), value: 168 }
     ];
 
     return (
         <>
             <SEO
-                title="Trending News - Most Viewed Articles"
-                description="Discover the most popular and trending news articles. See what everyone is reading right now."
+                title={t('trending.seoTitle')}
+                description={t('trending.seoDescription')}
             />
             <div className="p-4 sm:p-8">
             {/* Header */}
@@ -87,10 +89,12 @@ const TrendingPage = () => {
                                     <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
                                 </svg>
                             </div>
-                            <h1 className="font-serif text-3xl font-bold text-white">Trending Now</h1>
+                            <h1 className="font-serif text-3xl font-bold text-white">{t('trending.title')}</h1>
                         </div>
                         <p className="text-secondary text-sm">
-                            Most viewed articles in the last {timeRange >= 168 ? `${timeRange / 24} days` : `${timeRange} hours`}
+                            {timeRange >= 168
+                                ? t('trending.subtitleDays', { days: timeRange / 24 })
+                                : t('trending.subtitleHours', { hours: timeRange })}
                         </p>
                     </div>
 
@@ -145,7 +149,7 @@ const TrendingPage = () => {
                             <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">No Trending Articles</h3>
+                    <h3 className="text-white font-semibold mb-1">{t('trending.errorTitle')}</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto">{error}</p>
                     <Link
                         to="/"
@@ -165,7 +169,7 @@ const TrendingPage = () => {
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
-                        Back to Home
+                        {t('search.backHome')}
                     </Link>
                 </div>
             ) : articles.length === 0 ? (
@@ -186,9 +190,9 @@ const TrendingPage = () => {
                             <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
                         </svg>
                     </div>
-                    <h3 className="text-white font-semibold mb-1">No Articles Yet</h3>
+                    <h3 className="text-white font-semibold mb-1">{t('category.noArticlesYet')}</h3>
                     <p className="text-secondary text-sm max-w-md mx-auto">
-                        Articles will appear here once they start getting views.
+                        {t('trending.noArticlesDesc')}
                     </p>
                 </div>
             ) : (
@@ -224,7 +228,7 @@ const TrendingPage = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
                                 <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
                             </svg>
-                            Showing top <span className="text-white font-semibold">{articles.length}</span> articles by view count
+                            {t('trending.showingTop', { count: articles.length })}
                         </p>
                     </div>
                 </>
